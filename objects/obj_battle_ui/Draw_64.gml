@@ -1,4 +1,7 @@
 // obj_battle_ui 的 Draw_64.gml
+
+// 明確設置字體 - 與obj_dialogue_box相同
+draw_set_font(fnt_dialogue);
 // 檢查是否需要更新表面
 if (!surface_exists(ui_surface) || surface_needs_update) {
     if (surface_exists(ui_surface)) {
@@ -34,7 +37,6 @@ if (instance_exists(obj_battle_manager)) {
     var units_count = ds_list_size(player_units);
     
     if (units_count > 0) {
-        draw_set_font(-1); // 使用默認字體
         
         // 顯示單位卡片
         for (var i = 0; i < min(units_count, 3); i++) {
@@ -156,15 +158,12 @@ var tactic_icon = "";
 switch(current_tactic) {
     case 0: 
         tactic_text = "積極"; 
-        tactic_icon = "⚔️";
         break;
     case 1: 
         tactic_text = "防守"; 
-        tactic_icon = "🛡️";
         break;
     case 2: 
         tactic_text = "追擊"; 
-        tactic_icon = "👁️";
         break;
 }
 draw_text(tactics_btn_x + 20, tactics_btn_y + 15, tactic_icon + " " + tactic_text);

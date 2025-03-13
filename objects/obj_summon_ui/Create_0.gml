@@ -40,7 +40,6 @@ hide = function() {
     draw_set_valign(fa_top);
     draw_set_color(c_white);
     draw_set_alpha(1.0);
-    draw_set_font(-1);
     
     // 如果是從準備階段打開的，讓戰鬥UI知道玩家已經關閉了召喚UI
     if (from_preparing_phase && instance_exists(obj_battle_ui)) {
@@ -268,7 +267,6 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     
     // 怪物名稱
     draw_set_color(c_white);
-    draw_set_font(-1); // 使用默認字體
     draw_text(x + 80, y + 15, monster_data.name);
     
     // 怪物等級

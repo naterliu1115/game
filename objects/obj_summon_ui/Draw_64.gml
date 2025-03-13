@@ -1,6 +1,10 @@
 // obj_summon_ui 的 Draw_64.gml
 if (!active) return;
 
+// 明確設置字體 - 與obj_dialogue_box相同
+draw_set_font(fnt_dialogue);
+
+
 // 更新開啟動畫
 if (open_animation < 1) {
     open_animation += open_speed;
@@ -44,7 +48,6 @@ if (!surface_exists(ui_surface) || surface_needs_update) {
     
     // 標題文字
     draw_set_color(c_white);
-    draw_set_font(-1);
     draw_set_halign(fa_center);
     draw_text(ui_width / 2, 20, "選擇要召喚的怪物");
     draw_set_halign(fa_left);

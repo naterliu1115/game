@@ -3,6 +3,8 @@ event_inherited();
 // 基本設置
 visible = false; // 初始不可見
 active = false;  // 初始非活動狀態
+// 明確設置字體 - 與obj_dialogue_box相同
+draw_set_font(fnt_dialogue);
 
 // 標準UI方法
 show = function() {
@@ -322,7 +324,6 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     
     // 怪物名稱與等級
     draw_set_color(c_white);
-    draw_set_font(-1); // 使用默認字體
     draw_text(x + 100, y + 15, monster_data.name + " (Lv. " + string(monster_data.level) + ")");
     
     // HP條
@@ -385,7 +386,6 @@ draw_monster_details = function(monster_data) {
         
         // 標題
         draw_set_color(c_white);
-        draw_set_font(-1);
         draw_set_halign(fa_center);
         draw_text(details_width / 2, 15, monster_data.name + " 詳細信息");
         draw_line(10, 35, details_width - 10, 35);

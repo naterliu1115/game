@@ -1,4 +1,5 @@
 // obj_monster_manager_ui 的 Draw_64.gml
+
 if (!active) return;
 
 // 更新開啟動畫
@@ -51,7 +52,6 @@ if (!surface_exists(ui_surface) || surface_needs_update) {
     
     // 標題文字
     draw_set_color(c_white);
-    draw_set_font(-1);
     draw_set_halign(fa_center);
     draw_text(ui_width / 2, 20, "怪物管理");
     draw_set_halign(fa_left);
