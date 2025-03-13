@@ -1,11 +1,7 @@
 // obj_game_controller - Game End 事件
-// 手動清理 UI 管理器
-if (instance_exists(obj_ui_manager)) {
-    with (obj_ui_manager) {
-        cleanup();
-        instance_destroy();
-    }
+// 僅處理全局資源，不干預物件自己的清理
+if (variable_global_exists("resource_map") && ds_exists(global.resource_map, ds_type_map)) {
+    ds_map_destroy(global.resource_map);
 }
 
-// 清理其他全局資源
-// ...
+// 其他必要的全局資源清理...
