@@ -29,30 +29,30 @@ draw_surface(ui_surface, 0, ui_y);
 
 // 在準備階段顯示明顯的提示
 if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
-    // 檢查其他UI是否活躍
-    var other_ui_active = false;
+    // 檢查是否在召喚UI或其他UI開啟的情況下也需要顯示遮罩
+    var should_show_preparing_overlay = true;
     
+    // 僅當其他特定UI處於活躍狀態時不顯示遮罩
     if (instance_exists(obj_ui_manager)) {
-        // 使用UI管理器檢查是否有其他活躍UI
-        with (obj_ui_manager) {
-            var main_active = active_ui[? "main"];
-            if (main_active != noone && main_active != other.id) {
-                other_ui_active = true;
-            }
-            
-            var overlay_active = active_ui[? "overlay"];
-            if (overlay_active != noone) {
-                other_ui_active = true;
-            }
+        var summon_ui_active = false;
+        var monster_ui_active = false;
+        
+        // 檢查召喚UI是否活躍
+        if (instance_exists(obj_summon_ui) && obj_summon_ui.active && obj_summon_ui.visible) {
+            summon_ui_active = true;
         }
-    } else {
-        // 兼容舊代碼，直接檢查其他UI
-        if (instance_exists(obj_summon_ui) && obj_summon_ui.active) other_ui_active = true;
-        if (instance_exists(obj_monster_manager_ui) && obj_monster_manager_ui.active) other_ui_active = true;
+        
+        // 檢查怪物管理UI是否活躍
+        if (instance_exists(obj_monster_manager_ui) && obj_monster_manager_ui.active && obj_monster_manager_ui.visible) {
+            monster_ui_active = true;
+        }
+        
+        // 只有當這些UI真正活躍且可見時才隱藏遮罩
+        should_show_preparing_overlay = !(summon_ui_active || monster_ui_active);
     }
     
-    // 只有在其他UI不活躍時才顯示準備階段演出
-    if (!other_ui_active) {
+    // 只有在沒有其他UI時才顯示準備階段遮罩和倒計時
+    if (should_show_preparing_overlay) {
         // 繪製半透明遮罩
         draw_set_alpha(0.7);
         draw_rectangle_color(0, 0, display_get_gui_width(), display_get_gui_height(),
@@ -87,6 +87,8 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         draw_set_valign(fa_top);
     }
 }
+
+
 // 繪製玩家單位信息
 if (instance_exists(obj_battle_manager)) {
     var player_units = obj_battle_manager.player_units;

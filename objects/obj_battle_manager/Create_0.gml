@@ -22,6 +22,14 @@ max_player_units = 2;              // 初始最大召唤数量
 global_summon_cooldown = 0;        // 全局召唤冷却
 max_global_cooldown = 15 * game_get_speed(gamespeed_fps); // 15秒冷却
 
+// 為Step事件中使用的變數提前宣告
+// 避免警告
+active = false;
+from_preparing_phase = false;
+target_enemy = noone;
+ui_surface = -1;
+ui_details_surface = -1;
+
 // 初始化方法
 initialize_battle = function() {
     // 清空单位列表
@@ -183,5 +191,53 @@ enforce_battle_boundary = function() {
         }
     }
 };
+
+// 關閉所有活躍的UI函數 - 提前宣告在Create事件
+close_all_active_uis = function() {
+    // 確保UI管理器存在
+    if (instance_exists(obj_ui_manager)) {
+        // 關閉主層UI
+        if (ds_map_exists(obj_ui_manager.active_ui, "main")) {
+            var main_ui = obj_ui_manager.active_ui[? "main"];
+            if (instance_exists(main_ui)) {
+                obj_ui_manager.hide_ui(main_ui);
+            }
+        }
+        
+        // 關閉浮層UI
+        if (ds_map_exists(obj_ui_manager.active_ui, "overlay")) {
+            var overlay_ui = obj_ui_manager.active_ui[? "overlay"];
+            if (instance_exists(overlay_ui)) {
+                obj_ui_manager.hide_ui(overlay_ui);
+            }
+        }
+        
+        // 或者使用層級關閉函數
+        obj_ui_manager.hide_layer("main");
+        obj_ui_manager.hide_layer("overlay");
+        
+        show_debug_message("已在戰鬥階段切換時關閉所有UI");
+    } else {
+        // 直接通過實例關閉
+        if (instance_exists(obj_summon_ui)) {
+            with (obj_summon_ui) {
+                hide();
+            }
+        }
+        
+        if (instance_exists(obj_monster_manager_ui)) {
+            with (obj_monster_manager_ui) {
+                hide();
+            }
+        }
+        
+        if (instance_exists(obj_capture_ui)) {
+            with (obj_capture_ui) {
+                hide();
+            }
+        }
+    }
+};
+
 // 在第一次创建时初始化
 initialize_battle();

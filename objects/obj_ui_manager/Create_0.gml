@@ -35,7 +35,7 @@ register_ui = function(ui_inst, layer_name) {
     }
 }
 
-// 顯示指定UI，確保層級內互斥 - 修正參數類型問題
+// 顯示指定UI，確保層級內互斥並設定正確深度 - 修正參數類型問題
 show_ui = function(layer_name, ui_inst) {
     if (!ds_map_exists(ui_layers, layer_name)) {
         show_debug_message("顯示UI失敗: 找不到層級 " + layer_name);
@@ -83,8 +83,15 @@ show_ui = function(layer_name, ui_inst) {
         // 記錄當前活躍UI
         active_ui[? layer_name] = ui_inst;
         
-        // 設置正確的深度
+        // 確保UI有正確的深度 - 數字越小層級越高（越上層）
         var depth_value = layer_depths[? layer_name];
+        
+        // 為召喚UI和怪物管理UI設置更高的優先級
+        if (ui_inst.object_index == obj_summon_ui || ui_inst.object_index == obj_monster_manager_ui) {
+            // 確保這些UI在戰鬥準備階段時顯示在上層
+            depth_value -= 10; // 讓它們比一般的UI層級更上一層
+        }
+        
         ui_inst.depth = depth_value;
         
         // 調用UI的show方法
@@ -99,7 +106,7 @@ show_ui = function(layer_name, ui_inst) {
             }
         }
         
-        show_debug_message("顯示UI: " + object_get_name(ui_inst.object_index) + " 在 " + layer_name + " 層");
+        show_debug_message("顯示UI: " + object_get_name(ui_inst.object_index) + " 在 " + layer_name + " 層, 深度: " + string(depth_value));
         return true;
     }
     

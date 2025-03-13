@@ -1,4 +1,4 @@
-// **战斗管理器的 Step 事件**
+// **戰鬥管理器的 Step 事件**
 // 更新全局召唤冷却
 if (global_summon_cooldown > 0) {
     global_summon_cooldown--;
@@ -36,6 +36,9 @@ switch (battle_state) {
         
         // 检查是否已经召唤了单位或者时间超过限制
         if (ds_list_size(player_units) > 0 || battle_timer > game_get_speed(gamespeed_fps) * 10) {
+            // 關閉所有可能開啟的UI
+            close_all_active_uis();
+            
             // 如果10秒内没有召唤单位，自动召唤一个
             if (ds_list_size(player_units) == 0) {
                 var init_summon_x = battle_center_x - 100;
