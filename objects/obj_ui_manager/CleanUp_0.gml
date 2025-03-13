@@ -1,5 +1,5 @@
-// obj_ui_manager - Cleanup_0.gml
-// 安全地釋放資源
+// obj_ui_manager - CleanUp_0.gml
+// 直接在CleanUp事件中實現資源釋放，不調用額外的函數
 try {
     // 釋放UI層級列表
     if (variable_instance_exists(id, "ui_layers") && ds_exists(ui_layers, ds_type_map)) {
