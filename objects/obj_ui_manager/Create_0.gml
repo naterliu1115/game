@@ -35,6 +35,34 @@ register_ui = function(ui_inst, layer_name) {
     }
 }
 
+// UI 狀態通知系統
+function notify_ui_state_change(ui_object, is_visible) {
+    // 記錄 UI 狀態（可選）
+    var ui_id = object_get_name(ui_object.object_index);
+    show_debug_message("UI 狀態變更通知: " + ui_id + " 可見性: " + string(is_visible));
+    
+    // 通知戰鬥遮罩（如果存在）
+    if (instance_exists(obj_battle_overlay)) {
+        with (obj_battle_overlay) {
+            // 更新遮罩顯示邏輯
+            should_check_visibility = true; // 標記需要在 Draw 事件中檢查可見性
+            
+            // 只有在準備階段才需要處理
+            if (instance_exists(obj_battle_manager) && 
+                obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
+                
+                // 您可以選擇立即更新一些狀態，或讓 Draw 事件處理
+                // 例如：記錄哪些 UI 當前可見
+                if (ui_object.object_index == obj_summon_ui) {
+                    summon_ui_visible = is_visible;
+                } else if (ui_object.object_index == obj_monster_manager_ui) {
+                    monster_ui_visible = is_visible;
+                }
+            }
+        }
+    }
+}
+
 // 顯示指定UI，確保層級內互斥並設定正確深度 - 修正參數類型問題
 show_ui = function(layer_name, ui_inst) {
     if (!ds_map_exists(ui_layers, layer_name)) {

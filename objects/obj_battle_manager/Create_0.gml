@@ -84,9 +84,39 @@ start_battle = function(initial_enemy) {
     // 设置全局战斗标志
     global.in_battle = true;
     
-    // 显示战斗UI
+    // 显示战斗UI - 確保UI被創建且正確初始化
     if (!instance_exists(obj_battle_ui)) {
-        instance_create_layer(0, 0, "Instances", obj_battle_ui);
+        var ui_inst = instance_create_layer(0, 0, "Instances", obj_battle_ui);
+        with (ui_inst) {
+            show();  // 確保調用show方法
+            active = true;
+            visible = true;
+            depth = -100;  // 確保正確的深度
+        }
+        show_debug_message("創建戰鬥UI，深度設為: " + string(ui_inst.depth));
+    } else {
+        with (obj_battle_ui) {
+            show();
+            active = true;
+            visible = true;
+        }
+        show_debug_message("已存在戰鬥UI，設為活躍和可見");
+    }
+    
+    // 创建准备阶段遮罩
+    if (!instance_exists(obj_battle_overlay)) {
+        var overlay_inst = instance_create_layer(0, 0, "Instances", obj_battle_overlay);
+        with (overlay_inst) {
+            depth = -1000;  // 确保在最上层
+            visible = true;
+        }
+        show_debug_message("創建戰鬥準備階段遮罩，深度設為: " + string(overlay_inst.depth));
+    } else {
+        with (obj_battle_overlay) {
+            visible = true;
+            depth = -1000;  // 再次確保深度正確
+        }
+        show_debug_message("已存在戰鬥準備階段遮罩，設為可見");
     }
     
     show_debug_message("战斗开始准备! 敌人数量: " + string(ds_list_size(enemy_units)));

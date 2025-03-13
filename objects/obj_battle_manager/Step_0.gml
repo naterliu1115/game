@@ -18,11 +18,12 @@ switch (battle_state) {
         } else {
             // 过渡完成，进入准备阶段
             battle_state = BATTLE_STATE.PREPARING;
-            show_debug_message("战斗准备阶段开始!");
+            show_debug_message("战斗准备阶段开始!" + string(battle_state));
             
             // 在UI中显示提示
             if (instance_exists(obj_battle_ui)) {
                 obj_battle_ui.battle_info = "请召唤单位参战! (按空格键)";
+				obj_battle_ui.surface_needs_update = true; // 確保UI更新
             }
         }
         

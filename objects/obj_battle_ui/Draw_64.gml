@@ -27,67 +27,6 @@ if (!surface_exists(ui_surface) || surface_needs_update) {
 // 繪製基本UI表面
 draw_surface(ui_surface, 0, ui_y);
 
-// 在準備階段顯示明顯的提示
-if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
-    // 檢查是否在召喚UI或其他UI開啟的情況下也需要顯示遮罩
-    var should_show_preparing_overlay = true;
-    
-    // 僅當其他特定UI處於活躍狀態時不顯示遮罩
-    if (instance_exists(obj_ui_manager)) {
-        var summon_ui_active = false;
-        var monster_ui_active = false;
-        
-        // 檢查召喚UI是否活躍
-        if (instance_exists(obj_summon_ui) && obj_summon_ui.active && obj_summon_ui.visible) {
-            summon_ui_active = true;
-        }
-        
-        // 檢查怪物管理UI是否活躍
-        if (instance_exists(obj_monster_manager_ui) && obj_monster_manager_ui.active && obj_monster_manager_ui.visible) {
-            monster_ui_active = true;
-        }
-        
-        // 只有當這些UI真正活躍且可見時才隱藏遮罩
-        should_show_preparing_overlay = !(summon_ui_active || monster_ui_active);
-    }
-    
-    // 只有在沒有其他UI時才顯示準備階段遮罩和倒計時
-    if (should_show_preparing_overlay) {
-        // 繪製半透明遮罩
-        draw_set_alpha(0.7);
-        draw_rectangle_color(0, 0, display_get_gui_width(), display_get_gui_height(),
-                             c_black, c_black, c_black, c_black, false);
-        draw_set_alpha(1.0);
-        
-        draw_set_color(c_yellow);
-        draw_set_halign(fa_center);
-        draw_set_valign(fa_middle);
-        
-        // 使用脈動效果
-        var pulse = 0.2 * sin(current_time / 250) + 1;
-        
-        // 使用較大字體繪製準備階段提示
-        draw_text_transformed(display_get_gui_width() / 2, display_get_gui_height() / 2 - 50, 
-                     "準備階段", 2 * pulse, 2 * pulse, 0);
-        draw_text_transformed(display_get_gui_width() / 2, display_get_gui_height() / 2, 
-                     "按空格鍵召喚單位!", 1.5, 1.5, 0);
-                     
-        // 顯示倒計時
-        var time_left = 10 - floor(obj_battle_manager.battle_timer / game_get_speed(gamespeed_fps));
-        if (time_left > 0) {
-            draw_text_transformed(display_get_gui_width() / 2, display_get_gui_height() / 2 + 50, 
-                         "倒計時: " + string(time_left) + "秒", 1.5, 1.5, 0);
-        } else {
-            draw_text_transformed(display_get_gui_width() / 2, display_get_gui_height() / 2 + 50, 
-                         "即將自動召喚...", 1.5, 1.5, 0);
-        }
-        
-        // 重置文本對齊
-        draw_set_halign(fa_left);
-        draw_set_valign(fa_top);
-    }
-}
-
 
 // 繪製玩家單位信息
 if (instance_exists(obj_battle_manager)) {
@@ -261,6 +200,7 @@ if (instance_exists(obj_battle_manager)) {
 draw_text(10, ui_y + 5, battle_status);
 
 // 如果處於結果狀態，顯示戰鬥結果
+
 if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.RESULT) {
     draw_set_alpha(0.8);
     draw_rectangle_color(0, 0, display_get_gui_width(), display_get_gui_height(),

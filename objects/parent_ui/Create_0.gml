@@ -29,6 +29,7 @@ show = function() {
     active = true;
     surface_needs_update = true;
     // 子類應覆蓋此方法
+	
 };
 
 hide = function() {
