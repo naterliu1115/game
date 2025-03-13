@@ -289,7 +289,14 @@ toggle_monster_manager_ui = function() {
 
 toggle_capture_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
-    
+     // 不允許在準備階段開啟捕獲UI
+    if (instance_exists(obj_battle_manager) && 
+        obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
+        if (instance_exists(obj_battle_ui)) {
+            obj_battle_ui.show_info("無法在戰鬥準備階段捕獲敵人！");
+        }
+        return;
+    }
     // 設定捕獲目標
     var target = noone;
     
