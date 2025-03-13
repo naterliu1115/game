@@ -132,10 +132,7 @@ if (list_count > 0) {
         var selected_data = monster_list[| selected_monster];
         
         // 底部資訊欄
-        draw_set_color(c_white);
-        
-        // 技能列表標題
-        draw_text(ui_x + 20, ui_y + ui_height - 65, "可用技能:");
+        draw_text_safe(ui_x + 20, ui_y + ui_height - 65, "可用技能:", c_white);
         
         // 技能列表
         if (variable_struct_exists(selected_data, "abilities") && is_array(selected_data.abilities)) {
@@ -147,9 +144,9 @@ if (list_count > 0) {
                 abilities_text += abilities[j];
             }
             
-            draw_text(ui_x + 100, ui_y + ui_height - 65, abilities_text);
+            draw_text_safe(ui_x + 100, ui_y + ui_height - 65, abilities_text, c_white);
         } else {
-            draw_text(ui_x + 100, ui_y + ui_height - 65, "無特殊技能");
+            draw_text_safe(ui_x + 100, ui_y + ui_height - 65, "無特殊技能", c_white);
         }
     }
     
@@ -165,13 +162,13 @@ if (list_count > 0) {
     );
     
     // 按鈕文字
-    draw_set_color(c_white);
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_text(
+    draw_text_safe(
         summon_btn_x + summon_btn_width / 2,
         summon_btn_y + summon_btn_height / 2,
-        "召喚"
+        "召喚",
+        c_white,
+        TEXT_ALIGN_CENTER,
+        TEXT_VALIGN_MIDDLE
     );
     
     // 繪製取消按鈕
@@ -183,11 +180,13 @@ if (list_count > 0) {
     );
     
     // 按鈕文字
-    draw_set_color(c_white);
-    draw_text(
+    draw_text_safe(
         cancel_btn_x + cancel_btn_width / 2,
         cancel_btn_y + cancel_btn_height / 2,
-        "取消"
+        "取消",
+        c_white,
+        TEXT_ALIGN_CENTER,
+        TEXT_VALIGN_MIDDLE
     );
     
     // 重置文本對齊
@@ -195,14 +194,14 @@ if (list_count > 0) {
     draw_set_valign(fa_top);
 } else {
     // 無可用怪物時顯示提示
-    draw_set_color(c_white);
-    draw_set_halign(fa_center);
-    draw_text(
+    draw_text_safe(
         ui_x + ui_width / 2,
         ui_y + ui_height / 2,
-        "沒有可用的怪物！"
+        "沒有可用的怪物！",
+        c_white,
+        TEXT_ALIGN_CENTER,
+        TEXT_VALIGN_MIDDLE
     );
-    draw_set_halign(fa_left);
     
     // 只繪製取消按鈕
     draw_set_color(c_maroon);
@@ -212,16 +211,14 @@ if (list_count > 0) {
         false
     );
     
-    draw_set_color(c_white);
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_text(
+    draw_text_safe(
         ui_x + ui_width / 2,
         ui_y + ui_height - 40,
-        "關閉"
+        "關閉",
+        c_white,
+        TEXT_ALIGN_CENTER,
+        TEXT_VALIGN_MIDDLE
     );
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
 }
 
 // 重置繪圖顏色和混合模式

@@ -322,3 +322,6 @@ draw_progress_bar = function(x, y, width, height, value, max_value, colors, is_v
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
 };
+
+// obj_capture_ui/Create_0.gml
+show_debug_message("捕获UI创建完成");

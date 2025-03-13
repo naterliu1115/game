@@ -1,7 +1,22 @@
 // obj_capture_ui 的 Draw_64.gml (針對性修正版)
 
+// 調試輸出
+show_debug_message("捕獲UI Draw_64 事件開始");
+show_debug_message("active: " + string(active));
+show_debug_message("visible: " + string(visible));
+show_debug_message("ui_x: " + string(ui_x));
+show_debug_message("ui_y: " + string(ui_y));
+show_debug_message("ui_width: " + string(ui_width));
+show_debug_message("ui_height: " + string(ui_height));
+show_debug_message("target_enemy: " + string(target_enemy));
+show_debug_message("capture_state: " + string(capture_state));
+
 // 如果 UI 不活躍，不進行繪製
-if (!active) return;
+if (!active) {
+    show_debug_message("UI 未活躍，不繪製");
+    return;
+}
+
 show_debug_message("UI active: " + string(active) + ", visible: " + string(visible));
 
 // 計算 UI 中心座標和按鈕位置
@@ -132,7 +147,7 @@ switch (capture_state) {
         center_x - 100, center_y + 20,
         200, 20,
         capture_progress, 1,
-        [c_dkgray, c_yellow, c_white, c_white],
+        colors,
         false
         );
 
@@ -292,12 +307,9 @@ if (target_enemy != noone && instance_exists(target_enemy)) {
             draw_triangle(method_x - 20, option_y, method_x - 10, option_y - 5, method_x - 10, option_y + 5, false);
         }
         
-// 方法名稱
-// 将颜色常量转换为實數
-var text_color = is_selected ? real(c_yellow) : real(c_white);
-draw_text_safe(method_x, option_y, capture_method.name, text_color);
-
-
+        // 方法名稱
+        var text_color = is_selected ? real(c_yellow) : real(c_white);
+        draw_text_safe(method_x, option_y, capture_method.name, text_color);
         
         // 方法描述（簡短）
         draw_text_safe(method_x + 120, option_y, capture_method.description, c_silver);
@@ -307,24 +319,31 @@ draw_text_safe(method_x, option_y, capture_method.name, text_color);
             draw_text_safe(method_x + 300, option_y, "消耗: " + capture_method.cost.item + " x" + string(capture_method.cost.amount), c_orange);
         }
     }
-    
+
     // Debug 訊息
     if (variable_global_exists("game_debug_mode") && global.game_debug_mode) {
         show_debug_message("捕獲敵人: " + object_get_name(target_enemy.object_index));
     }
-} else if (capture_state == "ready") {
+}
+
+// 如果没有有效目标，且处于准备状态
+if ((target_enemy == noone || !instance_exists(target_enemy)) && (capture_state == "ready")) {
     // 如果沒有有效目標
     draw_text_safe(
         center_x,
         center_y,
         "沒有可捕獲的目標！",
-        c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE
+        c_white, 
+        TEXT_ALIGN_CENTER, 
+        TEXT_VALIGN_MIDDLE
     );
     
     // 關閉按鈕 - 使用修改後的函數名
     draw_ui_button(
-        center_x - 60, ui_y + ui_height - 60,
-        120, 40,
+        center_x - 60, 
+        ui_y + ui_height - 60,
+        120, 
+        40,
         "關閉"
     );
 }
@@ -334,3 +353,5 @@ draw_set_halign(0); // 0 = fa_left
 draw_set_valign(0); // 0 = fa_top
 draw_set_color(c_white);
 draw_set_alpha(1.0);
+
+show_debug_message("捕獲UI Draw_64 事件結束");
