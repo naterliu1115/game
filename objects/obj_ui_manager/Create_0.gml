@@ -168,27 +168,51 @@ hide_layer = function(layer_name) {
 }
 
 // 清理函數 - 在Room結束時調用
+persistent = true; // 使物件在房間更換時不會被銷毀
+// obj_ui_manager - Create_0.gml (修改 cleanup 函數)
 cleanup = function() {
-    var layers = ds_map_keys_to_array(ui_layers);
-    for (var i = 0; i < array_length(layers); i++) {
-        var layer_name = layers[i];
-        var ui_list = ui_layers[? layer_name];
-        if (ds_exists(ui_list, ds_type_list)) {
-            ds_list_destroy(ui_list);
+    // 先檢查映射表是否仍存在
+    if (!ds_exists(ui_layers, ds_type_map)) {
+        show_debug_message("UI 層級已經被釋放");
+        return;
+    }
+    
+    // 手動遍歷層級，避免使用 ds_map_keys_to_array
+    var layer_names = ["main", "overlay", "hud", "popup"]; // 硬編碼已知的層級名稱
+    
+    for (var i = 0; i < array_length(layer_names); i++) {
+        var layer_name = layer_names[i];
+        if (ds_map_exists(ui_layers, layer_name)) {
+            var ui_list = ui_layers[? layer_name];
+            if (ds_exists(ui_list, ds_type_list)) {
+                ds_list_destroy(ui_list);
+                show_debug_message("銷毀 UI 列表: " + layer_name);
+            }
         }
     }
     
+    // 釋放所有映射表
     if (ds_exists(ui_layers, ds_type_map)) {
         ds_map_destroy(ui_layers);
+        show_debug_message("銷毀 UI 層級映射表");
     }
     
     if (ds_exists(layer_depths, ds_type_map)) {
         ds_map_destroy(layer_depths);
+        show_debug_message("銷毀層級深度映射表");
     }
     
     if (ds_exists(active_ui, ds_type_map)) {
         ds_map_destroy(active_ui);
+        show_debug_message("銷毀活躍 UI 映射表");
     }
+    
+    if (ds_exists(ui_instances, ds_type_map)) {
+        ds_map_destroy(ui_instances);
+        show_debug_message("銷毀 UI 實例映射表");
+    }
+    
+    show_debug_message("UI 管理器清理完成");
 }
 
 // 初始註冊已知的UI物件 - 只有在實例存在時才註冊
@@ -196,3 +220,4 @@ if (instance_exists(obj_battle_ui)) register_ui(obj_battle_ui, "main");
 if (instance_exists(obj_summon_ui)) register_ui(obj_summon_ui, "main");
 if (instance_exists(obj_monster_manager_ui)) register_ui(obj_monster_manager_ui, "main");
 if (instance_exists(obj_capture_ui)) register_ui(obj_capture_ui, "overlay");
+
