@@ -133,8 +133,7 @@ if (!instance_exists(obj_battle_manager)) {
     instance_create_layer(0, 0, "Instances", obj_battle_manager);
 }
 
-// UI 控制函數
-// obj_game_controller - Create_0.gml (相關部分)
+
 // UI控制函數
 toggle_summon_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
@@ -178,16 +177,22 @@ toggle_summon_ui = function() {
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
     
+    // 獲取或創建召喚UI實例
+    var summon_ui_inst;
+    if (instance_exists(obj_summon_ui)) {
+        summon_ui_inst = instance_find(obj_summon_ui, 0);
+    } else {
+        summon_ui_inst = instance_create_layer(0, 0, "Instances", obj_summon_ui);
+    }
+    
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
-        show_ui("main", obj_summon_ui);
+        show_ui("main", summon_ui_inst); // 現在傳遞的是實例
     }
     
     // 標記從準備階段打開
-    if (instance_exists(obj_summon_ui)) {
-        with (obj_summon_ui) {
-            from_preparing_phase = true;
-        }
+    with (summon_ui_inst) {
+        from_preparing_phase = true;
     }
     
     ui_cooldown = 5;
@@ -201,9 +206,17 @@ toggle_monster_manager_ui = function() {
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
     
+    // 獲取或創建怪物管理UI實例
+    var monster_ui_inst;
+    if (instance_exists(obj_monster_manager_ui)) {
+        monster_ui_inst = instance_find(obj_monster_manager_ui, 0);
+    } else {
+        monster_ui_inst = instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
+    }
+    
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
-        show_ui("main", obj_monster_manager_ui);
+        show_ui("main", monster_ui_inst); // 現在傳遞的是實例
     }
     
     ui_cooldown = 5;
