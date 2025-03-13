@@ -134,6 +134,8 @@ if (!instance_exists(obj_battle_manager)) {
 }
 
 // UI 控制函數
+// obj_game_controller - Create_0.gml (相關部分)
+// UI控制函數
 toggle_summon_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
     
@@ -142,12 +144,10 @@ toggle_summon_ui = function() {
     if (instance_exists(obj_battle_manager)) {
         in_preparing_phase = (obj_battle_manager.battle_state == BATTLE_STATE.PREPARING);
         
-        // 如果不在準備階段，顯示提示並返回
         if (!in_preparing_phase) {
             if (instance_exists(obj_battle_ui)) {
                 obj_battle_ui.show_info("只能在戰鬥準備階段召喚怪物！");
             }
-            show_debug_message("嘗試在非準備階段打開召喚UI");
             return;
         }
     } else {
@@ -173,32 +173,106 @@ toggle_summon_ui = function() {
         return;
     }
     
-    show_debug_message("打開召喚UI - 在準備階段");
-    
-    // 確保召喚UI存在
-    if (!instance_exists(obj_summon_ui)) {
-        instance_create_layer(0, 0, "Instances", obj_summon_ui);
+    // 確保UI管理器存在
+    if (!instance_exists(obj_ui_manager)) {
+        instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
     
     // 使用UI管理器顯示UI
-    if (instance_exists(obj_ui_manager)) {
-        with (obj_ui_manager) {
-            show_ui("main", obj_summon_ui);
-        }
-        
-        // 標記召喚UI是從準備階段打開的
+    with (obj_ui_manager) {
+        show_ui("main", obj_summon_ui);
+    }
+    
+    // 標記從準備階段打開
+    if (instance_exists(obj_summon_ui)) {
         with (obj_summon_ui) {
             from_preparing_phase = true;
-        }
-    } else {
-        // 備用方法，直接操作UI
-        with (obj_summon_ui) {
-            from_preparing_phase = true;
-            show();
         }
     }
     
     ui_cooldown = 5;
+}
+
+toggle_monster_manager_ui = function() {
+    if (!ui_enabled || ui_cooldown > 0) return;
+    
+    // 確保UI管理器存在
+    if (!instance_exists(obj_ui_manager)) {
+        instance_create_layer(0, 0, "Instances", obj_ui_manager);
+    }
+    
+    // 使用UI管理器顯示UI
+    with (obj_ui_manager) {
+        show_ui("main", obj_monster_manager_ui);
+    }
+    
+    ui_cooldown = 5;
+}
+
+toggle_capture_ui = function() {
+    if (!ui_enabled || ui_cooldown > 0) return;
+    
+    // 設定捕獲目標
+    var target = noone;
+    
+    // 尋找一個活著的敵人實例
+    if (instance_exists(obj_battle_manager) && ds_exists(obj_battle_manager.enemy_units, ds_type_list)) {
+        if (ds_list_size(obj_battle_manager.enemy_units) > 0) {
+            var enemy_obj = obj_battle_manager.enemy_units[| 0];
+            if (instance_exists(enemy_obj)) {
+                target = enemy_obj;
+            }
+        }
+    }
+    
+    if (target != noone) {
+        // 確保UI管理器存在
+        if (!instance_exists(obj_ui_manager)) {
+            instance_create_layer(0, 0, "Instances", obj_ui_manager);
+        }
+        
+        // 先顯示UI
+        with (obj_ui_manager) {
+            show_ui("overlay", obj_capture_ui);
+        }
+        
+        // 設置捕獲目標
+        if (instance_exists(obj_capture_ui)) {
+            with (obj_capture_ui) {
+                target_enemy = target;
+                capture_state = "ready";
+                open_animation = 0;
+                
+                // 初始化捕獲方法
+                capture_methods = [];
+                
+                var method1 = {
+                    name: "普通捕獲",
+                    description: "用普通球捕獲怪物",
+                    cost: { item: "普通球", amount: 1 },
+                    bonus: 0
+                };
+                
+                var method2 = {
+                    name: "高級捕獲",
+                    description: "用高級球捕獲怪物",
+                    cost: { item: "高級球", amount: 1 },
+                    bonus: 0.2
+                };
+                
+                array_push(capture_methods, method1, method2);
+                selected_method = 0;
+                calculate_capture_chance();
+                surface_needs_update = true;
+            }
+        }
+        
+        ui_cooldown = 5;
+    } else {
+        if (instance_exists(obj_battle_ui)) {
+            obj_battle_ui.show_info("沒有可捕獲的敵人！");
+        }
+    }
 }
 
 toggle_capture_ui = function() {

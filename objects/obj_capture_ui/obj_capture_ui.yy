@@ -14,7 +14,10 @@
     "name":"Capture",
     "path":"folders/物体/Capture.yy",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"parent_ui",
+    "path":"objects/parent_ui/parent_ui.yy",
+  },
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,

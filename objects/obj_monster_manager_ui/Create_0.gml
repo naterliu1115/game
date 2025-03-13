@@ -1,4 +1,5 @@
 // obj_monster_manager_ui - Create_0.gml
+event_inherited();
 // 基本設置
 visible = false; // 初始不可見
 active = false;  // 初始非活動狀態

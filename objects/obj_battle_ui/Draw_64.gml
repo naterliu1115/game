@@ -33,33 +33,22 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
     var other_ui_active = false;
     
     if (instance_exists(obj_ui_manager)) {
-        var main_active = obj_ui_manager.active_ui[? "main"];
-        var overlay_active = obj_ui_manager.active_ui[? "overlay"];
-        
-        // 如果有其他主要UI或覆蓋層UI活躍
-        if ((main_active != noone && main_active != obj_battle_ui) || 
-            (overlay_active != noone)) {
-            other_ui_active = true;
+        // 使用UI管理器檢查是否有其他活躍UI
+        with (obj_ui_manager) {
+            var main_active = active_ui[? "main"];
+            if (main_active != noone && main_active != other.id) {
+                other_ui_active = true;
+            }
+            
+            var overlay_active = active_ui[? "overlay"];
+            if (overlay_active != noone) {
+                other_ui_active = true;
+            }
         }
     } else {
-        // 向下兼容原來的檢查方式
-        var summon_ui_active = false;
-        if (instance_exists(obj_summon_ui)) {
-            with (obj_summon_ui) {
-                summon_ui_active = active;
-            }
-        }
-        
-        var monster_ui_active = false;
-        if (instance_exists(obj_monster_manager_ui)) { 
-            with (obj_monster_manager_ui) {
-                monster_ui_active = active;
-            }
-        }
-        
-        if (summon_ui_active || monster_ui_active) {
-            other_ui_active = true;
-        }
+        // 兼容舊代碼，直接檢查其他UI
+        if (instance_exists(obj_summon_ui) && obj_summon_ui.active) other_ui_active = true;
+        if (instance_exists(obj_monster_manager_ui) && obj_monster_manager_ui.active) other_ui_active = true;
     }
     
     // 只有在其他UI不活躍時才顯示準備階段演出

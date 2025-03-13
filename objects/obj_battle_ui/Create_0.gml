@@ -1,4 +1,6 @@
 // obj_battle_ui - Create_0.gml
+event_inherited();
+
 show = function() {
     visible = true;
     active = true;

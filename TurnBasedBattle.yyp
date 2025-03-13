@@ -61,6 +61,7 @@
     {"id":{"name":"obj_test_summon","path":"objects/obj_test_summon/obj_test_summon.yy",},},
     {"id":{"name":"obj_ui_manager","path":"objects/obj_ui_manager/obj_ui_manager.yy",},},
     {"id":{"name":"obj_wall","path":"objects/obj_wall/obj_wall.yy",},},
+    {"id":{"name":"parent_ui","path":"objects/parent_ui/parent_ui.yy",},},
     {"id":{"name":"Player_2","path":"objects/Player_2/Player_2.yy",},},
     {"id":{"name":"Player","path":"objects/Player/Player.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},

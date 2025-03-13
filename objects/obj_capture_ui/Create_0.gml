@@ -1,4 +1,6 @@
 // obj_capture_ui - Create_0.gml
+event_inherited();
+
 // 初始化 UI 基本變數
 ui_width = 0;
 ui_height = 0;
