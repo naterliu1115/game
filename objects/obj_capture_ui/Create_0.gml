@@ -2,10 +2,10 @@
 event_inherited();
 
 // 初始化 UI 基本變數
-ui_width = 0;
-ui_height = 0;
-ui_x = 0;
-ui_y = 0;
+ui_width = display_get_gui_width() * 0.7;
+ui_height = display_get_gui_height() * 0.5;
+ui_x = (display_get_gui_width() - ui_width) / 2;
+ui_y = (display_get_gui_height() - ui_height) / 2;
 ui_surface = -1; // 設為無效的表面 ID
 surface_needs_update = true;
 
@@ -15,11 +15,11 @@ visible = false;
 
 // 定義標準UI方法
 show = function() {
-    visible = true;
     active = true;
+    visible = true;
     depth = -150; // 確保UI在overlay層級
     
-    // 設定UI尺寸
+    // 重新計算UI尺寸（確保每次都使用最新的屏幕尺寸）
     ui_width = display_get_gui_width() * 0.7;
     ui_height = display_get_gui_height() * 0.5;
     
@@ -34,13 +34,18 @@ show = function() {
     // 標記需要更新
     surface_needs_update = true;
     
-    show_debug_message("捕獲UI已打開");
+    // 重新計算按鈕位置
+    capture_btn_x = ui_x + ui_width / 4 - capture_btn_width / 2;
+    capture_btn_y = ui_y + ui_height - 60;
+    cancel_btn_x = ui_x + ui_width * 3/4 - cancel_btn_width / 2;
+    cancel_btn_y = ui_y + ui_height - 60;
+    
+    show_debug_message("捕獲UI已打開，尺寸: " + string(ui_width) + "x" + string(ui_height) + " 位置: " + string(ui_x) + "," + string(ui_y));
 };
 
 hide = function() {
+    active = false; 
     visible = false;
-    active = false;
-    depth = 0;
     
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
@@ -48,14 +53,17 @@ hide = function() {
         ui_surface = -1;
     }
     
-    // 清除目標參考
-    target_enemy = noone;
+    // 保留target_enemy參考，但將狀態重置
+    // 這樣再次開啟時可以繼續顯示相同的敵人
+    capture_state = "ready";
+    capture_animation = 0;
     
-    show_debug_message("捕獲UI已關閉");
+    show_debug_message("捕獲UI已關閉，資源已釋放");
 };
 
+// 初始化捕獲相關變數
 target_enemy = noone;
-capture_state = "ready";
+capture_state = "ready"; // 使用字串而非數字，方便識別
 capture_animation = 0;
 capture_result = false;
 capture_chance = 0;
@@ -64,20 +72,20 @@ capture_chance = 0;
 open_animation = 0;
 open_speed = 0.1;
 
-// 捕獲方法 - 使用数组
+// 捕獲方法 - 使用陣列
 capture_methods = []; 
 selected_method = 0;
 
 // 按鈕位置和尺寸
 capture_btn_width = 120;
 capture_btn_height = 40;
-capture_btn_x = 0;
-capture_btn_y = 0;
+capture_btn_x = 0; // 會在show()中更新
+capture_btn_y = 0; // 會在show()中更新
 
 cancel_btn_width = 120;
 cancel_btn_height = 40;
-cancel_btn_x = 0;
-cancel_btn_y = 0;
+cancel_btn_x = 0; // 會在show()中更新
+cancel_btn_y = 0; // 會在show()中更新
 
 // 定義開啟捕獲 UI 的函數
 open_capture_ui = function(target) {
@@ -116,9 +124,10 @@ open_capture_ui = function(target) {
     target_enemy = target;
     capture_state = "ready";
     open_animation = 0;
+    capture_animation = 0;
 
     // 重新初始化捕獲方法
-    capture_methods = []; // 清空数组
+    capture_methods = []; // 清空陣列
 
     // 添加捕獲方法 (這裡可以根據玩家持有的球和敵人類型動態添加)
     var method1 = {
@@ -135,7 +144,7 @@ open_capture_ui = function(target) {
         bonus: 0.2
     };
 
-    // 使用array_push添加到数组
+    // 使用array_push添加到陣列
     array_push(capture_methods, method1, method2);
 
     // 初始選擇第一個方法
@@ -160,7 +169,7 @@ calculate_capture_chance = function() {
         // 捕獲方法的加成
         var method_bonus = 0;
         if (selected_method < array_length(capture_methods)) {
-            var capture_method = capture_methods[selected_method]; // 使用数组索引
+            var capture_method = capture_methods[selected_method]; // 使用陣列索引
             if (variable_struct_exists(capture_method, "bonus")) {
                 method_bonus = capture_method.bonus;
             }
@@ -173,12 +182,10 @@ calculate_capture_chance = function() {
         capture_chance = clamp(capture_chance, 0, 1);
         
         // Debug 輸出
-        if (variable_global_exists("game_debug_mode") && global.game_debug_mode) {
-            show_debug_message("捕獲率計算: 基礎=" + string(base_chance) + 
-                             ", HP影響=" + string(hp_factor * 0.4) + 
-                             ", 方法加成=" + string(method_bonus) + 
-                             ", 最終=" + string(capture_chance));
-        }
+        show_debug_message("捕獲率計算: 基礎=" + string(base_chance) + 
+                         ", HP影響=" + string(hp_factor * 0.4) + 
+                         ", 方法加成=" + string(method_bonus) + 
+                         ", 最終=" + string(capture_chance));
     } else {
         capture_chance = 0;
     }
@@ -187,19 +194,11 @@ calculate_capture_chance = function() {
 // 嘗試捕獲敵人
 attempt_capture = function() {
     if (target_enemy != noone && instance_exists(target_enemy)) {
-        // 扣除物品
+        // 扣除物品 (實際遊戲中需要實作)
         var can_capture = true;
-        if (selected_method < array_length(capture_methods)) {
-            var capture_method = capture_methods[selected_method]; // 使用数组索引
-            if (variable_struct_exists(capture_method, "cost")) {
-                // 這裡應該添加檢查玩家是否有足夠的物品
-                // 如: if (!player_has_item(capture_method.cost.item, capture_method.cost.amount)) can_capture = false;
-            }
-        }
         
         if (!can_capture) {
-            // 顯示缺少物品的提示
-            // show_message("缺少必要的捕獲道具!");
+            // 顯示缺少物品的提示 (實際遊戲中需要實作)
             return;
         }
         
@@ -211,9 +210,7 @@ attempt_capture = function() {
         capture_result = (random(1) <= capture_chance);
         
         // Debug 輸出
-        if (variable_global_exists("game_debug_mode") && global.game_debug_mode) {
-            show_debug_message("嘗試捕獲: 機率 = " + string(capture_chance) + ", 結果 = " + (capture_result ? "成功" : "失敗"));
-        }
+        show_debug_message("嘗試捕獲: 機率 = " + string(capture_chance) + ", 結果 = " + (capture_result ? "成功" : "失敗"));
     }
 };
 
@@ -223,12 +220,7 @@ finalize_capture = function() {
         // 捕獲成功的處理邏輯
         if (target_enemy != noone && instance_exists(target_enemy)) {
             // 在這裡添加怪物加入收藏的邏輯
-            if (variable_global_exists("game_debug_mode") && global.game_debug_mode) {
-                show_debug_message("成功捕獲: " + object_get_name(target_enemy.object_index));
-            }
-            
-            // 這裡應該添加怪物加入玩家收藏的代碼
-            // add_monster_to_collection(target_enemy);
+            show_debug_message("成功捕獲: " + object_get_name(target_enemy.object_index));
             
             // 刪除敵人
             with (target_enemy) {
@@ -251,77 +243,4 @@ finalize_capture = function() {
     hide();
 };
 
-// 添加UI繪製實用函數
-draw_ui_button = function(x, y, width, height, text) {
-    draw_set_color(c_dkgray);
-    draw_rectangle(x, y, x + width, y + height, false);
-    
-    draw_set_color(c_white);
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_text(x + width/2, y + height/2, text);
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
-};
-
-// 安全繪製文本函數
-draw_text_safe = function(x, y, text, color, halign = fa_left, valign = fa_top) {
-    var old_halign = draw_get_halign();
-    var old_valign = draw_get_valign();
-    var old_color = draw_get_color();
-    
-    draw_set_halign(halign);
-    draw_set_valign(valign);
-    draw_set_color(color);
-    
-    draw_text(x, y, text);
-    
-    draw_set_halign(old_halign);
-    draw_set_valign(old_valign);
-    draw_set_color(old_color);
-};
-
-// 繪製進度條函數
-draw_progress_bar = function(x, y, width, height, value, max_value, colors, is_vertical) {
-    // 確保顏色是陣列
-    if (!is_array(colors)) {
-        colors = [c_dkgray, c_lime, c_white, c_white];
-    }
-    
-    // 確保有足夠的顏色定義
-    while (array_length(colors) < 4) {
-        array_push(colors, c_white);
-    }
-    
-    // 計算進度百分比
-    var progress = clamp(value / max_value, 0, 1);
-    
-    // 繪製背景
-    draw_set_color(colors[0]); // 背景色
-    draw_rectangle(x, y, x + width, y + height, false);
-    
-    // 繪製填充部分
-    if (progress > 0) {
-        draw_set_color(colors[1]); // 填充色
-        if (is_vertical) {
-            draw_rectangle(x, y + height * (1 - progress), x + width, y + height, false);
-        } else {
-            draw_rectangle(x, y, x + width * progress, y + height, false);
-        }
-    }
-    
-    // 繪製邊框
-    draw_set_color(colors[2]); // 邊框色
-    draw_rectangle(x, y, x + width, y + height, true);
-    
-    // 繪製進度文字
-    draw_set_color(colors[3]); // 文字色
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_text(x + width/2, y + height/2, string(floor(progress * 100)) + "%");
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
-};
-
-// obj_capture_ui/Create_0.gml
-show_debug_message("捕获UI创建完成");
+show_debug_message("捕獲UI創建完成");

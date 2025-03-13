@@ -11,6 +11,10 @@ show_debug_message("ui_height: " + string(ui_height));
 show_debug_message("target_enemy: " + string(target_enemy));
 show_debug_message("capture_state: " + string(capture_state));
 
+// 明確設置字體 - 與obj_dialogue_box相同
+draw_set_font(fnt_dialogue);
+
+
 // 如果 UI 不活躍，不進行繪製
 if (!active) {
     show_debug_message("UI 未活躍，不繪製");

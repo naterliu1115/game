@@ -10,6 +10,13 @@ global.info_timer = 0;  // UI 信息顯示相關變數
 ui_x = 0;
 ui_y = 0;
 
+cancel_btn_x = 0;
+cancel_btn_y = 0;
+capture_animation = 0;
+capture_btn_x = 0;
+capture_btn_y = 0;
+ui_surface = -1;
+
 // 確保UI管理器存在
 if (!instance_exists(obj_ui_manager)) {
     instance_create_layer(0, 0, "Instances", obj_ui_manager);
@@ -31,6 +38,30 @@ selected_method = 0;
 target_enemy = noone;
 ui_width = 300; 
 ui_height = 200;
+
+// 初始化全局字體
+function init_fonts() {
+    // 檢查字體資源是否存在
+    if (font_exists(fnt_dialogue)) {
+        global.font_dialogue = fnt_dialogue;
+        show_debug_message("成功初始化對話字體: fnt_dialogue");
+    } else {
+        global.font_dialogue = -1; // 使用默認字體
+        show_debug_message("警告: 找不到對話字體資源 fnt_dialogue，使用默認字體");
+    }
+    
+    // 您可以在這裡添加更多字體
+    // global.font_title = fnt_title;
+    // global.font_button = fnt_button;
+    // 等等...
+    
+    // 設置默認字體
+    draw_set_font(global.font_dialogue);
+}
+
+// 調用字體初始化
+init_fonts();
+
 
 // 設置調試模式
 global.game_debug_mode = true; // 開發時為 true，發布時設為 false
@@ -287,9 +318,12 @@ toggle_monster_manager_ui = function() {
     ui_cooldown = 5;
 }
 
+// obj_game_controller.gml 中的 toggle_capture_ui 函數
+
 toggle_capture_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
-     // 不允許在準備階段開啟捕獲UI
+    
+    // 不允許在準備階段開啟捕獲UI
     if (instance_exists(obj_battle_manager) && 
         obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
         if (instance_exists(obj_battle_ui)) {
@@ -297,6 +331,16 @@ toggle_capture_ui = function() {
         }
         return;
     }
+    
+    // 檢查是否已經打開，如果是則關閉
+    if (instance_exists(obj_capture_ui) && obj_capture_ui.active) {
+        with (obj_capture_ui) {
+            hide();
+        }
+        ui_cooldown = 5;
+        return;
+    }
+    
     // 設定捕獲目標
     var target = noone;
     
@@ -320,48 +364,32 @@ toggle_capture_ui = function() {
         var capture_ui_inst;
         if (instance_exists(obj_capture_ui)) {
             capture_ui_inst = instance_find(obj_capture_ui, 0);
+            
+            // 確保ui_inst的所有狀態已重置
+            with (capture_ui_inst) {
+                // 重設重要變量，確保UI狀態回到初始狀態
+                active = false;
+                visible = false;
+                capture_state = "ready";
+                open_animation = 0;
+                capture_animation = 0;
+                surface_needs_update = true;
+            }
         } else {
             capture_ui_inst = instance_create_layer(0, 0, "Instances", obj_capture_ui);
         }
         
-        // 先顯示UI
-        with (obj_ui_manager) {
-            show_ui("overlay", capture_ui_inst);
-        }
-        
-        // 設置捕獲目標
+        // 通過UI實例直接呼叫open_capture_ui函數
         with (capture_ui_inst) {
-            target_enemy = target;
-            capture_state = "ready";
-            open_animation = 0;
-            
-            // 初始化捕獲方法
-            capture_methods = [];
-            
-            var method1 = {
-                name: "普通捕獲",
-                description: "用普通球捕獲怪物",
-                cost: { item: "普通球", amount: 1 },
-                bonus: 0
-            };
-            
-            var method2 = {
-                name: "高級捕獲",
-                description: "用高級球捕獲怪物",
-                cost: { item: "高級球", amount: 1 },
-                bonus: 0.2
-            };
-            
-            array_push(capture_methods, method1, method2);
-            selected_method = 0;
-            calculate_capture_chance();
-            surface_needs_update = true;
+            open_capture_ui(target);
         }
         
         ui_cooldown = 5;
+        show_debug_message("已開啟捕獲UI，目標: " + string(object_get_name(target.object_index)));
     } else {
         if (instance_exists(obj_battle_ui)) {
             obj_battle_ui.show_info("沒有可捕獲的敵人！");
         }
+        show_debug_message("無法開啟捕獲UI：找不到有效的敵人目標");
     }
 }
