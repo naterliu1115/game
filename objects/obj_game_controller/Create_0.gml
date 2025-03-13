@@ -198,6 +198,71 @@ toggle_summon_ui = function() {
     ui_cooldown = 5;
 }
 
+// obj_game_controller - Create_0.gml
+// UI控制函數
+toggle_summon_ui = function() {
+    if (!ui_enabled || ui_cooldown > 0) return;
+    
+    // 檢查是否在準備階段，如果不是則不打開UI
+    var in_preparing_phase = false;
+    if (instance_exists(obj_battle_manager)) {
+        in_preparing_phase = (obj_battle_manager.battle_state == BATTLE_STATE.PREPARING);
+        
+        if (!in_preparing_phase) {
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.show_info("只能在戰鬥準備階段召喚怪物！");
+            }
+            return;
+        }
+    } else {
+        show_debug_message("戰鬥管理器不存在，無法打開召喚UI");
+        return;
+    }
+    
+    // 檢查是否有可用怪物
+    var has_usable_monsters = false;
+    if (variable_global_exists("player_monsters")) {
+        for (var i = 0; i < array_length(global.player_monsters); i++) {
+            if (global.player_monsters[i].hp > 0) {
+                has_usable_monsters = true;
+                break;
+            }
+        }
+    }
+    
+    if (!has_usable_monsters) {
+        if (instance_exists(obj_battle_ui)) {
+            obj_battle_ui.show_info("沒有可用的怪物！");
+        }
+        return;
+    }
+    
+    // 確保UI管理器存在
+    if (!instance_exists(obj_ui_manager)) {
+        instance_create_layer(0, 0, "Instances", obj_ui_manager);
+    }
+    
+    // 獲取或創建召喚UI實例
+    var summon_ui_inst;
+    if (instance_exists(obj_summon_ui)) {
+        summon_ui_inst = instance_find(obj_summon_ui, 0);
+    } else {
+        summon_ui_inst = instance_create_layer(0, 0, "Instances", obj_summon_ui);
+    }
+    
+    // 使用UI管理器顯示UI
+    with (obj_ui_manager) {
+        show_ui("main", summon_ui_inst);
+    }
+    
+    // 標記從準備階段打開
+    with (summon_ui_inst) {
+        from_preparing_phase = true;
+    }
+    
+    ui_cooldown = 5;
+}
+
 toggle_monster_manager_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
     
@@ -216,7 +281,7 @@ toggle_monster_manager_ui = function() {
     
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
-        show_ui("main", monster_ui_inst); // 現在傳遞的是實例
+        show_ui("main", monster_ui_inst);
     }
     
     ui_cooldown = 5;
@@ -244,40 +309,46 @@ toggle_capture_ui = function() {
             instance_create_layer(0, 0, "Instances", obj_ui_manager);
         }
         
+        // 獲取或創建捕獲UI實例
+        var capture_ui_inst;
+        if (instance_exists(obj_capture_ui)) {
+            capture_ui_inst = instance_find(obj_capture_ui, 0);
+        } else {
+            capture_ui_inst = instance_create_layer(0, 0, "Instances", obj_capture_ui);
+        }
+        
         // 先顯示UI
         with (obj_ui_manager) {
-            show_ui("overlay", obj_capture_ui);
+            show_ui("overlay", capture_ui_inst);
         }
         
         // 設置捕獲目標
-        if (instance_exists(obj_capture_ui)) {
-            with (obj_capture_ui) {
-                target_enemy = target;
-                capture_state = "ready";
-                open_animation = 0;
-                
-                // 初始化捕獲方法
-                capture_methods = [];
-                
-                var method1 = {
-                    name: "普通捕獲",
-                    description: "用普通球捕獲怪物",
-                    cost: { item: "普通球", amount: 1 },
-                    bonus: 0
-                };
-                
-                var method2 = {
-                    name: "高級捕獲",
-                    description: "用高級球捕獲怪物",
-                    cost: { item: "高級球", amount: 1 },
-                    bonus: 0.2
-                };
-                
-                array_push(capture_methods, method1, method2);
-                selected_method = 0;
-                calculate_capture_chance();
-                surface_needs_update = true;
-            }
+        with (capture_ui_inst) {
+            target_enemy = target;
+            capture_state = "ready";
+            open_animation = 0;
+            
+            // 初始化捕獲方法
+            capture_methods = [];
+            
+            var method1 = {
+                name: "普通捕獲",
+                description: "用普通球捕獲怪物",
+                cost: { item: "普通球", amount: 1 },
+                bonus: 0
+            };
+            
+            var method2 = {
+                name: "高級捕獲",
+                description: "用高級球捕獲怪物",
+                cost: { item: "高級球", amount: 1 },
+                bonus: 0.2
+            };
+            
+            array_push(capture_methods, method1, method2);
+            selected_method = 0;
+            calculate_capture_chance();
+            surface_needs_update = true;
         }
         
         ui_cooldown = 5;
@@ -286,83 +357,4 @@ toggle_capture_ui = function() {
             obj_battle_ui.show_info("沒有可捕獲的敵人！");
         }
     }
-}
-
-toggle_capture_ui = function() {
-    if (!ui_enabled || ui_cooldown > 0) return;
-
-    show_debug_message("嘗試打開捕獲 UI");
-
-    // 確保 obj_capture_ui 存在並獲取其實例
-    var ui_instance = noone;
-    if (instance_exists(obj_capture_ui)) {
-        ui_instance = instance_find(obj_capture_ui, 0); // 獲取第一個實例
-    } else {
-        // 創建 UI 實例
-        ui_instance = instance_create_layer(0, 0, "Instances", obj_capture_ui);
-    }
-    
-    // 檢查實例是否存在並有必要的函數
-    if (ui_instance == noone || !variable_instance_exists(ui_instance, "open_capture_ui")) {
-        show_debug_message("錯誤：obj_capture_ui 尚未初始化 `open_capture_ui`！");
-        exit;
-    }
-
-    // 設定捕獲目標
-    var target = noone;
-    
-    // 尋找一個活著的敵人實例
-    if (instance_exists(obj_battle_manager) && ds_exists(obj_battle_manager.enemy_units, ds_type_list)) {
-        if (ds_list_size(obj_battle_manager.enemy_units) > 0) {
-            var enemy_obj = obj_battle_manager.enemy_units[| 0];
-            if (instance_exists(enemy_obj)) {
-                target = enemy_obj;
-            }
-        }
-    }
-
-    if (target != noone) {
-        with (ui_instance) {
-            open_capture_ui(target);
-        }
-        ui_cooldown = 5;
-    } else {
-        show_debug_message("沒有可捕獲的敵人！");
-        if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.show_info("沒有可捕獲的敵人！");
-        }
-    }
-};
-
-toggle_monster_manager_ui = function() {
-    if (!ui_enabled || ui_cooldown > 0) return;
-    
-    show_debug_message("嘗試打開怪物管理UI");
-    
-    // 確保怪物管理UI存在
-    if (!instance_exists(obj_monster_manager_ui)) {
-        instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
-    }
-    
-    // 使用UI管理器顯示UI
-    if (instance_exists(obj_ui_manager)) {
-        with (obj_ui_manager) {
-            show_ui("main", obj_monster_manager_ui);
-        }
-    } else {
-        // 備用方法，直接操作UI
-        with (obj_monster_manager_ui) {
-            // 直接修改尺寸值而不是替換函數
-            details_width = max(1, details_width);
-            details_height = max(1, details_height);
-            
-            // 標記為需要更新
-            if (variable_instance_exists(id, "details_needs_update")) {
-                details_needs_update = true;
-            }
-            show();
-        }
-    }
-    
-    ui_cooldown = 5;
 }
