@@ -19,6 +19,15 @@ battle_center_y = 0;        // 戰鬥中心Y座標
 battle_result_handled = false; // 確保戰鬥結果（勝利或失敗）只會執行一次
 boundary_alert_timer = 0;   // 邊界警告計時器
 
+info_alpha = 1.0;  // 或其他適當的初始值
+info_text = "";
+info_timer = 0;
+target = noone;
+reward_exp = 0;
+reward_gold = 0;
+reward_items_list = [];
+reward_visible = false;
+
 // 捕獲相關變量
 capture_animation = 0;
 capture_state = "ready";
@@ -880,7 +889,7 @@ handle_capture_result = function(success) {
     if (success) {
         // 捕捉成功
         show_debug_message("捕捉成功: " + object_get_name(target_enemy.object_index));
-        
+        var monster_name = object_get_name(target_enemy.object_index);
         // 將敵人添加到玩家的怪物集合中
         var monster_data = {
             type: target_enemy.object_index,
@@ -900,7 +909,6 @@ handle_capture_result = function(success) {
         
         // 顯示成功訊息
         if (instance_exists(obj_battle_ui)) {
-            var monster_name = object_get_name(target_enemy.object_index);
             obj_battle_ui.show_info(monster_name + " 被成功捕獲!");
         }
         
