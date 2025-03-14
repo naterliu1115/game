@@ -9,6 +9,13 @@ ui_y = (display_get_gui_height() - ui_height) / 2;
 ui_surface = -1; // 設為無效的表面 ID
 surface_needs_update = true;
 
+// 初始化捕獲相關變數
+target_enemy = noone;
+capture_state = "ready"; // 使用字串而非數字，方便識別
+capture_animation = 0;
+capture_result = false;
+capture_chance = 0;
+
 // 捕獲狀態變數
 active = false;
 visible = false;
@@ -61,12 +68,7 @@ hide = function() {
     show_debug_message("捕獲UI已關閉，資源已釋放");
 };
 
-// 初始化捕獲相關變數
-target_enemy = noone;
-capture_state = "ready"; // 使用字串而非數字，方便識別
-capture_animation = 0;
-capture_result = false;
-capture_chance = 0;
+
 
 // 動畫相關
 open_animation = 0;

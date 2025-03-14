@@ -8,8 +8,8 @@
   "name":"obj_npc_parent",
   "overriddenProperties":[],
   "parent":{
-    "name":"物体",
-    "path":"folders/物体.yy",
+    "name":"NPC",
+    "path":"folders/物体/NPC.yy",
   },
   "parentObjectId":null,
   "persistent":false,

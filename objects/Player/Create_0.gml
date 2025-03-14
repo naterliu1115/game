@@ -1,5 +1,8 @@
 debug_message_printed = false;
 global.player = id;
+if (!variable_global_exists("player_gold")) {
+    global.player_gold = 100; // 設定玩家初始金錢
+}
 
 // 精确移动所需的变量
 xprevious_precise = x;

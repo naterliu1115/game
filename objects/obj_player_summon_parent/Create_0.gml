@@ -9,6 +9,18 @@ return_after_battle = true;  // 战斗后是否返回玩家的"队伍"
 stamina = 100;               // 特殊耐力值，可用于延长战场时间
 preferred_distance = 100;    // 与目标的理想战斗距离
 
+experience = 0;
+experience_to_level_up = 100;
+
+function gain_exp(exp_amount) {
+    experience += exp_amount;
+    if (experience >= experience_to_level_up) {
+        level_up();
+    }
+}
+
+
+
 // 覆盖初始化函数
 initialize = function() {
     // 调用父类的初始化

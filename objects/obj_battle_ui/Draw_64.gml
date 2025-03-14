@@ -1,7 +1,6 @@
 // obj_battle_ui 的 Draw_64.gml
 
-// 明確設置字體 - 與obj_dialogue_box相同
-draw_set_font(fnt_dialogue);
+
 // 檢查是否需要更新表面
 if (!surface_exists(ui_surface) || surface_needs_update) {
     if (surface_exists(ui_surface)) {

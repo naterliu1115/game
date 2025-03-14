@@ -14,6 +14,12 @@ battle_timer = 0;           // 战斗持续时间计时器
 battle_boundary_radius = 0; // 战斗边界半径
 battle_center_x = 0;        // 战斗中心X坐标
 battle_center_y = 0;        // 战斗中心Y坐标
+battle_result_handled = false; // 確保戰鬥結果（勝利或失敗）只會執行一次
+
+
+capture_animation = 0;
+capture_state = "ready";
+
 
 // 战斗单位管理
 player_units = ds_list_create();   // 玩家方单位
@@ -268,6 +274,50 @@ close_all_active_uis = function() {
         }
     }
 };
+
+function grant_rewards() {
+    show_debug_message("發放戰鬥獎勵...");
+
+    var exp_reward = 0;
+    var gold_reward = 0;
+    var item_drops = [];
+
+    // 計算獎勵
+    with (obj_enemy_parent) {
+        exp_reward += enemy_exp;  // 假設敵人有 `enemy_exp`
+        gold_reward += enemy_gold; // 假設敵人有 `enemy_gold`
+        if (random(1) < 0.3) { // 30% 機率掉落道具
+            array_push(item_drops, enemy_drop_item);
+        }
+    }
+
+    // 分配經驗值
+    for (var i = 0; i < ds_list_size(player_units); i++) {
+        var unit = player_units[| i];
+        if (instance_exists(unit)) {
+            unit.gain_exp(exp_reward);
+            } else {
+        show_debug_message("unit 不是 obj_player_summon_parent，跳過經驗獎勵：" + string(unit));
+    }
+    }
+
+    // 增加金錢
+    global.player_gold += gold_reward;
+
+    // 掉落道具（假設有 `global.inventory` 存放物品）
+    for (var j = 0; j < array_length(item_drops); j++) {
+        array_push(global.inventory, item_drops[j]);
+    }
+
+    // 顯示戰利品 UI
+    if (instance_exists(obj_battle_ui)) {
+        obj_battle_ui.show_rewards(exp_reward, gold_reward, item_drops);
+    }
+
+    show_debug_message("獲得經驗值：" + string(exp_reward) + ", 金錢：" + string(gold_reward));
+}
+
+
 
 // 在第一次创建时初始化
 initialize_battle();

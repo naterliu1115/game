@@ -1,4 +1,8 @@
 // obj_game_controller - Create_0.gml
+
+show_debug_message("目前玩家金錢：" + string(global.player_gold));
+
+
 // UI控制變量
 ui_enabled = true;  // 控制UI是否可用
 ui_cooldown = 0;    // UI操作冷卻時間

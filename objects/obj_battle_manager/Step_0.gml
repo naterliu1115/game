@@ -92,14 +92,32 @@ switch (battle_state) {
         enforce_battle_boundary();
         break;
         
-    case BATTLE_STATE.RESULT:
-        // 显示战斗结果
-        // 用户确认后返回普通游戏状态
-        if (keyboard_check_pressed(vk_space)) {
-            end_battle();
+ case BATTLE_STATE.RESULT:
+    // 確保只有這個階段會處理結果
+    if (!battle_result_handled) {
+        battle_result_handled = true; // 防止重複執行
+
+        if (!instance_exists(obj_enemy_parent)) {
+            // 戰鬥勝利
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.result_text = "戰鬥勝利!";
+            }
+            grant_rewards(); // 呼叫發放獎勵的函數
+        } else if (ds_list_size(player_units) == 0) {
+            // 戰鬥失敗（修正條件，當場上**所有己方怪物死亡**才算失敗）
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.result_text = "戰鬥失敗!";
+            }
+            handle_defeat(); // 處理失敗懲罰
         }
-        // 结果阶段不需要边界检查
-        break;
+    }
+
+    // 玩家確認後，戰鬥正式結束
+    if (keyboard_check_pressed(vk_space)) {
+        end_battle();
+    }
+    break;
+
 }
 
 // 管理单位列表，移除不存在的单位

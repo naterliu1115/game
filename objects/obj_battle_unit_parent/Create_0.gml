@@ -287,5 +287,9 @@ die = function() {
     }
 }
 
+
+
+
+
 // 调用初始化
 initialize();
