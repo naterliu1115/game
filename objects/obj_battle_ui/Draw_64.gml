@@ -1,6 +1,5 @@
 // obj_battle_ui 的 Draw_64.gml
 
-
 // 檢查是否需要更新表面
 if (!surface_exists(ui_surface) || surface_needs_update) {
     if (surface_exists(ui_surface)) {
@@ -198,7 +197,6 @@ if (instance_exists(obj_battle_manager)) {
 draw_text(10, ui_y + 5, battle_status);
 
 // 如果處於結果狀態，顯示戰鬥結果
-
 if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.RESULT) {
     draw_set_alpha(0.8);
     draw_rectangle_color(0, 0, display_get_gui_width(), display_get_gui_height(),
@@ -242,22 +240,40 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         result_text = "戰鬥失敗!";
         draw_set_color(c_red);
     }
-	
-	// **新增這段，顯示獎勵視窗**
+    
+    // 顯示獎勵視窗
     if (reward_visible) {
         var reward_x = display_get_gui_width() / 2 - 300;
         var reward_y = display_get_gui_height() / 2;
 
-        draw_sprite(reward_panel, 0, reward_x, reward_y);
+        // 檢查精靈是否存在
+        if (sprite_exists(reward_panel)) {
+            draw_sprite(reward_panel, 0, reward_x, reward_y);
+        } else {
+            // 繪製備用框
+            draw_set_color(c_navy);
+            draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, false);
+            draw_set_color(c_aqua);
+            draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, true);
+        }
         
         draw_set_color(c_white);
         draw_text(reward_x + 50, reward_y + 50, "EXP: " + string(reward_exp));
         draw_text(reward_x + 50, reward_y + 80, "Gold: " + string(reward_gold));
 
-        // 畫道具 ICON（最多顯示 3 個）
-        for (var i = 0; i < min(array_length(reward_items), 3); i++) {
-            draw_sprite(gold, 0, reward_x + 50 + (i * 40), reward_y + 120);
+        // 畫道具圖示（最多顯示 3 個）
+        if (array_length(reward_items_list) > 0) {
+            for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
+                if (sprite_exists(gold)) {
+                    draw_sprite(gold, 0, reward_x + 50 + (i * 40), reward_y + 120);
+                } else {
+                    // 繪製備用圖示
+                    draw_set_color(c_yellow);
+                    draw_circle(reward_x + 50 + (i * 40), reward_y + 120, 15, false);
+                }
+            }
         }
+    }
     
     // 添加動畫效果
     var scale = 1.5 + sin(current_time / 200) * 0.2;

@@ -77,17 +77,19 @@ reward_exp = 0;
 reward_gold = 0;
 reward_items_list = [];
 reward_visible = false;
+reward_panel = -1; // 面板精靈
+gold = -1; // 金幣精靈
 
-// 修正函式定義，確保不會影響解析
-show_rewards = function(exp, gold, r_list) { // `reward_list` 改為 `r_list`
+// 修正函式定義
+show_rewards = function(exp, gold, items) {
     reward_exp = exp;
     reward_gold = gold;
     
-    // 確保 r_list 是數組，避免 GameMaker 拒絕解析
-    if (is_array(r_list)) {
-        reward_items_list = array_create(array_length(r_list)); // 先建立一個空數組
-        for (var i = 0; i < array_length(r_list); i++) {
-            reward_items_list[i] = r_list[i]; // 逐個複製
+    // 確保 items 是數組
+    if (is_array(items)) {
+        reward_items_list = array_create(array_length(items)); // 先建立一個空數組
+        for (var i = 0; i < array_length(items); i++) {
+            reward_items_list[i] = items[i]; // 逐個複製
         }
     } else {
         reward_items_list = [];
