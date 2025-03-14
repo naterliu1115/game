@@ -1,8 +1,6 @@
 // obj_battle_ui 的 Draw_64.gml
 
 
-
-
 if (!surface_exists(ui_surface) || surface_needs_update) {
     if (surface_exists(ui_surface)) {
         surface_free(ui_surface);
@@ -213,78 +211,127 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
     if (ds_list_size(obj_battle_manager.enemy_units) <= 0) {
         result_text = "戰鬥勝利!";
         draw_set_color(c_lime);
+        
+        show_debug_message("[DEBUG] 獎勵面板狀態檢查：");
+        show_debug_message("[DEBUG] - reward_visible = " + string(reward_visible));
+        show_debug_message("[DEBUG] - reward_exp = " + string(reward_exp));
+        show_debug_message("[DEBUG] - reward_gold = " + string(reward_gold));
+        show_debug_message("[DEBUG] - items count = " + string(array_length(reward_items_list)));
+        
         // 顯示獎勵視窗
-if (reward_visible) {
-    var reward_x = display_get_gui_width() / 2 - 300;
-    var reward_y = display_get_gui_height() / 2;
-
-    // 使用正確的精靈名稱
-    var reward_panel_spr = asset_get_index("reward_panel");
-    if (reward_panel_spr != -1 && sprite_exists(reward_panel_spr)) {
-        draw_sprite(reward_panel_spr, 0, reward_x, reward_y);
-    } else {
-        // 繪製備用框
-        draw_set_color(c_navy);
-        draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, false);
-        draw_set_color(c_aqua);
-        draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, true);
-    }
-    
-    draw_set_color(c_white);
-    draw_text(reward_x + 50, reward_y + 50, "EXP: " + string(reward_exp));
-    draw_text(reward_x + 50, reward_y + 80, "Gold: " + string(reward_gold));
-
-    // 畫道具圖示（最多顯示 3 個）
-    if (array_length(reward_items_list) > 0) {
-        var gold_spr = asset_get_index("gold");
-        for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
-            if (gold_spr != -1 && sprite_exists(gold_spr)) {
-                draw_sprite(gold_spr, 0, reward_x + 50 + (i * 40), reward_y + 120);
-            } else {
-                // 繪製備用圖示
-                draw_set_color(c_yellow);
-                draw_circle(reward_x + 50 + (i * 40), reward_y + 120, 15, false);
-            }
-        }
-    }
-}
-        // 添加星星粒子效果
-        if (random(1) < 0.2) {
-            var star_x = random(display_get_gui_width());
-            var star_y = random(display_get_gui_height() * 0.7);
-            var star_size = random_range(1, 3);
+        if (reward_visible) {
+            show_debug_message("[DEBUG] 開始繪製獎勵面板");
             
-            // 使用安全繪製方式
-            var spr_star_index = asset_get_index("spr_star");
-            if (spr_star_index != -1 && sprite_exists(spr_star_index)) {
-                draw_sprite_ext(spr_star_index, 0, star_x, star_y, star_size, star_size, random(360), c_yellow, 0.8);
+            // 計算完全置中的位置
+            var reward_x, reward_y, panel_width, panel_height;
+            
+            if (sprite_exists(spr_reward_panel)) {
+                panel_width = sprite_get_width(spr_reward_panel);
+                panel_height = sprite_get_height(spr_reward_panel);
+                reward_x = (display_get_gui_width() - panel_width) / 2;
+                reward_y = (display_get_gui_height() - panel_height) / 2;
+                
+                show_debug_message("[DEBUG] 使用 spr_reward_panel 繪製背景");
+                show_debug_message("[DEBUG] 面板尺寸: " + string(panel_width) + "x" + string(panel_height));
+                show_debug_message("[DEBUG] 置中位置: (" + string(reward_x) + ", " + string(reward_y) + ")");
+                
+                // 先繪製勝利文字
+                var scale = 1.5 + sin(current_time / 200) * 0.2;
+                draw_text_transformed(
+                    reward_x + panel_width/2,    // X 位置：面板中心
+                    reward_y - 60,               // Y 位置：面板上方
+                    result_text,
+                    scale * 2, scale * 2,
+                    0
+                );
+                
+                // 再繪製背板
+                draw_sprite(spr_reward_panel, 0, reward_x, reward_y);
             } else {
-                // 繪製備用圖形
-                var original_color = draw_get_color();
-                var original_alpha = draw_get_alpha();
+                show_debug_message("[DEBUG] spr_reward_panel 不存在，使用備用背景");
+                // 備用背景（固定大小 300x200）
+                panel_width = 300;
+                panel_height = 200;
+                reward_x = (display_get_gui_width() - panel_width) / 2;
+                reward_y = (display_get_gui_height() - panel_height) / 2;
                 
-                draw_set_color(c_yellow);
-                draw_set_alpha(0.8);
-                draw_circle(star_x, star_y, 5 * star_size, false);
+                // 先繪製勝利文字
+                var scale = 1.5 + sin(current_time / 200) * 0.2;
+                draw_text_transformed(
+                    reward_x + panel_width/2,    // X 位置：面板中心
+                    reward_y - 60,               // Y 位置：面板上方
+                    result_text,
+                    scale * 2, scale * 2,
+                    0
+                );
                 
-                // 恢復原始繪圖設置
-                draw_set_color(original_color);
-                draw_set_alpha(original_alpha);
+                // 再繪製備用背景
+                draw_set_color(c_navy);
+                draw_rectangle(reward_x, reward_y, reward_x + panel_width, reward_y + panel_height, false);
+                draw_set_color(c_aqua);
+                draw_rectangle(reward_x, reward_y, reward_x + panel_width, reward_y + panel_height, true);
             }
+            
+            // 根據面板位置調整內容位置
+            var content_x = reward_x + 30;  // 內容左邊距
+            var title_x = reward_x + panel_width/2;  // 標題置中
+            
+            // 繪製獎勵內容
+            draw_set_halign(fa_center);
+            draw_set_color(c_yellow);
+            draw_text(title_x, reward_y + 30, "戰鬥獎勵");
+            
+            draw_set_halign(fa_left);
+            draw_set_color(c_white);
+            
+            // 繪製經驗值和金幣圖示
+            if (sprite_exists(spr_gold)) {
+                show_debug_message("[DEBUG] 使用 spr_gold 繪製金幣圖示");
+                draw_sprite(spr_gold, 0, content_x, reward_y + 100);
+                draw_text(content_x + 30, reward_y + 100, string(reward_gold));
+            } else {
+                show_debug_message("[DEBUG] spr_gold 不存在，使用純文字顯示");
+                draw_text(content_x, reward_y + 100, "金幣: " + string(reward_gold));
+            }
+            
+            draw_text(content_x, reward_y + 70, "經驗值: " + string(reward_exp));
+            
+            // 畫道具圖示（最多顯示 3 個）
+            if (array_length(reward_items_list) > 0) {
+                for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
+                    if (sprite_exists(spr_gold)) {
+                        draw_sprite(spr_gold, 0, content_x + (i * 40), reward_y + 140);
+                    } else {
+                        draw_set_color(c_yellow);
+                        draw_circle(content_x + (i * 40), reward_y + 140, 15, false);
+                    }
+                }
+            }
+        } else {
+            // 如果獎勵面板還沒顯示，將勝利文字置中
+            var scale = 1.5 + sin(current_time / 200) * 0.2;
+            draw_text_transformed(
+                display_get_gui_width() / 2,
+                display_get_gui_height() / 2 - 80,
+                result_text,
+                scale * 2, scale * 2,
+                0
+            );
         }
     } else {
         result_text = "戰鬥失敗!";
         draw_set_color(c_red);
+        
+        // 顯示失敗文字
+        var scale = 1.5 + sin(current_time / 200) * 0.2;
+        draw_text_transformed(
+            display_get_gui_width() / 2,
+            display_get_gui_height() / 2 - 80,
+            result_text,
+            scale * 2, scale * 2,
+            0
+        );
     }
-    
-// 以下是使用正確精靈名稱的獎勵繪製代碼
-
-
-    
-    // 添加動畫效果
-    var scale = 1.5 + sin(current_time / 200) * 0.2;
-    draw_text_transformed(display_get_gui_width() / 2, display_get_gui_height() / 2 - 80, 
-                 result_text, scale * 2, scale * 2, 0);
     
     // 戰鬥統計數據
     draw_set_color(c_white);

@@ -80,21 +80,34 @@ reward_visible = false;
 
 // 重寫獎勵顯示函數，使用非常基本的語法
 show_rewards = function(exp_val, gold_val, items_val) {
+    show_debug_message("[DEBUG] show_rewards 被調用");
+    show_debug_message("[DEBUG] 參數：EXP=" + string(exp_val) + ", Gold=" + string(gold_val));
+    
     reward_exp = exp_val;
     reward_gold = gold_val;
     reward_visible = true;
+    
+    show_debug_message("[DEBUG] 獎勵數據已設置：");
+    show_debug_message("[DEBUG] - reward_exp = " + string(reward_exp));
+    show_debug_message("[DEBUG] - reward_gold = " + string(reward_gold));
+    show_debug_message("[DEBUG] - reward_visible = " + string(reward_visible));
     
     // 清空現有物品列表
     reward_items_list = [];
     
     // 只有在輸入是陣列時才處理
     if (is_array(items_val)) {
+        show_debug_message("[DEBUG] 處理物品獎勵，數量：" + string(array_length(items_val)));
         var i;
         var count = array_length(items_val);
         for (i = 0; i < count; i++) {
             array_push(reward_items_list, items_val[i]);
         }
     }
+    
+    // 強制更新surface
+    surface_needs_update = true;
+    show_debug_message("[DEBUG] surface_needs_update 已設置為 true");
 };
 
 // 初始化時顯示戰鬥開始提示

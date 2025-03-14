@@ -200,17 +200,30 @@ switch (battle_state) {
         // 確保只有這個階段會處理結果
         if (!battle_result_handled) {
             battle_result_handled = true; // 防止重複執行
+            show_debug_message("[DEBUG] 開始處理戰鬥結果");
 
             if (battle_result.victory) {
                 // 戰鬥勝利
+                show_debug_message("[DEBUG] 戰鬥勝利，準備發放獎勵");
                 if (instance_exists(obj_battle_ui)) {
                     obj_battle_ui.result_text = "戰鬥勝利!";
+                    show_debug_message("[DEBUG] UI存在，設置勝利文本");
+                } else {
+                    show_debug_message("[DEBUG] 警告：找不到UI實例！");
                 }
                 
                 // 發放獎勵
                 grant_rewards();
+                show_debug_message("[DEBUG] 獎勵發放完成");
+                
+                // 確保UI顯示獎勵
+                if (instance_exists(obj_battle_ui)) {
+                    obj_battle_ui.reward_visible = true;
+                    show_debug_message("[DEBUG] 設置獎勵面板可見性：" + string(obj_battle_ui.reward_visible));
+                }
             } else {
-                // 戰鬥失敗（當場上所有己方怪物死亡才算失敗）
+                // 戰鬥失敗
+                show_debug_message("[DEBUG] 戰鬥失敗");
                 if (instance_exists(obj_battle_ui)) {
                     obj_battle_ui.result_text = "戰鬥失敗!";
                 }
@@ -218,10 +231,13 @@ switch (battle_state) {
                 // 處理失敗懲罰
                 handle_defeat();
             }
+            
+            show_debug_message("[DEBUG] 戰鬥結果處理完成");
         }
 
         // 玩家確認後，戰鬥正式結束
         if (keyboard_check_pressed(vk_space)) {
+            show_debug_message("[DEBUG] 玩家按下空格，準備結束戰鬥");
             end_battle();
         }
         break;
