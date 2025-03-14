@@ -4,6 +4,9 @@ visible = false;
 active = false;
 depth = -100;
 
+// 明確設置字體 - 與obj_dialogue_box相同
+draw_set_font(fnt_dialogue);
+
 // 尺寸和位置
 ui_width = 0;
 ui_height = 0;
