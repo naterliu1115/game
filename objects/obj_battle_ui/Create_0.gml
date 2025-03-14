@@ -70,34 +70,32 @@ show_info = function(text) {
     info_text = text;
     info_alpha = 1;
     info_timer = 120; // 2秒顯示時間
-}
+};
 
 // 儲存戰鬥結算資訊
 reward_exp = 0;
 reward_gold = 0;
 reward_items_list = [];
 reward_visible = false;
-reward_panel = -1; // 面板精靈
-gold = -1; // 金幣精靈
 
-// 修正函式定義
-show_rewards = function(exp, gold, items) {
-    reward_exp = exp;
-    reward_gold = gold;
+// 重寫獎勵顯示函數，使用非常基本的語法
+show_rewards = function(exp_val, gold_val, items_val) {
+    reward_exp = exp_val;
+    reward_gold = gold_val;
+    reward_visible = true;
     
-    // 確保 items 是數組
-    if (is_array(items)) {
-        reward_items_list = array_create(array_length(items)); // 先建立一個空數組
-        for (var i = 0; i < array_length(items); i++) {
-            reward_items_list[i] = items[i]; // 逐個複製
+    // 清空現有物品列表
+    reward_items_list = [];
+    
+    // 只有在輸入是陣列時才處理
+    if (is_array(items_val)) {
+        var i;
+        var count = array_length(items_val);
+        for (i = 0; i < count; i++) {
+            array_push(reward_items_list, items_val[i]);
         }
-    } else {
-        reward_items_list = [];
     }
-
-    reward_visible = true; // 顯示 UI
 };
-
 
 // 初始化時顯示戰鬥開始提示
 show_info("戰鬥開始！");

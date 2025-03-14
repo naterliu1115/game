@@ -241,39 +241,43 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         draw_set_color(c_red);
     }
     
-    // 顯示獎勵視窗
-    if (reward_visible) {
-        var reward_x = display_get_gui_width() / 2 - 300;
-        var reward_y = display_get_gui_height() / 2;
+// 以下是使用正確精靈名稱的獎勵繪製代碼
 
-        // 檢查精靈是否存在
-        if (sprite_exists(reward_panel)) {
-            draw_sprite(reward_panel, 0, reward_x, reward_y);
-        } else {
-            // 繪製備用框
-            draw_set_color(c_navy);
-            draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, false);
-            draw_set_color(c_aqua);
-            draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, true);
-        }
-        
-        draw_set_color(c_white);
-        draw_text(reward_x + 50, reward_y + 50, "EXP: " + string(reward_exp));
-        draw_text(reward_x + 50, reward_y + 80, "Gold: " + string(reward_gold));
+// 顯示獎勵視窗
+if (reward_visible) {
+    var reward_x = display_get_gui_width() / 2 - 300;
+    var reward_y = display_get_gui_height() / 2;
 
-        // 畫道具圖示（最多顯示 3 個）
-        if (array_length(reward_items_list) > 0) {
-            for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
-                if (sprite_exists(gold)) {
-                    draw_sprite(gold, 0, reward_x + 50 + (i * 40), reward_y + 120);
-                } else {
-                    // 繪製備用圖示
-                    draw_set_color(c_yellow);
-                    draw_circle(reward_x + 50 + (i * 40), reward_y + 120, 15, false);
-                }
+    // 使用正確的精靈名稱
+    var reward_panel_sprite = asset_get_index("reward_panel");
+    if (reward_panel_sprite != -1 && sprite_exists(reward_panel_sprite)) {
+        draw_sprite(reward_panel_sprite, 0, reward_x, reward_y);
+    } else {
+        // 繪製備用框
+        draw_set_color(c_navy);
+        draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, false);
+        draw_set_color(c_aqua);
+        draw_rectangle(reward_x, reward_y, reward_x + 600, reward_y + 300, true);
+    }
+    
+    draw_set_color(c_white);
+    draw_text(reward_x + 50, reward_y + 50, "EXP: " + string(reward_exp));
+    draw_text(reward_x + 50, reward_y + 80, "Gold: " + string(reward_gold));
+
+    // 畫道具圖示（最多顯示 3 個）
+    if (array_length(reward_items_list) > 0) {
+        var gold_sprite = asset_get_index("gold");
+        for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
+            if (gold_sprite != -1 && sprite_exists(gold_sprite)) {
+                draw_sprite(gold_sprite, 0, reward_x + 50 + (i * 40), reward_y + 120);
+            } else {
+                // 繪製備用圖示
+                draw_set_color(c_yellow);
+                draw_circle(reward_x + 50 + (i * 40), reward_y + 120, 15, false);
             }
         }
     }
+}
     
     // 添加動畫效果
     var scale = 1.5 + sin(current_time / 200) * 0.2;
