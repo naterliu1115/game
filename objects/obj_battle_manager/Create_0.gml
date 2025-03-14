@@ -296,9 +296,9 @@ function grant_rewards() {
         var unit = player_units[| i];
         if (instance_exists(unit)) {
             unit.gain_exp(exp_reward);
-            } else {
-        show_debug_message("unit 不是 obj_player_summon_parent，跳過經驗獎勵：" + string(unit));
-    }
+        } else {
+            show_debug_message("unit 不是 obj_player_summon_parent，跳過經驗獎勵：" + string(unit));
+        }
     }
 
     // 增加金錢
@@ -309,13 +309,19 @@ function grant_rewards() {
         array_push(global.inventory, item_drops[j]);
     }
 
-    // 顯示戰利品 UI
-    if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.show_rewards(exp_reward, gold_reward, item_drops);
+    // 儲存戰鬥獎勵數據
+    battle_result.exp_gained = exp_reward;
+    battle_result.gold_gained = gold_reward;
+    battle_result.item_drops = item_drops;
+
+    // 讓 `BATTLE_STATE.RESULT` 內的 UI 會顯示這些獎勵
+    if (instance_exists(obj_battle_manager)) {
+        obj_battle_manager.battle_state = BATTLE_STATE.RESULT;
     }
 
     show_debug_message("獲得經驗值：" + string(exp_reward) + ", 金錢：" + string(gold_reward));
 }
+
 
 
 

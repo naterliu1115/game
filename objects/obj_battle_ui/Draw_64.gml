@@ -242,6 +242,22 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         result_text = "戰鬥失敗!";
         draw_set_color(c_red);
     }
+	
+	// **新增這段，顯示獎勵視窗**
+    if (reward_visible) {
+        var reward_x = display_get_gui_width() / 2 - 300;
+        var reward_y = display_get_gui_height() / 2;
+
+        draw_sprite(reward_panel, 0, reward_x, reward_y);
+        
+        draw_set_color(c_white);
+        draw_text(reward_x + 50, reward_y + 50, "EXP: " + string(reward_exp));
+        draw_text(reward_x + 50, reward_y + 80, "Gold: " + string(reward_gold));
+
+        // 畫道具 ICON（最多顯示 3 個）
+        for (var i = 0; i < min(array_length(reward_items), 3); i++) {
+            draw_sprite(gold, 0, reward_x + 50 + (i * 40), reward_y + 120);
+        }
     
     // 添加動畫效果
     var scale = 1.5 + sin(current_time / 200) * 0.2;

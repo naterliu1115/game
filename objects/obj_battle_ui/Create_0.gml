@@ -72,5 +72,30 @@ show_info = function(text) {
     info_timer = 120; // 2秒顯示時間
 }
 
+// 儲存戰鬥結算資訊
+reward_exp = 0;
+reward_gold = 0;
+reward_items_list = [];
+reward_visible = false;
+
+// 修正函式定義，確保不會影響解析
+show_rewards = function(exp, gold, r_list) { // `reward_list` 改為 `r_list`
+    reward_exp = exp;
+    reward_gold = gold;
+    
+    // 確保 r_list 是數組，避免 GameMaker 拒絕解析
+    if (is_array(r_list)) {
+        reward_items_list = array_create(array_length(r_list)); // 先建立一個空數組
+        for (var i = 0; i < array_length(r_list); i++) {
+            reward_items_list[i] = r_list[i]; // 逐個複製
+        }
+    } else {
+        reward_items_list = [];
+    }
+
+    reward_visible = true; // 顯示 UI
+};
+
+
 // 初始化時顯示戰鬥開始提示
 show_info("戰鬥開始！");
