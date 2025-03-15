@@ -280,8 +280,17 @@ function check_lost_surfaces() {
             // Surface丟失，標記對應的UI需要更新
             var ui_inst = real(key);
             
-            if (instance_exists(ui_inst)) {
-                with (ui_inst) {
+           var ui_inst;
+           if (is_string(key)) {
+                   ui_inst = asset_get_index(key);
+               } else if (is_real(key)) {
+                   ui_inst = key;
+                  } else {
+                   ui_inst = noone;
+                  }
+
+if (instance_exists(ui_inst)) {
+    with (ui_inst) {
                     if (variable_instance_exists(id, "surface_needs_update")) {
                         surface_needs_update = true;
                     }
