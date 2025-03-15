@@ -1,5 +1,13 @@
 // obj_battle_manager - Create_0.gml 完整版
 
+// 在obj_battle_manager的Create事件開頭添加
+reward_items_list = [];
+item_rewards = [];
+surface_needs_update = false;
+atb_rate = 1.0;  // 或其他適當的初始值
+experience = 0;  // 經驗值從0開始
+experience_to_level_up = 100;  // 或其他適當的初始值
+
 // 戰鬥狀態枚舉
 enum BATTLE_STATE {
     INACTIVE,    // 非戰鬥狀態
@@ -76,14 +84,14 @@ initialize_battle = function() {
     battle_result_handled = false;
     
     // 重置戰鬥結果
-    battle_result = {
-        victory: false,
-        exp_gained: 0,
-        gold_gained: 0,
-        item_drops: [],
-        defeated_enemies: 0,
-        duration: 0
-    };
+battle_result = {
+    victory: false,
+    exp_gained: 0,
+    gold_gained: 0,
+    item_drops: [], // 確保陣列初始化
+    defeated_enemies: 0,
+    duration: 0
+};
     
     show_debug_message("戰鬥管理器初始化完成");
 }
@@ -425,7 +433,7 @@ grant_rewards = function() {
     
     var total_exp = 0;
     var total_gold = 0;
-    var item_rewards = [];
+    var item_rewards = []; // 確保陣列初始化
     
     // 計算經驗值和金錢獎勵
     for (var i = 0; i < global.defeated_enemies_count; i++) {
@@ -505,7 +513,10 @@ grant_rewards = function() {
     // 更新戰鬥結果數據
     battle_result.exp_gained = total_exp;
     battle_result.gold_gained = total_gold;
-    battle_result.item_drops = item_rewards;
+    battle_result.item_drops = [];
+for (var i = 0; i < array_length(item_rewards); i++) {
+    array_push(battle_result.item_drops, item_rewards[i]);
+}
     
     // 更新UI顯示獎勵
     if (instance_exists(obj_battle_ui)) {
