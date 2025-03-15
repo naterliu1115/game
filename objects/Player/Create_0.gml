@@ -1,4 +1,7 @@
 debug_message_printed = false;
+battle_result_handled = false;
+battle_timer = 0;
+
 global.player = id;
 if (!variable_global_exists("player_gold")) {
     global.player_gold = 100; // 設定玩家初始金錢

@@ -278,19 +278,19 @@ function check_lost_surfaces() {
         
         if (!surface_exists(surface_id)) {
             // Surface丟失，標記對應的UI需要更新
-            var ui_inst = real(key);
+
             
-           var ui_inst;
+           var temp_inst;
            if (is_string(key)) {
-                   ui_inst = asset_get_index(key);
+                   temp_inst = asset_get_index(key);
                } else if (is_real(key)) {
-                   ui_inst = key;
+                   temp_inst = key;
                   } else {
-                   ui_inst = noone;
+                   temp_inst = noone;
                   }
 
-if (instance_exists(ui_inst)) {
-    with (ui_inst) {
+if (instance_exists(temp_inst)) {
+    with (temp_inst) {
                     if (variable_instance_exists(id, "surface_needs_update")) {
                         surface_needs_update = true;
                     }
