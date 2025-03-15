@@ -6,7 +6,7 @@ event_subscribers = ds_map_create();
 // 事件歷史記錄（用於調試）
 event_history = ds_list_create();
 max_history_size = 100; // 最多保存100個最近事件
-debug_mode = true; // 是否記錄詳細事件信息，可以根據需要關閉
+event_debug_mode = true; // 是否記錄詳細事件信息，可以根據需要關閉
 
 // 註冊事件處理函數
 function subscribe_to_event(event_name, instance_id, callback) {
@@ -31,7 +31,7 @@ function subscribe_to_event(event_name, instance_id, callback) {
         callback: callback
     });
     
-    if (debug_mode) {
+    if (event_debug_mode) {
         show_debug_message("事件系統: 實例 " + string(instance_id) + " 訂閱了事件 " + event_name);
     }
 }
@@ -47,7 +47,7 @@ function unsubscribe_from_event(event_name, instance_id) {
         if (subscriber.instance == instance_id) {
             ds_list_delete(subscriber_list, i);
             
-            if (debug_mode) {
+            if (event_debug_mode) {
                 show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消訂閱事件 " + event_name);
             }
         }
@@ -63,7 +63,7 @@ function unsubscribe_from_all_events(instance_id) {
         unsubscribe_from_event(event_name, instance_id);
     }
     
-    if (debug_mode) {
+    if (event_debug_mode) {
         show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消了所有事件訂閱");
     }
 }
@@ -71,7 +71,7 @@ function unsubscribe_from_all_events(instance_id) {
 // 處理事件
 function handle_event(event_name, data) {
     // 記錄事件歷史
-    if (debug_mode) {
+    if (event_debug_mode) {
         var event_info = {
             name: event_name,
             data: data,
@@ -119,7 +119,7 @@ function handle_event(event_name, data) {
                 var original_subscriber = subscriber_list[| j];
                 if (original_subscriber.instance == subscriber.instance) {
                     ds_list_delete(subscriber_list, j);
-                    if (debug_mode) {
+                    if (event_debug_mode) {
                         show_debug_message("事件系統: 已移除不存在的實例 " + string(subscriber.instance) + " 的訂閱");
                     }
                     break;
@@ -149,7 +149,7 @@ function cleanup_event_system() {
     ds_map_destroy(event_subscribers);
     ds_list_destroy(event_history);
     
-    if (debug_mode) {
+    if (event_debug_mode) {
         show_debug_message("事件系統: 資源已清理");
     }
 }
@@ -189,6 +189,6 @@ function get_event_history(count = 10) {
 // 將事件系統全局化（可選）
 global.event_manager = id;
 
-if (debug_mode) {
+if (event_debug_mode) {
     show_debug_message("事件管理器已初始化");
 }
