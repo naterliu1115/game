@@ -17,9 +17,14 @@ switch (battle_state) {
         // 通知單位管理器更新邊界 (逐漸擴大)
         if (instance_exists(obj_unit_manager)) {
             var radius = min(battle_timer * 10, 300); // 逐漸擴大到300
+            
+            // 更新结构化变量
+            battle_area.boundary_radius = radius;
+            battle_boundary_radius = radius;
+            
             obj_unit_manager.set_battle_area(
-                obj_unit_manager.battle_center_x,
-                obj_unit_manager.battle_center_y,
+                battle_area.center_x,
+                battle_area.center_y,
                 radius
             );
             
@@ -169,3 +174,7 @@ switch (battle_state) {
         }
         break;
 }
+
+battle_center_x = battle_area.center_x;
+battle_center_y = battle_area.center_y;
+battle_boundary_radius = battle_area.boundary_radius;

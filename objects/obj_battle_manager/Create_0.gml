@@ -10,11 +10,65 @@ enum BATTLE_STATE {
     RESULT       // 顯示戰鬥結果
 }
 
-// 初始化戰鬥狀態
+// 戰鬥核心數據
 battle_state = BATTLE_STATE.INACTIVE;
-battle_timer = 0;           // 戰鬥持續時間計時器
-battle_result_handled = false; // 確保戰鬥結果只處理一次
-battle_log = ds_list_create(); // 戰鬥日誌
+battle_timer = 0;
+battle_result_handled = false;
+
+// 戰鬥區域數據
+battle_area = {
+    center_x: 0,
+    center_y: 0,
+    boundary_radius: 0
+};
+
+// UI顯示數據
+ui_data = {
+    info_text: "",
+    info_alpha: 1.0,
+    info_timer: 0,
+    surface_needs_update: true
+};
+
+// 單位系統數據
+units_data = {
+    global_summon_cooldown: 0,
+    atb_rate: 0
+};
+
+// 經驗與升級數據
+exp_system = {
+    experience: 0,
+    experience_to_level_up: 100
+};
+
+// 獎勵系統數據
+rewards = {
+    exp: 0,
+    gold: 0,
+    items_list: [],
+    visible: false
+};
+
+// 為了向後兼容，添加直接變數引用
+battle_center_x = battle_area.center_x;
+battle_center_y = battle_area.center_y;
+battle_boundary_radius = battle_area.boundary_radius;
+info_alpha = ui_data.info_alpha;
+info_text = ui_data.info_text;
+info_timer = ui_data.info_timer;
+global_summon_cooldown = units_data.global_summon_cooldown;
+atb_rate = units_data.atb_rate;
+experience = exp_system.experience;
+experience_to_level_up = exp_system.experience_to_level_up;
+reward_exp = rewards.exp;
+reward_gold = rewards.gold;
+reward_items_list = rewards.items_list;
+reward_visible = rewards.visible;
+surface_needs_update = ui_data.surface_needs_update;
+
+// 戰鬥日誌
+battle_log = ds_list_create();
 
 // 初始化方法
 initialize_battle_manager = function() {
@@ -22,6 +76,16 @@ initialize_battle_manager = function() {
     battle_state = BATTLE_STATE.INACTIVE;
     battle_timer = 0;
     battle_result_handled = false;
+    
+    // 重置戰鬥區域
+    battle_area.center_x = 0;
+    battle_area.center_y = 0;
+    battle_area.boundary_radius = 0;
+    
+    // 更新直接引用
+    battle_center_x = battle_area.center_x;
+    battle_center_y = battle_area.center_y;
+    battle_boundary_radius = battle_area.boundary_radius;
     
     // 清空戰鬥日誌
     ds_list_clear(battle_log);
