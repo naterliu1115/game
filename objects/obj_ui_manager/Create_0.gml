@@ -271,26 +271,27 @@ function free_ui_surface(ui_instance) {
 // 檢查並恢復丟失的Surface
 function check_lost_surfaces() {
     var keys = ds_map_keys_to_array(ui_surfaces);
+    var key, surface_id, ui_inst;  // 在函數開頭一次性宣告所有變數
     
     for (var i = 0; i < array_length(keys); i++) {
-        var key = keys[i];
-        var surface_id = ui_surfaces[? key];
+        key = keys[i];  // 注意這裡沒有使用var
+        surface_id = ui_surfaces[? key];
+        ui_inst = noone;  // 為每次迭代重置變數
         
         if (!surface_exists(surface_id)) {
             // Surface丟失，標記對應的UI需要更新
-
             
-           var temp_inst;
-           if (is_string(key)) {
-                   temp_inst = asset_get_index(key);
-               } else if (is_real(key)) {
-                   temp_inst = key;
-                  } else {
-                   temp_inst = noone;
-                  }
-
-if (instance_exists(temp_inst)) {
-    with (temp_inst) {
+            // 使用完整的if-else結構，避免try-catch
+            if (is_string(key)) {
+                ui_inst = asset_get_index(key);
+                if (ui_inst == -1) ui_inst = noone;
+            } else if (is_real(key)) {
+                ui_inst = key;
+            }
+            // else ui_inst已經是noone了
+            
+            if (instance_exists(ui_inst)) {
+                with (ui_inst) {
                     if (variable_instance_exists(id, "surface_needs_update")) {
                         surface_needs_update = true;
                     }
