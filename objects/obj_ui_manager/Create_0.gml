@@ -1,258 +1,379 @@
 // obj_ui_manager - Create_0.gml
-// UI層級管理
-ui_layers = ds_map_create();
-ds_map_add(ui_layers, "main", ds_list_create());      // 主要UI層（互斥）
-ds_map_add(ui_layers, "overlay", ds_list_create());   // 浮層UI層（可獨立顯示）
-ds_map_add(ui_layers, "hud", ds_list_create());       // HUD層（常駐顯示）
-ds_map_add(ui_layers, "popup", ds_list_create());     // 彈窗層（最高層級）
 
-// 層級深度設定（數字越小越上層）
+// 建立UI層級結構
+ui_layers = ds_map_create();
+ds_map_add(ui_layers, "background", ds_list_create());  // 最底層
+ds_map_add(ui_layers, "main", ds_list_create());        // 主要UI層
+ds_map_add(ui_layers, "overlay", ds_list_create());     // 浮層UI
+ds_map_add(ui_layers, "popup", ds_list_create());       // 彈窗層（最高層級）
+
+// 層級深度設置
 layer_depths = ds_map_create();
+ds_map_add(layer_depths, "background", -50);
 ds_map_add(layer_depths, "main", -100);
 ds_map_add(layer_depths, "overlay", -150);
-ds_map_add(layer_depths, "hud", -200);
-ds_map_add(layer_depths, "popup", -250);
+ds_map_add(layer_depths, "popup", -200);
 
-// 當前活躍的UI（按層級）
+// 追蹤當前活躍的UI
 active_ui = ds_map_create();
-ds_map_add(active_ui, "main", noone);
-ds_map_add(active_ui, "overlay", noone);
-ds_map_add(active_ui, "hud", noone);
-ds_map_add(active_ui, "popup", noone);
+ds_map_add(active_ui, "background", ds_list_create());
+ds_map_add(active_ui, "main", ds_list_create());
+ds_map_add(active_ui, "overlay", ds_list_create());
+ds_map_add(active_ui, "popup", ds_list_create());
 
-// 註冊UI到對應層級 - 修正參數類型問題
-register_ui = function(ui_inst, layer_name) {
-    if (ds_map_exists(ui_layers, layer_name)) {
-        var ui_list = ui_layers[? layer_name];
-        // 確保不重複添加
-        for (var i = 0; i < ds_list_size(ui_list); i++) {
-            if (ui_list[| i] == ui_inst) return;
+// Surface管理
+ui_surfaces = ds_map_create(); // 存儲UI surface的映射表
+surface_check_counter = 0; // 用於定期檢查surface是否丟失
+
+// UI消息顯示
+message_queue = ds_queue_create(); // 消息隊列
+max_messages = 5; // 最多同時顯示的消息數
+message_duration = 3 * game_get_speed(gamespeed_fps); // 3秒顯示時間
+message_spacing = 30; // 消息間距
+
+// 初始化
+function initialize() {
+    // 訂閱相關事件
+    if (instance_exists(obj_event_manager)) {
+        with (obj_event_manager) {
+            subscribe_to_event("ui_message", other.id, other.on_ui_message);
+            subscribe_to_event("close_all_ui", other.id, other.close_all_ui);
+            subscribe_to_event("battle_end", other.id, other.on_battle_end);
         }
-        ds_list_add(ui_list, ui_inst);
-        show_debug_message("UI註冊成功: " + object_get_name(ui_inst.object_index) + " 到 " + layer_name + " 層");
-    } else {
-        show_debug_message("UI註冊失敗: 找不到層級 " + layer_name);
     }
-}
-
-// UI 狀態通知系統
-function notify_ui_state_change(ui_object, is_visible) {
-    // 記錄 UI 狀態（可選）
-    var ui_id = object_get_name(ui_object.object_index);
-    show_debug_message("UI 狀態變更通知: " + ui_id + " 可見性: " + string(is_visible));
     
-    // 通知戰鬥遮罩（如果存在）
-    if (instance_exists(obj_battle_overlay)) {
-        with (obj_battle_overlay) {
-            // 更新遮罩顯示邏輯
-            should_check_visibility = true; // 標記需要在 Draw 事件中檢查可見性
-            
-            // 只有在準備階段才需要處理
-            if (instance_exists(obj_battle_manager) && 
-                obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
-                
-                // 您可以選擇立即更新一些狀態，或讓 Draw 事件處理
-                // 例如：記錄哪些 UI 當前可見
-                if (ui_object.object_index == obj_summon_ui) {
-                    summon_ui_visible = is_visible;
-                } else if (ui_object.object_index == obj_monster_manager_ui) {
-                    monster_ui_visible = is_visible;
-                }
-            }
-        }
-    }
+    show_debug_message("UI管理器已初始化");
 }
 
-// 顯示指定UI，確保層級內互斥並設定正確深度 - 修正參數類型問題
-show_ui = function(layer_name, ui_inst) {
+// 註冊UI到指定層級
+function register_ui(ui_instance, layer_name) {
     if (!ds_map_exists(ui_layers, layer_name)) {
-        show_debug_message("顯示UI失敗: 找不到層級 " + layer_name);
-        return false;
+        show_debug_message("錯誤: 嘗試註冊UI到不存在的層級 " + layer_name);
+        return;
     }
     
-    // 檢查UI是否存在且已註冊
-    var ui_exists = false;
     var ui_list = ui_layers[? layer_name];
+    
+    // 檢查是否已註冊
     for (var i = 0; i < ds_list_size(ui_list); i++) {
-        if (ui_list[| i] == ui_inst) {
-            ui_exists = true;
+        if (ui_list[| i] == ui_instance) {
+            show_debug_message("警告: UI " + object_get_name(ui_instance.object_index) + " 已註冊到層級 " + layer_name);
+            return;
+        }
+    }
+    
+    // 註冊UI並設置其深度
+    ds_list_add(ui_list, ui_instance);
+    ui_instance.depth = layer_depths[? layer_name];
+    
+    show_debug_message("UI註冊: " + object_get_name(ui_instance.object_index) + " 到層級 " + layer_name + "，深度 = " + string(ui_instance.depth));
+}
+
+// 顯示UI
+function show_ui(ui_instance, layer_name) {
+    if (!instance_exists(ui_instance)) {
+        show_debug_message("錯誤: 嘗試顯示不存在的UI實例");
+        return;
+    }
+    
+    if (!ds_map_exists(ui_layers, layer_name)) {
+        show_debug_message("錯誤: 嘗試在不存在的層級顯示UI: " + layer_name);
+        return;
+    }
+    
+    // 確保UI已註冊
+    var ui_list = ui_layers[? layer_name];
+    var registered = false;
+    
+    for (var i = 0; i < ds_list_size(ui_list); i++) {
+        if (ui_list[| i] == ui_instance) {
+            registered = true;
             break;
         }
     }
     
-    if (!ui_exists) {
-        // 自動註冊UI
-        register_ui(ui_inst, layer_name);
-        show_debug_message("UI自動註冊: " + object_get_name(ui_inst.object_index) + " 到 " + layer_name + " 層");
+    if (!registered) {
+        register_ui(ui_instance, layer_name);
     }
     
-    // 如果層級要求互斥（main和popup層）
+    // 處理互斥層
     if (layer_name == "main" || layer_name == "popup") {
-        // 關閉同層所有UI
-        for (var i = 0; i < ds_list_size(ui_list); i++) {
-            var other_ui = ui_list[| i];
-            if (instance_exists(other_ui) && other_ui != ui_inst) {
-                if (variable_instance_exists(other_ui, "hide")) {
-                    with (other_ui) {
-                        hide();
-                    }
-                } else {
-                    with (other_ui) {
-                        visible = false;
-                        active = false;
-                    }
-                }
-            }
+        hide_layer(layer_name);
+    }
+    
+    // 顯示UI
+    with (ui_instance) {
+        visible = true;
+        active = true;
+        if (variable_instance_exists(id, "show") && is_method(variable_instance_get(id, "show"))) {
+            var show_method = variable_instance_get(id, "show");
+            show_method();
         }
     }
     
-    // 顯示指定UI
-    if (instance_exists(ui_inst)) {
-        // 記錄當前活躍UI
-        active_ui[? layer_name] = ui_inst;
-        
-        // 確保UI有正確的深度 - 數字越小層級越高（越上層）
-        var depth_value = layer_depths[? layer_name];
-        
-        // 為召喚UI和怪物管理UI設置更高的優先級
-        if (ui_inst.object_index == obj_summon_ui || ui_inst.object_index == obj_monster_manager_ui) {
-            // 確保這些UI在戰鬥準備階段時顯示在上層
-            depth_value -= 10; // 讓它們比一般的UI層級更上一層
-        }
-        
-        ui_inst.depth = depth_value;
-        
-        // 調用UI的show方法
-        if (variable_instance_exists(ui_inst, "show")) {
-            with (ui_inst) {
-                show();
-            }
-        } else {
-            with (ui_inst) {
-                visible = true;
-                active = true;
-            }
-        }
-        
-        show_debug_message("顯示UI: " + object_get_name(ui_inst.object_index) + " 在 " + layer_name + " 層, 深度: " + string(depth_value));
-        return true;
-    }
+    // 添加到活躍UI列表
+    var active_list = active_ui[? layer_name];
+    ds_list_add(active_list, ui_instance);
     
-    show_debug_message("顯示UI失敗: UI物件不存在");
-    return false;
+    show_debug_message("UI顯示: " + object_get_name(ui_instance.object_index) + " 在層級 " + layer_name);
 }
 
-// 隱藏指定UI
-hide_ui = function(ui_inst) {
-    if (instance_exists(ui_inst)) {
-        if (variable_instance_exists(ui_inst, "hide")) {
-            with (ui_inst) {
-                hide();
-            }
+// 隱藏UI
+function hide_ui(ui_instance) {
+    if (!instance_exists(ui_instance)) return;
+    
+    // 隱藏UI
+    with (ui_instance) {
+        if (variable_instance_exists(id, "hide") && is_method(variable_instance_get(id, "hide"))) {
+            var hide_method = variable_instance_get(id, "hide");
+            hide_method();
         } else {
-            with (ui_inst) {
-                visible = false;
-                active = false;
-            }
+            visible = false;
+            active = false;
         }
-        
-        // 更新活躍UI記錄
-        var layer_keys = ds_map_keys_to_array(active_ui);
-        for (var i = 0; i < array_length(layer_keys); i++) {
-            var layer_name = layer_keys[i];
-            if (active_ui[? layer_name] == ui_inst) {
-                active_ui[? layer_name] = noone;
-            }
-        }
-        
-        show_debug_message("隱藏UI: " + object_get_name(ui_inst.object_index));
-        return true;
     }
     
-    show_debug_message("隱藏UI失敗: UI物件不存在");
-    return false;
+    // 從活躍UI列表中移除
+    var keys = ds_map_keys_to_array(active_ui);
+    for (var i = 0; i < array_length(keys); i++) {
+        var layer_name = keys[i];
+        var active_list = active_ui[? layer_name];
+        
+        var index = ds_list_find_index(active_list, ui_instance);
+        if (index != -1) {
+            ds_list_delete(active_list, index);
+            show_debug_message("UI隱藏: " + object_get_name(ui_instance.object_index) + " 從層級 " + layer_name);
+        }
+    }
 }
 
 // 隱藏指定層級的所有UI
-hide_layer = function(layer_name) {
-    if (!ds_map_exists(ui_layers, layer_name)) {
-        show_debug_message("隱藏層級失敗: 找不到層級 " + layer_name);
-        return false;
+function hide_layer(layer_name) {
+    if (!ds_map_exists(active_ui, layer_name)) return;
+    
+    var active_list = active_ui[? layer_name];
+    var count = ds_list_size(active_list);
+    
+    // 創建臨時列表以避免迭代過程中修改列表
+    var temp_list = ds_list_create();
+    for (var i = 0; i < count; i++) {
+        ds_list_add(temp_list, active_list[| i]);
     }
     
-    var ui_list = ui_layers[? layer_name];
-    for (var i = 0; i < ds_list_size(ui_list); i++) {
-        var ui_inst = ui_list[| i];
+    // 遍歷並隱藏所有UI
+    for (var i = 0; i < ds_list_size(temp_list); i++) {
+        var ui_inst = temp_list[| i];
         if (instance_exists(ui_inst)) {
-            if (variable_instance_exists(ui_inst, "hide")) {
+            hide_ui(ui_inst);
+        }
+    }
+    
+    // 清理臨時列表
+    ds_list_destroy(temp_list);
+    
+    show_debug_message("隱藏層級: " + layer_name + "，UI數量: " + string(count));
+}
+
+// 關閉所有UI
+function close_all_ui(data = undefined) {
+    var keys = ds_map_keys_to_array(active_ui);
+    
+    for (var i = 0; i < array_length(keys); i++) {
+        hide_layer(keys[i]);
+    }
+    
+    show_debug_message("已關閉所有UI");
+}
+
+// 獲取指定層級活躍的UI數量
+function get_active_ui_count(layer_name = "") {
+    if (layer_name != "") {
+        if (ds_map_exists(active_ui, layer_name)) {
+            return ds_list_size(active_ui[? layer_name]);
+        }
+        return 0;
+    } else {
+        // 返回所有層級的活躍UI總數
+        var total = 0;
+        var keys = ds_map_keys_to_array(active_ui);
+        
+        for (var i = 0; i < array_length(keys); i++) {
+            var key = keys[i];
+            total += ds_list_size(active_ui[? key]);
+        }
+        
+        return total;
+    }
+}
+
+// 檢查指定的UI是否活躍
+function is_ui_active(ui_instance) {
+    var keys = ds_map_keys_to_array(active_ui);
+    
+    for (var i = 0; i < array_length(keys); i++) {
+        var layer_name = keys[i];
+        var active_list = active_ui[? layer_name];
+        
+        if (ds_list_find_index(active_list, ui_instance) != -1) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// 創建或獲取UI的Surface
+function get_ui_surface(ui_instance, width, height) {
+    var surface_id = -1;
+    var ui_key = string(ui_instance);
+    
+    if (ds_map_exists(ui_surfaces, ui_key)) {
+        surface_id = ui_surfaces[? ui_key];
+        
+        // 檢查surface是否存在，以及尺寸是否需要更新
+        if (!surface_exists(surface_id) || 
+            surface_get_width(surface_id) != width || 
+            surface_get_height(surface_id) != height) {
+                
+            // 如果surface存在但尺寸不對，先釋放它
+            if (surface_exists(surface_id)) {
+                surface_free(surface_id);
+            }
+            
+            // 創建新的surface
+            surface_id = surface_create(width, height);
+            ds_map_set(ui_surfaces, ui_key, surface_id);
+        }
+    } else {
+        // 首次創建surface
+        surface_id = surface_create(width, height);
+        ds_map_add(ui_surfaces, ui_key, surface_id);
+    }
+    
+    return surface_id;
+}
+
+// 釋放UI的Surface
+function free_ui_surface(ui_instance) {
+    var ui_key = string(ui_instance);
+    
+    if (ds_map_exists(ui_surfaces, ui_key)) {
+        var surface_id = ui_surfaces[? ui_key];
+        
+        if (surface_exists(surface_id)) {
+            surface_free(surface_id);
+        }
+        
+        ds_map_delete(ui_surfaces, ui_key);
+    }
+}
+
+// 檢查並恢復丟失的Surface
+function check_lost_surfaces() {
+    var keys = ds_map_keys_to_array(ui_surfaces);
+    
+    for (var i = 0; i < array_length(keys); i++) {
+        var key = keys[i];
+        var surface_id = ui_surfaces[? key];
+        
+        if (!surface_exists(surface_id)) {
+            // Surface丟失，標記對應的UI需要更新
+            var ui_inst = real(key);
+            
+            if (instance_exists(ui_inst)) {
                 with (ui_inst) {
-                    hide();
+                    if (variable_instance_exists(id, "surface_needs_update")) {
+                        surface_needs_update = true;
+                    }
                 }
             } else {
-                with (ui_inst) {
-                    visible = false;
-                    active = false;
-                }
+                // UI實例不存在，清理映射
+                ds_map_delete(ui_surfaces, key);
             }
         }
     }
-    
-    active_ui[? layer_name] = noone;
-    show_debug_message("隱藏層級: " + layer_name);
-    return true;
 }
 
-// 清理函數 - 在Room結束時調用
-persistent = true; // 使物件在房間更換時不會被銷毀
-// obj_ui_manager - Create_0.gml (修改 cleanup 函數)
-cleanup = function() {
-    // 先檢查映射表是否仍存在
-    if (!ds_exists(ui_layers, ds_type_map)) {
-        show_debug_message("UI 層級已經被釋放");
-        return;
+// 處理UI消息事件
+function on_ui_message(data) {
+    if (!variable_struct_exists(data, "message")) return;
+    
+    // 添加到消息隊列
+    var message = {
+        text: data.message,
+        duration: variable_struct_exists(data, "duration") ? data.duration : message_duration,
+        alpha: 1.0,
+        timer: 0
+    };
+    
+    ds_queue_enqueue(message_queue, message);
+    
+    // 限制消息數量
+    while (ds_queue_size(message_queue) > max_messages) {
+        ds_queue_dequeue(message_queue);
     }
+}
+
+// 處理戰鬥結束事件
+function on_battle_end(data) {
+    // 清理所有UI
+    close_all_ui();
     
-    // 手動遍歷層級，避免使用 ds_map_keys_to_array
-    var layer_names = ["main", "overlay", "hud", "popup"]; // 硬編碼已知的層級名稱
+    // 清空消息隊列
+    ds_queue_clear(message_queue);
     
-    for (var i = 0; i < array_length(layer_names); i++) {
-        var layer_name = layer_names[i];
-        if (ds_map_exists(ui_layers, layer_name)) {
-            var ui_list = ui_layers[? layer_name];
-            if (ds_exists(ui_list, ds_type_list)) {
-                ds_list_destroy(ui_list);
-                show_debug_message("銷毀 UI 列表: " + layer_name);
-            }
+    show_debug_message("UI管理器: 戰鬥結束，清理所有UI");
+}
+
+// 清理函數
+function cleanup() {
+    // 釋放所有surface
+    var keys = ds_map_keys_to_array(ui_surfaces);
+    for (var i = 0; i < array_length(keys); i++) {
+        var key = keys[i];
+        var surface_id = ui_surfaces[? key];
+        
+        if (surface_exists(surface_id)) {
+            surface_free(surface_id);
         }
     }
     
-    // 釋放所有映射表
-    if (ds_exists(ui_layers, ds_type_map)) {
-        ds_map_destroy(ui_layers);
-        show_debug_message("銷毀 UI 層級映射表");
+    // 釋放數據結構
+    var layer_keys = ds_map_keys_to_array(ui_layers);
+    for (var i = 0; i < array_length(layer_keys); i++) {
+        var key = layer_keys[i];
+        var list = ui_layers[? key];
+        
+        if (ds_exists(list, ds_type_list)) {
+            ds_list_destroy(list);
+        }
     }
     
-    if (ds_exists(layer_depths, ds_type_map)) {
-        ds_map_destroy(layer_depths);
-        show_debug_message("銷毀層級深度映射表");
+    var active_keys = ds_map_keys_to_array(active_ui);
+    for (var i = 0; i < array_length(active_keys); i++) {
+        var key = active_keys[i];
+        var list = active_ui[? key];
+        
+        if (ds_exists(list, ds_type_list)) {
+            ds_list_destroy(list);
+        }
     }
     
-    if (ds_exists(active_ui, ds_type_map)) {
-        ds_map_destroy(active_ui);
-        show_debug_message("銷毀活躍 UI 映射表");
+    ds_map_destroy(ui_layers);
+    ds_map_destroy(active_ui);
+    ds_map_destroy(layer_depths);
+    ds_map_destroy(ui_surfaces);
+    ds_queue_destroy(message_queue);
+    
+    // 取消事件訂閱
+    if (instance_exists(obj_event_manager)) {
+        with (obj_event_manager) {
+            unsubscribe_from_all_events(other.id);
+        }
     }
     
-    if (ds_exists(ui_instances, ds_type_map)) {
-        ds_map_destroy(ui_instances);
-        show_debug_message("銷毀 UI 實例映射表");
-    }
-    
-    show_debug_message("UI 管理器清理完成");
+    show_debug_message("UI管理器資源已清理");
 }
 
-// 初始註冊已知的UI物件 - 只有在實例存在時才註冊
-if (instance_exists(obj_battle_ui)) register_ui(obj_battle_ui, "main");
-if (instance_exists(obj_summon_ui)) register_ui(obj_summon_ui, "main");
-if (instance_exists(obj_monster_manager_ui)) register_ui(obj_monster_manager_ui, "main");
-if (instance_exists(obj_capture_ui)) register_ui(obj_capture_ui, "overlay");
-
+// 初始化
+initialize();

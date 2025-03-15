@@ -1,275 +1,171 @@
-// obj_battle_manager 的 Step_0.gml 完整版
-// 更新全局召喚冷卻
-if (global_summon_cooldown > 0) {
-    global_summon_cooldown--;
-}
+/ =======================
+// Step 事件代碼
+// =======================
 
-// 根据战斗状态执行不同逻辑
+// obj_battle_manager (重構) - Step_0.gml
+
+// 根據戰鬥狀態執行不同邏輯
 switch (battle_state) {
     case BATTLE_STATE.INACTIVE:
-        // 非战斗状态，检测是否需要开始战斗
-        // 不需要处理边界
+        // 非戰鬥狀態，不需要處理
         break;
         
     case BATTLE_STATE.STARTING:
-        // 战斗开始过渡 - 边界扩张阶段
-        if (battle_boundary_radius < 300) {
-            battle_boundary_radius += 10; // 逐渐扩大战斗边界
-        } else {
-            // 过渡完成，进入准备阶段
-            battle_state = BATTLE_STATE.PREPARING;
-            show_debug_message("战斗准备阶段开始!" + string(battle_state));
+        // 戰鬥開始過渡 - 邊界擴張階段
+        battle_timer++;
+        
+        // 通知單位管理器更新邊界 (逐漸擴大)
+        if (instance_exists(obj_unit_manager)) {
+            var radius = min(battle_timer * 10, 300); // 逐漸擴大到300
+            obj_unit_manager.set_battle_area(
+                obj_unit_manager.battle_center_x,
+                obj_unit_manager.battle_center_y,
+                radius
+            );
             
-            // 初始化全局戰鬥計數器
-            if (!variable_global_exists("defeated_enemies_count")) {
-                global.defeated_enemies_count = 0;
-            } else {
-                global.defeated_enemies_count = 0; // 重置計數器
-            }
-            
-            if (!variable_global_exists("defeated_player_units")) {
-                global.defeated_player_units = 0;
-            } else {
-                global.defeated_player_units = 0; // 重置計數器
-            }
-            
-            // 在UI中显示提示
-            if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.battle_info = "请召唤单位参战! (按空格键)";
-                obj_battle_ui.surface_needs_update = true; // 確保UI更新
-                obj_battle_ui.show_info("準備階段開始! 召喚你的怪物!");
+            // 邊界擴張完成，進入準備階段
+            if (radius >= 300) {
+                battle_state = BATTLE_STATE.PREPARING;
+                battle_timer = 0;
+                
+                add_battle_log("戰鬥準備階段開始!");
+                
+                // 在UI中顯示提示
+                if (instance_exists(obj_battle_ui)) {
+                    obj_battle_ui.battle_info = "請召喚單位參戰! (按空格鍵)";
+                    obj_battle_ui.show_info("準備階段開始! 召喚你的怪物!");
+                }
+                
+                // 發送進入準備階段事件
+                broadcast_event("battle_preparing", {});
             }
         }
-        
-        // 处理边界
-        enforce_battle_boundary();
         break;
         
     case BATTLE_STATE.PREPARING:
-        // 战斗准备阶段 - 等待玩家召唤单位
+        // 戰鬥準備階段 - 等待玩家召喚單位
         battle_timer++;
         
-        // 检查是否已经召唤了单位或者时间超过限制
-        if (ds_list_size(player_units) > 0 || battle_timer > game_get_speed(gamespeed_fps) * 10) {
+        // 檢查是否已經召喚了單位或者時間超過限制 (10秒)
+        var has_units = false;
+        if (instance_exists(obj_unit_manager)) {
+            has_units = (ds_list_size(obj_unit_manager.player_units) > 0);
+        }
+        
+        if (has_units || battle_timer > game_get_speed(gamespeed_fps) * 10) {
             // 關閉所有可能開啟的UI
-            close_all_active_uis();
+            broadcast_event("close_all_ui", {});
             
-            // 如果10秒内没有召唤单位，自动召唤一个
-            if (ds_list_size(player_units) == 0) {
-                var init_summon_x = battle_center_x - 100;
-                var init_summon_y = battle_center_y;
+            // 如果10秒內沒有召喚單位，自動召喚一個
+            if (!has_units && instance_exists(obj_unit_manager)) {
+                add_battle_log("自動召喚初始單位");
                 
-                // 檢查是否有可用的怪物
-                var has_usable_monster = false;
-                var monster_type_to_summon = obj_test_summon; // 預設值
-                
-                if (variable_global_exists("player_monsters") && array_length(global.player_monsters) > 0) {
-                    for (var i = 0; i < array_length(global.player_monsters); i++) {
-                        if (global.player_monsters[i].hp > 0) {
-                            monster_type_to_summon = global.player_monsters[i].type;
-                            has_usable_monster = true;
-                            break;
+                // 讓單位管理器處理自動召喚邏輯
+                with (obj_unit_manager) {
+                    // 取得戰鬥中心位置
+                    var summon_x = battle_center_x - 100;
+                    var summon_y = battle_center_y;
+                    
+                    // 檢查是否有可用的怪物
+                    var monster_type = obj_test_summon; // 預設值
+                    var found_usable = false;
+                    
+                    if (variable_global_exists("player_monsters") && array_length(global.player_monsters) > 0) {
+                        for (var i = 0; i < array_length(global.player_monsters); i++) {
+                            if (global.player_monsters[i].hp > 0) {
+                                monster_type = global.player_monsters[i].type;
+                                found_usable = true;
+                                break;
+                            }
                         }
                     }
+                    
+                    // 召喚怪物或創建預設怪物
+                    if (found_usable) {
+                        summon_monster(monster_type, summon_x, summon_y);
+                    } else {
+                        var initial_summon = instance_create_layer(summon_x, summon_y, "Instances", obj_test_summon);
+                        ds_list_add(player_units, initial_summon);
+                    }
                 }
-                
-                // 如果有怪物則召喚，否則創建預設怪物
-                if (has_usable_monster) {
-                    summon_monster(monster_type_to_summon);
-                } else {
-                    var initial_summon = instance_create_layer(init_summon_x, init_summon_y, "Instances", obj_test_summon);
-                    ds_list_add(player_units, initial_summon);
-                }
-                
-                show_debug_message("自动召唤了初始单位!");
-                add_battle_log("自動召喚了初始單位");
             }
             
-            // 进入战斗阶段
+            // 進入戰鬥階段
             battle_state = BATTLE_STATE.ACTIVE;
-            battle_timer = 0; // 重置战斗计时器
-            show_debug_message("战斗正式开始!");
+            battle_timer = 0;
+            
+            add_battle_log("戰鬥正式開始!");
             
             // 更新UI提示
             if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.battle_info = "战斗开始!";
+                obj_battle_ui.battle_info = "戰鬥開始!";
                 obj_battle_ui.show_info("戰鬥開始!");
             }
             
-            // 通知所有單位
-            for (var i = 0; i < ds_list_size(player_units); i++) {
-                if (instance_exists(player_units[| i])) {
-                    with (player_units[| i]) {
-                        atb_current = 0; // 重置ATB
-                    }
-                }
-            }
-            
-            for (var i = 0; i < ds_list_size(enemy_units); i++) {
-                if (instance_exists(enemy_units[| i])) {
-                    with (enemy_units[| i]) {
-                        atb_current = 0; // 重置ATB
-                    }
-                }
-            }
-            
-            // 寫入戰鬥日誌
-            add_battle_log("戰鬥開始: 玩家單位=" + string(ds_list_size(player_units)) + 
-                          ", 敵方單位=" + string(ds_list_size(enemy_units)));
+            // 發送戰鬥開始事件
+            broadcast_event("battle_active", {});
         }
-        
-        // 处理边界
-        enforce_battle_boundary();
         break;
         
     case BATTLE_STATE.ACTIVE:
-        // 战斗进行中
+        // 戰鬥進行中
         battle_timer++;
         
-        // 检查战斗是否应该结束
-        if (ds_list_size(player_units) <= 0 || ds_list_size(enemy_units) <= 0) {
-            battle_state = BATTLE_STATE.ENDING;
-            show_debug_message("战斗结束条件达成!");
-            
-            // 寫入戰鬥日誌
-            if (ds_list_size(player_units) <= 0) {
-                add_battle_log("戰鬥失敗: 所有玩家單位被擊敗");
-            } else {
-                add_battle_log("戰鬥勝利: 所有敵人被擊敗");
-            }
-        }
-        
-        // 处理边界
-        enforce_battle_boundary();
-        
-        // 處理捕獲動畫進度
-        if (capture_state == "animating") {
-            capture_animation++;
-            
-            // 捕獲動畫結束
-            if (capture_animation >= 120) { // 2秒動畫
-                // 決定是否成功
-                var roll = random(1);
-                var capture_chance = 0.5; // 基本捕獲率
-                
-                // 如果目標存在且HP較低，提高捕獲率
-                if (instance_exists(target_enemy)) {
-                    capture_chance += (1 - (target_enemy.hp / target_enemy.max_hp)) * 0.4; // 最多額外 +40%
-                }
-                
-                capture_chance = clamp(capture_chance, 0.1, 0.9); // 限制在10%-90%之間
-                var success = (roll <= capture_chance);
-                
-                // 處理捕獲結果
-                handle_capture_result(success);
-            }
-        }
+        // 檢查戰鬥結束條件由事件處理 (on_all_enemies_defeated, on_all_player_units_defeated)
         break;
         
     case BATTLE_STATE.ENDING:
-        // 战斗结束过渡 - 缩小战斗边界
-        if (battle_boundary_radius > 0) {
-            battle_boundary_radius -= 10; // 逐渐缩小战斗边界
-        } else {
-            // 过渡完成，显示战斗结果
-            battle_state = BATTLE_STATE.RESULT;
-            show_debug_message("显示战斗结果!");
-            
-            // 更新戰鬥結果數據
-            battle_result.duration = battle_timer / game_get_speed(gamespeed_fps);
-            battle_result.defeated_enemies = global.defeated_enemies_count;
-            battle_result.victory = (ds_list_size(enemy_units) <= 0);
-            
-            if (battle_result.victory) {
-                // 如果勝利，計算經驗獎勵
-                battle_result.exp_gained = battle_result.defeated_enemies * 50 + battle_result.duration;
-            } else {
-                // 失敗時減少獎勵
-                battle_result.exp_gained = floor(battle_result.defeated_enemies * 20);
-            }
-            
-            add_battle_log("戰鬥結束: 時間=" + string_format(battle_result.duration, 3, 1) + 
-                          "秒, 擊敗敵人=" + string(battle_result.defeated_enemies));
-        }
+        // 戰鬥結束過渡 - 縮小戰鬥邊界
+        battle_timer++;
         
-        // 在边界还存在时处理边界
-        enforce_battle_boundary();
+        // 通知單位管理器更新邊界 (逐漸縮小)
+        if (instance_exists(obj_unit_manager)) {
+            // 計算應該的邊界半徑
+            var shrink_speed = 10;
+            var radius = max(0, 300 - (shrink_speed * (battle_timer / game_get_speed(gamespeed_fps)) * 60));
+            
+            obj_unit_manager.set_battle_area(
+                obj_unit_manager.battle_center_x,
+                obj_unit_manager.battle_center_y,
+                radius
+            );
+            
+            // 邊界縮小完成，顯示戰鬥結果
+            if (radius <= 0) {
+                battle_state = BATTLE_STATE.RESULT;
+                add_battle_log("顯示戰鬥結果!");
+                
+                // 發送顯示結果事件
+                broadcast_event("show_battle_result", {});
+            }
+        }
         break;
         
     case BATTLE_STATE.RESULT:
         // 確保只有這個階段會處理結果
         if (!battle_result_handled) {
-            battle_result_handled = true; // 防止重複執行
-            show_debug_message("[DEBUG] 開始處理戰鬥結果");
-
-            if (battle_result.victory) {
-                // 戰鬥勝利
-                show_debug_message("[DEBUG] 戰鬥勝利，準備發放獎勵");
-                if (instance_exists(obj_battle_ui)) {
-                    obj_battle_ui.result_text = "戰鬥勝利!";
-                    show_debug_message("[DEBUG] UI存在，設置勝利文本");
-                } else {
-                    show_debug_message("[DEBUG] 警告：找不到UI實例！");
-                }
-                
-                // 發放獎勵
-                grant_rewards();
-                show_debug_message("[DEBUG] 獎勵發放完成");
-                
-                // 確保UI顯示獎勵
-                if (instance_exists(obj_battle_ui)) {
-                    obj_battle_ui.reward_visible = true;
-                    show_debug_message("[DEBUG] 設置獎勵面板可見性：" + string(obj_battle_ui.reward_visible));
-                }
-            } else {
-                // 戰鬥失敗
-                show_debug_message("[DEBUG] 戰鬥失敗");
-                if (instance_exists(obj_battle_ui)) {
-                    obj_battle_ui.result_text = "戰鬥失敗!";
-                }
-                
-                // 處理失敗懲罰
-                handle_defeat();
+            battle_result_handled = true;
+            
+            // 檢查勝負
+            var victory = false;
+            if (instance_exists(obj_unit_manager)) {
+                victory = (ds_list_size(obj_unit_manager.enemy_units) <= 0);
             }
             
-            show_debug_message("[DEBUG] 戰鬥結果處理完成");
+            // 發送計算獎勵事件
+            if (instance_exists(obj_reward_system)) {
+                with (obj_reward_system) {
+                    // 發放獎勵
+                    grant_rewards();
+                }
+            }
+            
+            add_battle_log("戰鬥結果處理完成，勝利: " + string(victory));
         }
 
         // 玩家確認後，戰鬥正式結束
         if (keyboard_check_pressed(vk_space)) {
-            show_debug_message("[DEBUG] 玩家按下空格，準備結束戰鬥");
             end_battle();
         }
         break;
-}
-
-// 管理单位列表，移除不存在的单位
-for (var i = ds_list_size(player_units) - 1; i >= 0; i--) {
-    if (!instance_exists(player_units[| i])) {
-        ds_list_delete(player_units, i);
-    }
-}
-
-for (var i = ds_list_size(enemy_units) - 1; i >= 0; i--) {
-    if (!instance_exists(enemy_units[| i])) {
-        ds_list_delete(enemy_units, i);
-    }
-}
-
-// 檢查死亡單位 (保險機制)
-with (obj_battle_unit_parent) {
-    if (hp <= 0 && !dead) {
-        // 單位死亡但尚未處理
-        dead = true;
-        
-        // 通知戰鬥管理器
-        if (instance_exists(obj_battle_manager)) {
-            with (obj_battle_manager) {
-                handle_unit_death(other.id);
-            }
-        } else {
-            // 如果找不到戰鬥管理器，直接銷毀
-            instance_destroy();
-        }
-    }
 }

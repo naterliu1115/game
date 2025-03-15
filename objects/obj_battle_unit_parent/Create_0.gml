@@ -271,18 +271,18 @@ take_damage = function(amount) {
 die = function() {
     if (!dead) {
         dead = true;
-        show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ") 已死亡");
+        // 發送死亡事件
+        broadcast_event("unit_died", {
+            unit_id: id,
+            team: team,
+            position: {x: x, y: y},
+            unit_type: object_index
+        });
         
-        // 从战斗管理器的列表中移除
-        with (obj_battle_manager) {
-            var list_to_check = (other.team == 0) ? player_units : enemy_units;
-            var index = ds_list_find_index(list_to_check, other.id);
-            if (index != -1) {
-                ds_list_delete(list_to_check, index);
-            }
-        }
+        // 創建死亡特效
+        instance_create_layer(x, y, "Effects", obj_death_effect);
         
-        // 设置闹钟延迟销毁
+        // 設置自我銷毀延遲
         alarm[0] = 15;
     }
 }
