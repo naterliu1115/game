@@ -48,6 +48,7 @@
     {"id":{"name":"obj_battle_unit_parent","path":"objects/obj_battle_unit_parent/obj_battle_unit_parent.yy",},},
     {"id":{"name":"obj_capture_effect","path":"objects/obj_capture_effect/obj_capture_effect.yy",},},
     {"id":{"name":"obj_capture_ui","path":"objects/obj_capture_ui/obj_capture_ui.yy",},},
+    {"id":{"name":"obj_death_effect","path":"objects/obj_death_effect/obj_death_effect.yy",},},
     {"id":{"name":"obj_dialogue_box","path":"objects/obj_dialogue_box/obj_dialogue_box.yy",},},
     {"id":{"name":"obj_dialogue_manager","path":"objects/obj_dialogue_manager/obj_dialogue_manager.yy",},},
     {"id":{"name":"obj_enemy_parent","path":"objects/obj_enemy_parent/obj_enemy_parent.yy",},},

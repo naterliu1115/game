@@ -20,56 +20,6 @@ capture_chance = 0;
 active = false;
 visible = false;
 
-// 定義標準UI方法
-show = function() {
-    active = true;
-    visible = true;
-    depth = -150; // 確保UI在overlay層級
-    
-    // 重新計算UI尺寸（確保每次都使用最新的屏幕尺寸）
-    ui_width = display_get_gui_width() * 0.7;
-    ui_height = display_get_gui_height() * 0.5;
-    
-    // 確保UI不會太小
-    ui_width = max(300, ui_width);
-    ui_height = max(200, ui_height);
-    
-    // 中心對齊
-    ui_x = (display_get_gui_width() - ui_width) / 2;
-    ui_y = (display_get_gui_height() - ui_height) / 2;
-    
-    // 標記需要更新
-    surface_needs_update = true;
-    
-    // 重新計算按鈕位置
-    capture_btn_x = ui_x + ui_width / 4 - capture_btn_width / 2;
-    capture_btn_y = ui_y + ui_height - 60;
-    cancel_btn_x = ui_x + ui_width * 3/4 - cancel_btn_width / 2;
-    cancel_btn_y = ui_y + ui_height - 60;
-    
-    show_debug_message("捕獲UI已打開，尺寸: " + string(ui_width) + "x" + string(ui_height) + " 位置: " + string(ui_x) + "," + string(ui_y));
-};
-
-hide = function() {
-    active = false; 
-    visible = false;
-    
-    // 釋放表面資源
-    if (surface_exists(ui_surface)) {
-        surface_free(ui_surface);
-        ui_surface = -1;
-    }
-    
-    // 保留target_enemy參考，但將狀態重置
-    // 這樣再次開啟時可以繼續顯示相同的敵人
-    capture_state = "ready";
-    capture_animation = 0;
-    
-    show_debug_message("捕獲UI已關閉，資源已釋放");
-};
-
-
-
 // 動畫相關
 open_animation = 0;
 open_speed = 0.1;
@@ -96,6 +46,9 @@ open_capture_ui = function(target) {
         return;
     }
     
+    show_debug_message("===== 開啟捕獲UI =====");
+    show_debug_message("目標：" + object_get_name(target.object_index));
+    
     // 檢查戰鬥狀態，確保UI不能在PREPARING開啟
     if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
         show_debug_message("無法在戰鬥準備階段開啟捕獲 UI");
@@ -111,22 +64,12 @@ open_capture_ui = function(target) {
         return;
     }
     
-    show_debug_message("打開捕獲 UI，目標：" + string(object_get_name(target.object_index)));
-    
-    // 通過UI管理器顯示
-    if (instance_exists(obj_ui_manager)) {
-        with(obj_ui_manager) {
-            show_ui("overlay", other.id);
-        }
-    } else {
-        // 備用方法，直接顯示
-        show();
-    }
-    
+    // 設置目標和初始狀態
     target_enemy = target;
     capture_state = "ready";
     open_animation = 0;
     capture_animation = 0;
+    surface_needs_update = true;
 
     // 重新初始化捕獲方法
     capture_methods = []; // 清空陣列
@@ -154,46 +97,47 @@ open_capture_ui = function(target) {
 
     // 計算初始捕獲率
     calculate_capture_chance();
-
-    // 確保 UI 需要更新
-    surface_needs_update = true;
+    
+    // 通過UI管理器顯示
+    if (instance_exists(obj_ui_manager)) {
+        show_debug_message("使用UI管理器顯示捕獲UI");
+        with (obj_ui_manager) {
+            show_ui(other.id, "overlay");
+        }
+    } else {
+        // 備用方法，直接顯示
+        show_debug_message("UI管理器不存在，使用直接顯示方法");
+        show();
+    }
+    
+    show_debug_message("===== 捕獲UI開啟完成 =====");
 };
 
 // 計算捕獲成功率
 calculate_capture_chance = function() {
-    if (target_enemy != noone && instance_exists(target_enemy)) {
-        // 基礎捕獲率 (這可以根據怪物稀有度等調整)
-        var base_chance = 0.3;
-        
-        // HP 影響 (HP 越低，捕獲率越高)
-        var hp_factor = 1 - (target_enemy.hp / target_enemy.max_hp);
-        
-        // 捕獲方法的加成
-        var method_bonus = 0;
-        if (selected_method < array_length(capture_methods)) {
-            var capture_method = capture_methods[selected_method]; // 使用陣列索引
-            if (variable_struct_exists(capture_method, "bonus")) {
-                method_bonus = capture_method.bonus;
-            }
-        }
-        
-        // 計算最終捕獲率
-        capture_chance = base_chance + (hp_factor * 0.4) + method_bonus;
-        
-        // 限制在 0 到 1 之間
-        capture_chance = clamp(capture_chance, 0, 1);
-        
-        // Debug 輸出
-        show_debug_message("捕獲率計算: 基礎=" + string(base_chance) + 
-                         ", HP影響=" + string(hp_factor * 0.4) + 
-                         ", 方法加成=" + string(method_bonus) + 
-                         ", 最終=" + string(capture_chance));
-    } else {
+    if (!instance_exists(target_enemy)) {
         capture_chance = 0;
+        return;
     }
+    
+    // 基礎捕獲率計算
+    var hp_percent = target_enemy.hp / target_enemy.max_hp;
+    var base_chance = 0.8; // 80% 基礎捕獲率
+    var chance_modifier = 1 - hp_percent; // HP越低，成功率越高
+    
+    // 計算最終捕獲率
+    capture_chance = base_chance + (chance_modifier * 0.3); // 最高額外 +30%
+    
+    // 如果有選擇捕獲方法，加入其加成
+    if (selected_method >= 0 && selected_method < array_length(capture_methods)) {
+        capture_chance += capture_methods[selected_method].bonus;
+    }
+    
+    // 限制在合理範圍內
+    capture_chance = clamp(capture_chance, 0.1, 0.95);
 };
 
-// 嘗試捕獲敵人
+// 嘗試捕獲
 attempt_capture = function() {
     if (target_enemy != noone && instance_exists(target_enemy)) {
         // 扣除物品 (實際遊戲中需要實作)
@@ -243,6 +187,58 @@ finalize_capture = function() {
     
     // 關閉 UI
     hide();
+};
+
+// 定義標準UI方法
+show = function() {
+    show_debug_message("===== 顯示捕獲UI =====");
+    
+    active = true;
+    visible = true;
+    depth = -150; // 確保UI在overlay層級
+    
+    // 重新計算UI尺寸（確保每次都使用最新的屏幕尺寸）
+    ui_width = display_get_gui_width() * 0.7;
+    ui_height = display_get_gui_height() * 0.5;
+    
+    // 確保UI不會太小
+    ui_width = max(300, ui_width);
+    ui_height = max(200, ui_height);
+    
+    // 中心對齊
+    ui_x = (display_get_gui_width() - ui_width) / 2;
+    ui_y = (display_get_gui_height() - ui_height) / 2;
+    
+    // 標記需要更新
+    surface_needs_update = true;
+    
+    // 重新計算按鈕位置
+    capture_btn_x = ui_x + ui_width / 4 - capture_btn_width / 2;
+    capture_btn_y = ui_y + ui_height - 60;
+    cancel_btn_x = ui_x + ui_width * 3/4 - cancel_btn_width / 2;
+    cancel_btn_y = ui_y + ui_height - 60;
+    
+    show_debug_message("捕獲UI已打開，尺寸: " + string(ui_width) + "x" + string(ui_height) + " 位置: " + string(ui_x) + "," + string(ui_y));
+};
+
+hide = function() {
+    show_debug_message("===== 隱藏捕獲UI =====");
+    
+    active = false; 
+    visible = false;
+    
+    // 釋放表面資源
+    if (surface_exists(ui_surface)) {
+        surface_free(ui_surface);
+        ui_surface = -1;
+    }
+    
+    // 保留target_enemy參考，但將狀態重置
+    // 這樣再次開啟時可以繼續顯示相同的敵人
+    capture_state = "ready";
+    capture_animation = 0;
+    
+    show_debug_message("捕獲UI已關閉，資源已釋放");
 };
 
 show_debug_message("捕獲UI創建完成");

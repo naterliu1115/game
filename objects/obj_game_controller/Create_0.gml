@@ -264,17 +264,28 @@ toggle_monster_manager_ui = function() {
 toggle_capture_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
     
-    // 不允許在準備階段開啟捕獲UI
-    if (instance_exists(obj_battle_manager) && 
-        obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
+    show_debug_message("===== 開始檢查捕獲條件 =====");
+    
+    // 檢查戰鬥狀態，只允許在ACTIVE狀態使用
+    if (!instance_exists(obj_battle_manager)) {
+        show_debug_message("錯誤：找不到戰鬥管理器");
         if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.show_info("無法在戰鬥準備階段捕獲敵人！");
+            obj_battle_ui.show_info("戰鬥系統未初始化！");
+        }
+        return;
+    }
+    
+    if (obj_battle_manager.battle_state != BATTLE_STATE.ACTIVE) {
+        show_debug_message("錯誤：戰鬥狀態不是ACTIVE，當前狀態：" + string(obj_battle_manager.battle_state));
+        if (instance_exists(obj_battle_ui)) {
+            obj_battle_ui.show_info("只能在戰鬥進行中使用捕獲功能！");
         }
         return;
     }
     
     // 檢查是否已經打開，如果是則關閉
     if (instance_exists(obj_capture_ui) && obj_capture_ui.active) {
+        show_debug_message("關閉已開啟的捕獲UI");
         with (obj_capture_ui) {
             hide();
         }
@@ -285,17 +296,45 @@ toggle_capture_ui = function() {
     // 設定捕獲目標
     var target = noone;
     
-    // 尋找一個活著的敵人實例
-    if (instance_exists(obj_battle_manager) && ds_exists(obj_battle_manager.enemy_units, ds_type_list)) {
-        if (ds_list_size(obj_battle_manager.enemy_units) > 0) {
-            var enemy_obj = obj_battle_manager.enemy_units[| 0];
-            if (instance_exists(enemy_obj)) {
-                target = enemy_obj;
+    // 檢查enemy_units列表
+    if (!instance_exists(obj_unit_manager)) {
+        show_debug_message("錯誤：找不到單位管理器");
+        return;
+    }
+    
+    with (obj_unit_manager) {
+        show_debug_message("檢查敵人列表：");
+        show_debug_message("- enemy_units 是否存在: " + string(ds_exists(enemy_units, ds_type_list)));
+        
+        if (!ds_exists(enemy_units, ds_type_list)) {
+            show_debug_message("錯誤：enemy_units不是有效的列表");
+            return;
+        }
+        
+        var enemy_count = ds_list_size(enemy_units);
+        show_debug_message("- 敵人數量: " + string(enemy_count));
+        
+        if (enemy_count > 0) {
+            // 遍歷所有敵人，找到第一個活著的
+            for (var i = 0; i < enemy_count; i++) {
+                var enemy_obj = enemy_units[| i];
+                show_debug_message("檢查敵人 #" + string(i) + ":");
+                show_debug_message("- 實例是否存在: " + string(instance_exists(enemy_obj)));
+                
+                if (instance_exists(enemy_obj)) {
+                    show_debug_message("- HP: " + string(enemy_obj.hp) + "/" + string(enemy_obj.max_hp));
+                    if (enemy_obj.hp > 0) {
+                        target = enemy_obj;
+                        show_debug_message("找到有效目標：" + object_get_name(enemy_obj.object_index));
+                        break;
+                    }
+                }
             }
         }
     }
     
     if (target != noone) {
+        show_debug_message("準備開啟捕獲UI");
         // 確保UI管理器存在
         if (!instance_exists(obj_ui_manager)) {
             instance_create_layer(0, 0, "Instances", obj_ui_manager);
@@ -306,9 +345,8 @@ toggle_capture_ui = function() {
         if (instance_exists(obj_capture_ui)) {
             capture_ui_inst = instance_find(obj_capture_ui, 0);
             
-            // 確保ui_inst的所有狀態已重置
+            // 重置UI狀態
             with (capture_ui_inst) {
-                // 重設重要變量，確保UI狀態回到初始狀態
                 active = false;
                 visible = false;
                 capture_state = "ready";
@@ -317,10 +355,10 @@ toggle_capture_ui = function() {
                 surface_needs_update = true;
             }
         } else {
-            capture_ui_inst = instance_create_layer(0, 0, "Instances", obj_capture_ui);
+            capture_ui_inst = instance_create_layer(0, 0, "UI", obj_capture_ui);
         }
         
-        // 通過UI實例直接呼叫open_capture_ui函數
+        // 開啟捕獲UI
         with (capture_ui_inst) {
             open_capture_ui(target);
         }
@@ -328,9 +366,11 @@ toggle_capture_ui = function() {
         ui_cooldown = 5;
         show_debug_message("已開啟捕獲UI，目標: " + string(object_get_name(target.object_index)));
     } else {
+        show_debug_message("錯誤：沒有找到有效的目標");
         if (instance_exists(obj_battle_ui)) {
             obj_battle_ui.show_info("沒有可捕獲的敵人！");
         }
-        show_debug_message("無法開啟捕獲UI：找不到有效的敵人目標");
     }
+    
+    show_debug_message("===== 捕獲檢查結束 =====");
 }

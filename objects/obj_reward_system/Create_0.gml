@@ -35,9 +35,9 @@ function initialize() {
     // 訂閱相關事件
     if (instance_exists(obj_event_manager)) {
         with (obj_event_manager) {
-            subscribe_to_event("battle_end", other.id, other.on_battle_end);
-            subscribe_to_event("all_enemies_defeated", other.id, other.on_all_enemies_defeated);
-            subscribe_to_event("all_player_units_defeated", other.id, other.on_all_player_units_defeated);
+            subscribe_to_event("battle_end", other.id, "on_battle_end");
+            subscribe_to_event("all_enemies_defeated", other.id, "on_all_enemies_defeated");
+            subscribe_to_event("all_player_units_defeated", other.id, "on_all_player_units_defeated");
         }
     }
     

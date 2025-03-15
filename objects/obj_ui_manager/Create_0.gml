@@ -33,16 +33,25 @@ message_spacing = 30; // 消息間距
 
 // 初始化
 function initialize() {
+    show_debug_message("===== 初始化UI管理器 =====");
+    
     // 訂閱相關事件
     if (instance_exists(obj_event_manager)) {
+        show_debug_message("事件管理器存在，開始訂閱事件...");
+        
         with (obj_event_manager) {
-            subscribe_to_event("ui_message", other.id, other.on_ui_message);
-            subscribe_to_event("close_all_ui", other.id, other.close_all_ui);
-            subscribe_to_event("battle_end", other.id, other.on_battle_end);
+            // 使用字符串而不是函數引用
+            subscribe_to_event("ui_message", other.id, "on_ui_message");
+            subscribe_to_event("close_all_ui", other.id, "close_all_ui");
+            subscribe_to_event("battle_end", other.id, "on_battle_end");
         }
+        
+        show_debug_message("事件訂閱完成");
+    } else {
+        show_debug_message("錯誤：找不到事件管理器");
     }
     
-    show_debug_message("UI管理器已初始化");
+    show_debug_message("===== UI管理器初始化完成 =====");
 }
 
 // 註冊UI到指定層級

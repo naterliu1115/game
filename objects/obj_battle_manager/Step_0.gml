@@ -120,18 +120,48 @@ switch (battle_state) {
         // 戰鬥進行中
         battle_timer++;
         
-        // 檢查戰鬥結束條件由事件處理 (on_all_enemies_defeated, on_all_player_units_defeated)
+        // 安全網檢查 - 每秒檢查一次
+        if (battle_timer mod game_get_speed(gamespeed_fps) == 0) {
+            if (instance_exists(obj_unit_manager)) {
+                var enemy_count = ds_list_size(obj_unit_manager.enemy_units);
+                var player_count = ds_list_size(obj_unit_manager.player_units);
+                
+                show_debug_message("安全網檢查 - 敵人數量: " + string(enemy_count) + ", 玩家單位數量: " + string(player_count));
+                
+                // 只在戰鬥狀態為 ACTIVE 且超過3秒後才進行安全網檢查
+                if (battle_state == BATTLE_STATE.ACTIVE && battle_timer >= game_get_speed(gamespeed_fps) * 3) {
+                    // 如果敵人數量為0但沒有觸發結束事件
+                    if (enemy_count <= 0) {
+                        show_debug_message("警告：安全網檢測到敵人數量為0但戰鬥仍在進行，觸發all_enemies_defeated事件");
+                        broadcast_event("all_enemies_defeated", {
+                            reason: "safety_check_delayed"
+                        });
+                    }
+                    // 如果玩家單位數量為0但沒有觸發結束事件
+                    else if (player_count <= 0) {
+                        show_debug_message("警告：安全網檢測到玩家單位數量為0但戰鬥仍在進行，觸發all_player_units_defeated事件");
+                        broadcast_event("all_player_units_defeated", {
+                            reason: "safety_check_delayed"
+                        });
+                    }
+                }
+            }
+        }
         break;
         
     case BATTLE_STATE.ENDING:
         // 戰鬥結束過渡 - 縮小戰鬥邊界
         battle_timer++;
         
+        show_debug_message("處理 ENDING 狀態（計時器：" + string(battle_timer) + "）");
+        
         // 通知單位管理器更新邊界 (逐漸縮小)
         if (instance_exists(obj_unit_manager)) {
             // 計算應該的邊界半徑
             var shrink_speed = 10;
             var radius = max(0, 300 - (shrink_speed * (battle_timer / game_get_speed(gamespeed_fps)) * 60));
+            
+            show_debug_message("更新戰鬥邊界 - 當前半徑: " + string(radius));
             
             obj_unit_manager.set_battle_area(
                 obj_unit_manager.battle_center_x,
@@ -141,12 +171,18 @@ switch (battle_state) {
             
             // 邊界縮小完成，顯示戰鬥結果
             if (radius <= 0) {
+                show_debug_message("邊界收縮完成，轉換到 RESULT 狀態");
                 battle_state = BATTLE_STATE.RESULT;
+                battle_timer = 0;  // 重置計時器
                 add_battle_log("顯示戰鬥結果!");
                 
                 // 發送顯示結果事件
                 broadcast_event("show_battle_result", {});
             }
+        } else {
+            show_debug_message("警告：單位管理器不存在，直接轉換到 RESULT 狀態");
+            battle_state = BATTLE_STATE.RESULT;
+            battle_timer = 0;
         }
         break;
         
@@ -182,3 +218,17 @@ switch (battle_state) {
 battle_center_x = battle_area.center_x;
 battle_center_y = battle_area.center_y;
 battle_boundary_radius = battle_area.boundary_radius;
+
+// 測試用：按F3顯示當前戰鬥狀態
+if (keyboard_check_pressed(vk_f3)) {
+    var state_names = ["INACTIVE", "STARTING", "PREPARING", "ACTIVE", "ENDING", "RESULT"];
+    show_debug_message("===== 當前戰鬥狀態 =====");
+    show_debug_message("狀態: " + state_names[battle_state]);
+    show_debug_message("計時器: " + string(battle_timer));
+    show_debug_message("結果是否已處理: " + string(battle_result_handled));
+    if (instance_exists(obj_unit_manager)) {
+        show_debug_message("玩家單位數量: " + string(ds_list_size(obj_unit_manager.player_units)));
+        show_debug_message("敵方單位數量: " + string(ds_list_size(obj_unit_manager.enemy_units)));
+    }
+    show_debug_message("========================");
+}

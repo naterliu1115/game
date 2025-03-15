@@ -303,7 +303,7 @@ die = function() {
         });
         
         // 創建死亡特效
-        instance_create_layer(x, y, "Effects", obj_death_effect);
+        instance_create_layer(x, y, "Instances", obj_death_effect);
         
         // 設置自我銷毀延遲
         alarm[0] = 15;
