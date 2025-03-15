@@ -67,88 +67,111 @@ choose_target_and_skill = function() {
 // 寻找新目标
 find_new_target = function() {
     // 获取潜在目标列表(敌对阵营)
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") 正在寻找目标");
+    show_debug_message("===== 開始尋找目標 =====");
+    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ")");
+    show_debug_message("- 當前隊伍: " + string(team));
+    
     var potential_targets = ds_list_create();
     
-    with (obj_battle_manager) {
-        var enemy_list = (other.team == 0) ? enemy_units : player_units;
-        show_debug_message("  - 潜在目标数量: " + string(ds_list_size(enemy_list)));
-        ds_list_copy(potential_targets, enemy_list);
-    }
-    
-    // 确保不会选择自己作为目标
-    var self_index = ds_list_find_index(potential_targets, id);
-    if (self_index != -1) {
-        ds_list_delete(potential_targets, self_index);
-        show_debug_message("  - 已从目标列表中移除自己");
-    }
-    
-    // 根据AI模式和标记来选择目标
-    if (ds_list_size(potential_targets) > 0) {
-        var marked_found = false;
+    if (instance_exists(obj_unit_manager)) {
+        var enemy_list = (team == 0) ? obj_unit_manager.enemy_units : obj_unit_manager.player_units;
+        show_debug_message("- 查找列表: " + (team == 0 ? "enemy_units" : "player_units"));
+        show_debug_message("- 潛在目標數量: " + string(ds_list_size(enemy_list)));
         
-        // 优先选择被标记的目标
-        for (var i = 0; i < ds_list_size(potential_targets); i++) {
-            var pot_target = potential_targets[| i];
-            if (instance_exists(pot_target) && pot_target.marked) {
-                target = pot_target;
-                marked_found = true;
-                show_debug_message("  - 找到被标记的目标: " + string(pot_target));
-                break;
+        // 列出所有潛在目標的信息
+        for (var i = 0; i < ds_list_size(enemy_list); i++) {
+            var check_target = enemy_list[| i];
+            show_debug_message("  目標 " + string(i) + ":");
+            show_debug_message("  - ID: " + string(check_target));
+            show_debug_message("  - 類型: " + object_get_name(check_target.object_index));
+            show_debug_message("  - Team: " + string(check_target.team));
+            show_debug_message("  - 是否存活: " + (!check_target.dead ? "是" : "否"));
+            
+            if (instance_exists(check_target) && 
+                !check_target.dead && 
+                check_target.id != id) {
+                ds_list_add(potential_targets, check_target);
             }
-        }
-        
-        // 如果没有找到被标记的目标，根据AI模式选择
-        if (!marked_found) {
-            switch (ai_mode) {
-                case AI_MODE.AGGRESSIVE:
-                    // 选择最近或最弱的目标
-                    var closest_dist = 100000;
-                    var closest_target = noone;
-                    
-                    for (var i = 0; i < ds_list_size(potential_targets); i++) {
-                        var pot_target = potential_targets[| i];
-                        if (instance_exists(pot_target)) {
-                            var dist = point_distance(x, y, pot_target.x, pot_target.y);
-                            if (dist < closest_dist) {
-                                closest_dist = dist;
-                                closest_target = pot_target;
-                            }
-                        }
-                    }
-                    
-                    target = closest_target;
-                    break;
-                    
-                case AI_MODE.DEFENSIVE:
-                    // 优先选择攻击自己的目标
-                    // 或者最接近的目标
-                    // 这里可以添加更复杂的逻辑
-                    if (ds_list_size(potential_targets) > 0) {
-                        target = potential_targets[| 0];
-                    }
-                    break;
-                    
-                case AI_MODE.PURSUIT:
-                    // 如果之前有目标但失效了，找最相似的目标
-                    // 否则选择随机目标
-                    if (ds_list_size(potential_targets) > 0) {
-                        target = potential_targets[| irandom(ds_list_size(potential_targets) - 1)];
-                    }
-                    break;
-            }
-        }
-        
-        if (target != noone) {
-            show_debug_message("  - 选择目标成功: " + object_get_name(target.object_index) + " (ID: " + string(target.id) + ")");
-        } else {
-            show_debug_message("  - 尽管有潜在目标，但选择失败!");
         }
     } else {
-        show_debug_message("  - 没有找到任何有效目标!");
-        target = noone;
+        show_debug_message("- 警告：單位管理器不存在！");
     }
     
+    show_debug_message("- 有效目標數量: " + string(ds_list_size(potential_targets)));
+    
+    // 如果有標記的目標，優先選擇
+    var marked_target = noone;
+    for (var i = 0; i < ds_list_size(potential_targets); i++) {
+        var potential_target = potential_targets[| i];
+        if (potential_target.marked) {
+            marked_target = potential_target;
+            show_debug_message("- 找到被標記的目標: " + string(marked_target));
+            break;
+        }
+    }
+    
+    if (marked_target != noone) {
+        target = marked_target;
+        show_debug_message("- 選擇了被標記的目標: " + string(target));
+    }
+    // 根據 AI 模式選擇目標
+    else if (ds_list_size(potential_targets) > 0) {
+        switch(ai_mode) {
+            case AI_MODE.AGGRESSIVE:
+                // 選擇最近的目標
+                var nearest_dist = infinity;
+                var nearest_target = noone;
+                
+                for (var i = 0; i < ds_list_size(potential_targets); i++) {
+                    var potential_target = potential_targets[| i];
+                    var dist = point_distance(x, y, potential_target.x, potential_target.y);
+                    if (dist < nearest_dist) {
+                        nearest_dist = dist;
+                        nearest_target = potential_target;
+                    }
+                }
+                
+                target = nearest_target;
+                show_debug_message("- 選擇了最近的目標: " + string(target) + "，距離: " + string(nearest_dist));
+                break;
+                
+            case AI_MODE.DEFENSIVE:
+                // 選擇最弱的目標
+                var lowest_hp_ratio = infinity;
+                var weakest_target = noone;
+                
+                for (var i = 0; i < ds_list_size(potential_targets); i++) {
+                    var potential_target = potential_targets[| i];
+                    var hp_ratio = potential_target.hp / potential_target.max_hp;
+                    if (hp_ratio < lowest_hp_ratio) {
+                        lowest_hp_ratio = hp_ratio;
+                        weakest_target = potential_target;
+                    }
+                }
+                
+                target = weakest_target;
+                show_debug_message("- 選擇了最弱的目標: " + string(target) + "，HP比例: " + string(lowest_hp_ratio));
+                break;
+                
+            case AI_MODE.PURSUIT:
+                // 如果已有目標且目標仍然有效，保持追蹤
+                if (target != noone && instance_exists(target) && !target.dead) {
+                    show_debug_message("- 繼續追蹤現有目標: " + string(target));
+                } else {
+                    // 否則選擇隨機目標
+                    target = potential_targets[| irandom(ds_list_size(potential_targets) - 1)];
+                    show_debug_message("- 選擇了隨機目標: " + string(target));
+                }
+                break;
+        }
+    } else {
+        target = noone;
+        show_debug_message("- 沒有找到任何有效目標!");
+    }
+    
+    show_debug_message("===== 目標搜索結束 =====");
+    
+    // 清理臨時列表
     ds_list_destroy(potential_targets);
 }
 
@@ -286,10 +309,6 @@ die = function() {
         alarm[0] = 15;
     }
 }
-
-
-
-
 
 // 调用初始化
 initialize();

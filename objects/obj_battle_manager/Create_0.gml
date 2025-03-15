@@ -15,6 +15,10 @@ battle_state = BATTLE_STATE.INACTIVE;
 battle_timer = 0;
 battle_result_handled = false;
 
+// 初始化單位列表
+player_units = ds_list_create();
+enemy_units = ds_list_create();
+
 // 戰鬥區域數據
 battle_area = {
     center_x: 0,
@@ -133,7 +137,11 @@ ensure_managers_exist = function() {
 
 // 啟動戰鬥函數
 start_battle = function(initial_enemy) {
-    if (battle_state != BATTLE_STATE.INACTIVE) return false;
+    show_debug_message("===== 開始初始化戰鬥 =====");
+    if (battle_state != BATTLE_STATE.INACTIVE) {
+        show_debug_message("警告：戰鬥已經在進行中，狀態：" + string(battle_state));
+        return false;
+    }
     
     // 設置戰鬥狀態
     battle_state = BATTLE_STATE.STARTING;
@@ -143,14 +151,34 @@ start_battle = function(initial_enemy) {
     // 設置全局戰鬥標誌
     global.in_battle = true;
     
+    show_debug_message("初始敵人信息：");
+    show_debug_message("- ID: " + string(initial_enemy));
+    show_debug_message("- 類型: " + object_get_name(initial_enemy.object_index));
+    show_debug_message("- 位置: (" + string(initial_enemy.x) + ", " + string(initial_enemy.y) + ")");
+    with (initial_enemy) {
+        show_debug_message("- Team值: " + string(team));
+    }
+    
     // 記錄戰鬥開始
     add_battle_log("戰鬥開始! 初始敵人: " + object_get_name(initial_enemy.object_index));
     
+    // 設置戰鬥區域 - 使用初始敵人位置作為中心點
+    battle_area.center_x = initial_enemy.x;
+    battle_area.center_y = initial_enemy.y;
+    battle_area.boundary_radius = 0; // 初始為0，會在Step事件中擴張
+    
+    // 更新直接引用
+    battle_center_x = initial_enemy.x;
+    battle_center_y = initial_enemy.y;
+    battle_boundary_radius = 0;
+    
+    show_debug_message("發送戰鬥開始事件");
     // 發送戰鬥開始事件
     broadcast_event("battle_start", {
         initial_enemy: initial_enemy,
         center_x: initial_enemy.x,
-        center_y: initial_enemy.y
+        center_y: initial_enemy.y,
+        required_radius: 300 // 使用預設值
     });
     
     // 顯示戰鬥UI
@@ -161,7 +189,7 @@ start_battle = function(initial_enemy) {
         }
     }
     
-    show_debug_message("戰鬥開始: 初始敵人 " + object_get_name(initial_enemy.object_index));
+    show_debug_message("===== 戰鬥初始化完成 =====");
     return true;
 };
 
@@ -169,6 +197,11 @@ start_battle = function(initial_enemy) {
 end_battle = function() {
     // 恢復正常遊戲狀態
     battle_state = BATTLE_STATE.INACTIVE;
+    
+    // 保存玩家單位狀態
+    if (instance_exists(obj_unit_manager)) {
+        obj_unit_manager.save_player_units_state();
+    }
     
     // 重置全局戰鬥標誌
     global.in_battle = false;

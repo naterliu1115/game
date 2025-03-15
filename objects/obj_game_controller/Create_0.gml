@@ -175,8 +175,13 @@ toggle_summon_ui = function() {
     
     // 檢查是否在準備階段，如果不是則不打開UI
     var in_preparing_phase = false;
-    if (instance_exists(obj_battle_manager)) {
-        in_preparing_phase = (obj_battle_manager.battle_state == BATTLE_STATE.PREPARING);
+    if (!instance_exists(obj_battle_manager)) {
+        instance_create_layer(0, 0, "Controllers", obj_battle_manager);
+    }
+    
+    with (obj_battle_manager) {
+        ensure_managers_exist(); // 確保所有管理器存在
+        in_preparing_phase = (battle_state == BATTLE_STATE.PREPARING);
         
         if (!in_preparing_phase) {
             if (instance_exists(obj_battle_ui)) {
@@ -184,9 +189,6 @@ toggle_summon_ui = function() {
             }
             return;
         }
-    } else {
-        show_debug_message("戰鬥管理器不存在，無法打開召喚UI");
-        return;
     }
     
     // 檢查是否有可用怪物
@@ -222,72 +224,7 @@ toggle_summon_ui = function() {
     
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
-        show_ui("main", summon_ui_inst); // 現在傳遞的是實例
-    }
-    
-    // 標記從準備階段打開
-    with (summon_ui_inst) {
-        from_preparing_phase = true;
-    }
-    
-    ui_cooldown = 5;
-}
-
-// obj_game_controller - Create_0.gml
-// UI控制函數
-toggle_summon_ui = function() {
-    if (!ui_enabled || ui_cooldown > 0) return;
-    
-    // 檢查是否在準備階段，如果不是則不打開UI
-    var in_preparing_phase = false;
-    if (instance_exists(obj_battle_manager)) {
-        in_preparing_phase = (obj_battle_manager.battle_state == BATTLE_STATE.PREPARING);
-        
-        if (!in_preparing_phase) {
-            if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.show_info("只能在戰鬥準備階段召喚怪物！");
-            }
-            return;
-        }
-    } else {
-        show_debug_message("戰鬥管理器不存在，無法打開召喚UI");
-        return;
-    }
-    
-    // 檢查是否有可用怪物
-    var has_usable_monsters = false;
-    if (variable_global_exists("player_monsters")) {
-        for (var i = 0; i < array_length(global.player_monsters); i++) {
-            if (global.player_monsters[i].hp > 0) {
-                has_usable_monsters = true;
-                break;
-            }
-        }
-    }
-    
-    if (!has_usable_monsters) {
-        if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.show_info("沒有可用的怪物！");
-        }
-        return;
-    }
-    
-    // 確保UI管理器存在
-    if (!instance_exists(obj_ui_manager)) {
-        instance_create_layer(0, 0, "Instances", obj_ui_manager);
-    }
-    
-    // 獲取或創建召喚UI實例
-    var summon_ui_inst;
-    if (instance_exists(obj_summon_ui)) {
-        summon_ui_inst = instance_find(obj_summon_ui, 0);
-    } else {
-        summon_ui_inst = instance_create_layer(0, 0, "Instances", obj_summon_ui);
-    }
-    
-    // 使用UI管理器顯示UI
-    with (obj_ui_manager) {
-        show_ui("main", summon_ui_inst);
+        show_ui(summon_ui_inst, "main");
     }
     
     // 標記從準備階段打開
@@ -316,7 +253,7 @@ toggle_monster_manager_ui = function() {
     
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
-        show_ui("main", monster_ui_inst);
+        show_ui(monster_ui_inst, "main");
     }
     
     ui_cooldown = 5;

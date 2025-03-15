@@ -16,20 +16,24 @@ switch (battle_state) {
         
         // 通知單位管理器更新邊界 (逐漸擴大)
         if (instance_exists(obj_unit_manager)) {
-            var radius = min(battle_timer * 10, 300); // 逐漸擴大到300
+            // 獲取所需半徑
+            var required_radius = obj_unit_manager.battle_required_radius;
             
-            // 更新结构化变量
-            battle_area.boundary_radius = radius;
-            battle_boundary_radius = radius;
+            // 逐漸擴大到所需半徑
+            var current_radius = min(battle_timer * 10, required_radius);
+            
+            // 更新結構化變量
+            battle_area.boundary_radius = current_radius;
+            battle_boundary_radius = current_radius;
             
             obj_unit_manager.set_battle_area(
                 battle_area.center_x,
                 battle_area.center_y,
-                radius
+                current_radius
             );
             
             // 邊界擴張完成，進入準備階段
-            if (radius >= 300) {
+            if (current_radius >= required_radius) {
                 battle_state = BATTLE_STATE.PREPARING;
                 battle_timer = 0;
                 

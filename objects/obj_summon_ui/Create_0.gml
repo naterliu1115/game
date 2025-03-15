@@ -5,6 +5,15 @@ visible = false; // 初始不可見
 active = false;  // 初始非活動狀態
 
 show = function() {
+    // 確保單位管理器存在
+    if (!instance_exists(obj_unit_manager)) {
+        if (instance_exists(obj_battle_manager)) {
+            obj_battle_manager.ensure_managers_exist();
+        } else {
+            instance_create_layer(0, 0, "Controllers", obj_unit_manager);
+        }
+    }
+    
     active = true;
     visible = true;
     depth = -100; // 設置默認深度
@@ -109,80 +118,85 @@ summon_selected_monster = function() {
     if (selected_monster >= 0 && selected_monster < ds_list_size(monster_list)) {
         var monster_data = monster_list[| selected_monster];
         
-        // 檢查是否可以召喚
-        if (instance_exists(obj_battle_manager)) {
-            with (obj_battle_manager) {
-                if (global_summon_cooldown <= 0 && ds_list_size(player_units) < max_player_units) {
-                    // 獲取召喚位置（靠近玩家）
-                    var summon_x = global.player.x + 50;
-                    var summon_y = global.player.y;
-                    
-                    // 創建對應類型的召喚物
-                    var summon_type = monster_data.type;
-                    var new_summon = instance_create_layer(summon_x, summon_y, "Instances", summon_type);
-                    
-                    // 設置召喚物的屬性與數據匹配
-                    with (new_summon) {
-                        level = monster_data.level;
-                        max_hp = monster_data.max_hp;
-                        hp = monster_data.hp;
-                        attack = monster_data.attack;
-                        defense = monster_data.defense;
-                        spd = monster_data.spd;
-                        
-                        // 確保abilities是一個陣列
-                        if (variable_struct_exists(monster_data, "abilities") && is_array(monster_data.abilities)) {
-                            // 這裡需要深度複製，而不是直接引用
-                            abilities = [];
-                            for (var i = 0; i < array_length(monster_data.abilities); i++) {
-                                array_push(abilities, monster_data.abilities[i]);
-                            }
-                        }
-                        
-                        // 重新初始化以應用新屬性
-                        initialize();
+        // 首先檢查 obj_unit_manager 是否存在
+        if (!instance_exists(obj_unit_manager)) {
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.show_info("單位管理器不存在！");
+            }
+            return false;
+        }
+        
+        // 檢查召喚條件
+        if (obj_unit_manager.global_summon_cooldown <= 0 && 
+            ds_list_size(obj_unit_manager.player_units) < obj_unit_manager.max_player_units) {
+            // 獲取召喚位置（靠近玩家）
+            var summon_x = global.player.x + 50;
+            var summon_y = global.player.y;
+            
+            // 創建對應類型的召喚物
+            var summon_type = monster_data.type;
+            var new_summon = instance_create_layer(summon_x, summon_y, "Instances", summon_type);
+            
+            // 設置召喚物的屬性與數據匹配
+            with (new_summon) {
+                level = monster_data.level;
+                max_hp = monster_data.max_hp;
+                hp = monster_data.hp;
+                attack = monster_data.attack;
+                defense = monster_data.defense;
+                spd = monster_data.spd;
+                
+                // 確保abilities是一個陣列
+                if (variable_struct_exists(monster_data, "abilities") && is_array(monster_data.abilities)) {
+                    // 這裡需要深度複製，而不是直接引用
+                    abilities = [];
+                    for (var i = 0; i < array_length(monster_data.abilities); i++) {
+                        array_push(abilities, monster_data.abilities[i]);
                     }
-                    
-                    // 添加到玩家單位列表
-                    ds_list_add(player_units, new_summon);
-                    
-                    // 設置全局召喚冷卻
-                    global_summon_cooldown = max_global_cooldown;
-                    
-                    // 創建召喚效果
-                    instance_create_layer(summon_x, summon_y, "Instances", obj_summon_effect);
-                    
-                    // 如果在準備階段召喚，立即開始戰鬥
-                    if (battle_state == BATTLE_STATE.PREPARING) {
-                        battle_state = BATTLE_STATE.ACTIVE;
-                        battle_timer = 0;
-                        
-                        // 更新UI提示
-                        if (instance_exists(obj_battle_ui)) {
-                            obj_battle_ui.show_info("戰鬥開始!");
-                        }
-                    }
-                    
-                    // 顯示成功召喚提示
-                    if (instance_exists(obj_battle_ui)) {
-                        obj_battle_ui.show_info("已召喚 " + monster_data.name + "!");
-                    }
-                    return true;
-                } else {
-                    // 提示玩家無法召喚的原因
-                    var reason = "";
-                    if (global_summon_cooldown > 0) {
-                        reason = "召喚冷卻中!";
-                    } else if (ds_list_size(player_units) >= max_player_units) {
-                        reason = "已達到最大召喚數量!";
-                    }
-                    
-                    if (instance_exists(obj_battle_ui)) {
-                        obj_battle_ui.show_info("無法召喚: " + reason);
-                    }
-                    return false;
+                }
+                
+                // 重新初始化以應用新屬性
+                initialize();
+            }
+            
+            // 添加到玩家單位列表
+            ds_list_add(obj_unit_manager.player_units, new_summon);
+            
+            // 設置全局召喚冷卻
+            obj_unit_manager.global_summon_cooldown = obj_unit_manager.max_global_cooldown;
+            
+            // 創建召喚效果
+            instance_create_layer(summon_x, summon_y, "Instances", obj_summon_effect);
+            
+            // 如果在準備階段召喚，立即開始戰鬥
+            if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
+                obj_battle_manager.battle_state = BATTLE_STATE.ACTIVE;
+                obj_battle_manager.battle_timer = 0;
+                
+                // 更新UI提示
+                if (instance_exists(obj_battle_ui)) {
+                    obj_battle_ui.show_info("戰鬥開始!");
                 }
             }
+            
+            // 顯示成功召喚提示
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.show_info("已召喚 " + monster_data.name + "!");
+            }
+            return true;
+        } else {
+            // 提示玩家無法召喚的原因
+            var reason = "";
+            if (obj_unit_manager.global_summon_cooldown > 0) {
+                reason = "召喚冷卻中!";
+            } else if (ds_list_size(obj_unit_manager.player_units) >= obj_unit_manager.max_player_units) {
+                reason = "已達到最大召喚數量!";
+            }
+            
+            if (instance_exists(obj_battle_ui)) {
+                obj_battle_ui.show_info("無法召喚: " + reason);
+            }
+            return false;
         }
     }
     return false;

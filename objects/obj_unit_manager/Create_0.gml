@@ -25,6 +25,7 @@ total_enemy_units_defeated = 0;    // 總共被擊敗的敵方單位
 battle_center_x = 0;        // 戰鬥中心X座標
 battle_center_y = 0;        // 戰鬥中心Y座標
 battle_boundary_radius = 0; // 戰鬥邊界半徑
+battle_required_radius = 300; // 戰鬥所需半徑
 
 // 初始化單位管理器
 initialize = function() {
@@ -146,11 +147,17 @@ set_battle_area = function(center_x, center_y, radius) {
 
 // 玩家召喚怪物方法
 summon_monster = function(monster_type, position_x, position_y) {
+    show_debug_message("===== 開始召喚怪物 =====");
+    
     // 檢查是否在戰鬥中
-    if (!global.in_battle) return false;
+    if (!global.in_battle) {
+        show_debug_message("無法召喚：不在戰鬥中");
+        return false;
+    }
     
     // 檢查是否達到最大單位數量
     if (ds_list_size(player_units) >= max_player_units) {
+        show_debug_message("無法召喚：已達最大召喚數量 " + string(ds_list_size(player_units)) + "/" + string(max_player_units));
         broadcast_event("ui_message", {message: "已達最大召喚數量!"});
         return false;
     }
@@ -158,19 +165,34 @@ summon_monster = function(monster_type, position_x, position_y) {
     // 檢查冷卻時間
     if (global_summon_cooldown > 0) {
         var cooldown_seconds = global_summon_cooldown / game_get_speed(gamespeed_fps);
+        show_debug_message("無法召喚：冷卻中，剩餘 " + string_format(cooldown_seconds, 1, 1) + " 秒");
         broadcast_event("ui_message", {message: "召喚冷卻中! 剩餘: " + string_format(cooldown_seconds, 1, 1) + "秒"});
         return false;
     }
+    
+    show_debug_message("創建怪物實例：" + object_get_name(monster_type));
     
     // 創建單位
     var monster_inst = instance_create_layer(position_x, position_y, "Instances", monster_type);
     total_player_units_created++;
     
+    show_debug_message("設置怪物屬性");
+    
     // 設置單位屬性
     apply_monster_stats(monster_inst, monster_type);
     
+    // 確認team值
+    with (monster_inst) {
+        show_debug_message("確認怪物team值：" + string(team));
+        if (team != 0) {
+            team = 0;
+            show_debug_message("糾正team值為0（玩家方）");
+        }
+    }
+    
     // 添加到單位列表
     ds_list_add(player_units, monster_inst);
+    show_debug_message("已添加到玩家單位列表，當前數量：" + string(ds_list_size(player_units)));
     
     // 設置冷卻
     global_summon_cooldown = max_global_cooldown;
@@ -188,22 +210,62 @@ summon_monster = function(monster_type, position_x, position_y) {
     // 顯示提示訊息
     broadcast_event("ui_message", {message: object_get_name(monster_type) + " 已召喚!"});
     
+    show_debug_message("===== 召喚完成 =====");
     return true;
 }
 
 // 生成敵人單位
 spawn_enemy = function(enemy_type, position_x, position_y) {
+    show_debug_message("===== 開始生成敵人 =====");
+    show_debug_message("- 敵人類型: " + object_get_name(enemy_type));
+    show_debug_message("- 位置: (" + string(position_x) + ", " + string(position_y) + ")");
+    show_debug_message("- 當前敵人列表大小: " + string(ds_list_size(enemy_units)));
+    
+    // 檢查是否在戰鬥中
+    if (!global.in_battle) {
+        show_debug_message("警告：不在戰鬥狀態中，無法生成敵人");
+        return noone;
+    }
+    
     var enemy_inst = instance_create_layer(position_x, position_y, "Instances", enemy_type);
+    show_debug_message("- 敵人實例創建完成，ID: " + string(enemy_inst));
+    
+    if (!instance_exists(enemy_inst)) {
+        show_debug_message("錯誤：敵人實例創建失敗");
+        return noone;
+    }
+    
     total_enemy_units_created++;
+    show_debug_message("- 總敵人創建數: " + string(total_enemy_units_created));
     
     // 設置敵人屬性
     with (enemy_inst) {
-        team = 1; // 敵方隊伍
-        initialize(); // 調用敵人自身的初始化方法
+        show_debug_message("- 初始化前team值: " + string(team));
+        initialize(); // 先調用敵人自身的初始化方法
+        show_debug_message("- 初始化後team值: " + string(team));
+        team = 1;    // 然後再設置team值，確保不會被初始化覆蓋
+        show_debug_message("- 最終team值: " + string(team));
+        
+        // 確認其他重要屬性
+        show_debug_message("- 確認敵人屬性：");
+        show_debug_message("  * HP: " + string(hp) + "/" + string(max_hp));
+        show_debug_message("  * 攻擊: " + string(attack));
+        show_debug_message("  * 防禦: " + string(defense));
+        show_debug_message("  * 速度: " + string(spd));
     }
     
     // 添加到敵人列表
+    show_debug_message("- 添加到敵人列表前的列表大小: " + string(ds_list_size(enemy_units)));
     ds_list_add(enemy_units, enemy_inst);
+    show_debug_message("- 添加到敵人列表後的列表大小: " + string(ds_list_size(enemy_units)));
+    
+    // 驗證是否成功添加到列表
+    var index = ds_list_find_index(enemy_units, enemy_inst);
+    if (index == -1) {
+        show_debug_message("錯誤：敵人未能成功添加到列表中");
+    } else {
+        show_debug_message("- 敵人成功添加到列表，索引位置: " + string(index));
+    }
     
     // 發送敵人生成事件
     broadcast_event("enemy_spawned", {
@@ -212,8 +274,9 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
         position: {x: position_x, y: position_y}
     });
     
+    show_debug_message("===== 敵人生成完成 =====");
     return enemy_inst;
-}
+};
 
 // 處理單位死亡
 handle_unit_death = function(data) {
@@ -256,33 +319,50 @@ handle_unit_death = function(data) {
 
 // 更新單位屬性（例如從怪物數據）
 apply_monster_stats = function(monster_inst, monster_type) {
+    show_debug_message("===== 開始設置怪物屬性 =====");
+    
+    // 首先調用初始化
+    with (monster_inst) {
+        initialize();
+    }
+    
     // 查找怪物在玩家怪物列表中的數據
     if (variable_global_exists("player_monsters")) {
         for (var i = 0; i < array_length(global.player_monsters); i++) {
             var monster_data = global.player_monsters[i];
             if (monster_data.type == monster_type) {
+                show_debug_message("找到匹配的怪物數據：" + object_get_name(monster_type));
+                
                 // 設置屬性
-                monster_inst.level = monster_data.level;
-                monster_inst.hp = monster_data.hp;
-                monster_inst.max_hp = monster_data.max_hp;
-                monster_inst.attack = monster_data.attack;
-                monster_inst.defense = monster_data.defense;
-                monster_inst.spd = monster_data.spd;
-                monster_inst.team = 0; // 玩家隊伍
-                
-                // 其他初始化
-                monster_inst.atb_current = 0;
-                monster_inst.atb_ready = false;
-                
-                // 如果有技能數據，也可以複製
-                if (variable_struct_exists(monster_data, "skills") && is_array(monster_data.skills)) {
-                    // 這裡可以添加技能設置邏輯
+                with (monster_inst) {
+                    level = monster_data.level;
+                    hp = monster_data.hp;
+                    max_hp = monster_data.max_hp;
+                    attack = monster_data.attack;
+                    defense = monster_data.defense;
+                    spd = monster_data.spd;
+                    
+                    // 確保team值正確設置
+                    team = 0; // 玩家隊伍
+                    show_debug_message("已設置team值為: " + string(team));
+                    
+                    // 其他初始化
+                    atb_current = 0;
+                    atb_ready = false;
+                    
+                    // 如果有技能數據，也可以複製
+                    if (variable_struct_exists(monster_data, "skills") && is_array(monster_data.skills)) {
+                        // 這裡可以添加技能設置邏輯
+                    }
                 }
                 
+                show_debug_message("怪物屬性設置完成");
                 break;
             }
         }
     }
+    
+    show_debug_message("===== 怪物屬性設置結束 =====");
 }
 
 // 清理所有單位
@@ -304,42 +384,141 @@ clear_all_units = function() {
     ds_list_clear(enemy_units);
 }
 
-// 戰鬥開始響應
+// 戰鬥開始事件處理
 on_battle_start = function(data) {
+    show_debug_message("===== 戰鬥開始事件處理 =====");
+    
     // 初始化戰鬥區域
     if (variable_struct_exists(data, "center_x") && variable_struct_exists(data, "center_y")) {
-        set_battle_area(data.center_x, data.center_y, 0); // 初始半徑為0，會逐漸擴大
+        battle_center_x = data.center_x;
+        battle_center_y = data.center_y;
+        battle_boundary_radius = 0; // 初始為0，會在戰鬥管理器中逐漸擴大
+        
+        show_debug_message("設置戰鬥區域：");
+        show_debug_message("- 中心點: (" + string(battle_center_x) + ", " + string(battle_center_y) + ")");
+        
+        // 如果提供了所需半徑，保存它
+        if (variable_struct_exists(data, "required_radius")) {
+            battle_required_radius = data.required_radius;
+        } else {
+            battle_required_radius = 300; // 預設值
+        }
+        show_debug_message("- 所需半徑: " + string(battle_required_radius));
+        
+        set_battle_area(battle_center_x, battle_center_y, 0);
+    } else {
+        show_debug_message("警告: 戰鬥開始事件缺少中心座標數據");
+        set_battle_area(0, 0, 0); // 使用預設值
     }
     
-    // 初始化單位統計
+    show_debug_message("清理單位列表：");
+    show_debug_message("- 清理前玩家單位數量: " + string(ds_list_size(player_units)));
+    show_debug_message("- 清理前敵方單位數量: " + string(ds_list_size(enemy_units)));
+    
+    // 清空單位列表
+    ds_list_clear(player_units);
+    ds_list_clear(enemy_units);
+    
+    show_debug_message("- 清理後玩家單位數量: " + string(ds_list_size(player_units)));
+    show_debug_message("- 清理後敵方單位數量: " + string(ds_list_size(enemy_units)));
+    
+    // 重置計數器
     total_player_units_created = 0;
+    total_enemy_units_created = 0;
+    total_player_units_defeated = 0;
     total_enemy_units_defeated = 0;
     
-    // 確保列表是空的
-    clear_all_units();
-    
-    // 如果有初始敵人，添加到敵人列表
+    // 添加初始敵人
+    show_debug_message("處理初始敵人：");
     if (variable_struct_exists(data, "initial_enemy")) {
-        ds_list_add(enemy_units, data.initial_enemy);
+        var enemy = data.initial_enemy;
+        show_debug_message("- 檢測到初始敵人數據");
         
-        // 通知敵人進入戰鬥模式
-        with (data.initial_enemy) {
-            if (variable_instance_exists(id, "enter_battle_mode")) {
-                enter_battle_mode();
+        if (instance_exists(enemy)) {
+            show_debug_message("- 敵人實例存在");
+            show_debug_message("  - ID: " + string(enemy));
+            show_debug_message("  - 類型: " + object_get_name(enemy.object_index));
+            
+            with (enemy) {
+                show_debug_message("  - 初始Team值: " + string(team));
+                // 確保team值正確設置
+                team = 1;
+                show_debug_message("  - 設置後Team值: " + string(team));
+            }
+            
+            // 檢查是否已經在列表中
+            if (ds_list_find_index(enemy_units, enemy) == -1) {
+                ds_list_add(enemy_units, enemy);
+                total_enemy_units_created++;
+                
+                show_debug_message("- 已添加到敵人列表");
+                show_debug_message("- 當前敵人列表大小: " + string(ds_list_size(enemy_units)));
+                
+                // 通知敵人進入戰鬥模式
+                with (enemy) {
+                    if (variable_instance_exists(id, "enter_battle_mode")) {
+                        show_debug_message("- 調用敵人的enter_battle_mode");
+                        enter_battle_mode();
+                    } else {
+                        show_debug_message("- 警告：敵人沒有enter_battle_mode函數");
+                    }
+                }
+            } else {
+                show_debug_message("- 警告：敵人已經在列表中");
+            }
+        } else {
+            show_debug_message("警告: 初始敵人實例不存在");
+        }
+    } else {
+        show_debug_message("- 沒有初始敵人數據");
+    }
+    
+    // 最終確認
+    show_debug_message("最終確認：");
+    show_debug_message("- 玩家單位數量: " + string(ds_list_size(player_units)));
+    show_debug_message("- 敵方單位數量: " + string(ds_list_size(enemy_units)));
+    
+    if (ds_list_size(enemy_units) > 0) {
+        show_debug_message("敵人列表內容：");
+        for (var i = 0; i < ds_list_size(enemy_units); i++) {
+            var unit = enemy_units[| i];
+            if (instance_exists(unit)) {
+                show_debug_message(string(i) + ": ID=" + string(unit) + ", Type=" + object_get_name(unit.object_index) + ", Team=" + string(unit.team));
+            } else {
+                show_debug_message(string(i) + ": <無效單位>");
             }
         }
     }
-}
-
-// 戰鬥結束響應
-on_battle_end = function(data) {
-    // 保存單位狀態到玩家怪物數據
-    save_player_units_state();
     
-    // 清理單位和戰鬥區域
-    clear_all_units();
-    battle_boundary_radius = 0;
-}
+    show_debug_message("===== 戰鬥開始事件處理完成 =====");
+};
+
+// 戰鬥結束事件處理
+on_battle_end = function(data) {
+    // 清理所有單位
+    for (var i = ds_list_size(player_units) - 1; i >= 0; i--) {
+        var unit = player_units[| i];
+        if (instance_exists(unit)) {
+            instance_destroy(unit);
+        }
+    }
+    
+    for (var i = ds_list_size(enemy_units) - 1; i >= 0; i--) {
+        var enemy = enemy_units[| i];
+        if (instance_exists(enemy)) {
+            instance_destroy(enemy);
+        }
+    }
+    
+    // 清空列表
+    ds_list_clear(player_units);
+    ds_list_clear(enemy_units);
+    
+    // 重置戰鬥區域
+    set_battle_area(0, 0, 0);
+    
+    show_debug_message("單位管理器: 戰鬥結束，已清理所有單位");
+};
 
 // 保存玩家單位狀態
 save_player_units_state = function() {
