@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+rules:
+  -description: "Use Traditional Chinese for all communications."
+  -description: "Before generating code, AI must ensure it aligns with the overall project architecture."
+  -description: "AI must confirm the issue, verify the solution, and discuss it with the user before making any modifications."
+  -description: "After confirming the solution, AI must ask the user if they want to proceed with code modifications."
