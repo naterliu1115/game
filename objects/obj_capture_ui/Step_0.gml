@@ -63,6 +63,11 @@ if (capture_state == "capturing" || capture_state == "success" || capture_state 
     return;
 }
 
+// 如果UI活躍且有目標，更新捕獲率
+if (active && target_enemy != noone && instance_exists(target_enemy)) {
+    calculate_capture_chance();
+}
+
 // 鼠標控制
 if (mouse_check_button_pressed(mb_left)) {
     var mx = device_mouse_x_to_gui(0);
@@ -106,7 +111,6 @@ if (mouse_check_button_pressed(mb_left)) {
         
         // 檢查是否選擇了不同的捕獲方法
         if (target_enemy != noone && instance_exists(target_enemy)) {
-            // 修改：使用 array_length 代替 ds_list_size
             var method_count = array_length(capture_methods);
             var method_x = ui_x + 180;
             var method_y = ui_y + 180;
@@ -145,7 +149,6 @@ if (capture_state == "ready") {
 
     if (keyboard_check_pressed(vk_down)) {
         // 向下選擇捕獲方法
-        // 修改：使用 array_length 代替 ds_list_size
         if (selected_method < array_length(capture_methods) - 1) {
             selected_method++;
             calculate_capture_chance(); // 更新捕獲率
