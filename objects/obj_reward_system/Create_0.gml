@@ -214,6 +214,11 @@ grant_rewards = function() {
     
     // 通知UI顯示獎勵
     if (instance_exists(obj_battle_ui)) {
+        // 確保 item_drops 是一個數組
+        if (!is_array(battle_result.item_drops)) {
+            battle_result.item_drops = [];
+        }
+        
         obj_battle_ui.show_rewards(
             battle_result.exp_gained,
             battle_result.gold_gained,

@@ -531,9 +531,9 @@ on_show_battle_result = function(data) {
     rewards.items_list = data.items_gained;
     rewards.visible = true;
     
-    // 更新UI顯示
+    // 更新UI顯示 - 修改此行，傳遞必要參數
     if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.show_rewards();
+        obj_battle_ui.show_rewards(rewards.exp, rewards.gold, rewards.items_list);
     }
     
     add_battle_log("顯示戰鬥結果!");
