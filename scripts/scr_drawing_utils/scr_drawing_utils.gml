@@ -49,8 +49,8 @@ function draw_text_safe(x, y, text, color = c_white, halign = TEXT_ALIGN_LEFT, v
     draw_set_valign(original_valign);
 }
 
-/// @function draw_text_outlined(x, y, text, text_color, outline_color, halign, valign)
-/// @description 繪製帶輪廓的文字
+/// @function draw_text_outlined(x, y, text, text_color, outline_color, halign, valign, scale)
+/// @description 繪製帶輪廓的文字，支援縮放
 /// @param {real} x X 座標
 /// @param {real} y Y 座標
 /// @param {string} text 要顯示的文字
@@ -58,7 +58,8 @@ function draw_text_safe(x, y, text, color = c_white, halign = TEXT_ALIGN_LEFT, v
 /// @param {real} outline_color 輪廓顏色
 /// @param {real} halign 水平對齊方式 (預設為左對齊)
 /// @param {real} valign 垂直對齊方式 (預設為頂部對齊)
-function draw_text_outlined(x, y, text, text_color = c_white, outline_color = c_black, halign = TEXT_ALIGN_LEFT, valign = TEXT_VALIGN_TOP) {
+/// @param {real} scale 縮放比例 (預設為 1)
+function draw_text_outlined(x, y, text, text_color = c_white, outline_color = c_black, halign = TEXT_ALIGN_LEFT, valign = TEXT_VALIGN_TOP, scale = 1) {
     var original_color = draw_get_color();
     var original_halign = draw_get_halign();
     var original_valign = draw_get_valign();
@@ -77,14 +78,14 @@ function draw_text_outlined(x, y, text, text_color = c_white, outline_color = c_
     
     // 繪製輪廓
     draw_set_color(outline_color);
-    draw_text(x+1, y+1, string(text));
-    draw_text(x-1, y-1, string(text));
-    draw_text(x+1, y-1, string(text));
-    draw_text(x-1, y+1, string(text));
+    draw_text_transformed(x+1, y+1, string(text), scale, scale, 0);
+    draw_text_transformed(x-1, y-1, string(text), scale, scale, 0);
+    draw_text_transformed(x+1, y-1, string(text), scale, scale, 0);
+    draw_text_transformed(x-1, y+1, string(text), scale, scale, 0);
     
     // 繪製主要文字
     draw_set_color(text_color);
-    draw_text(x, y, string(text));
+    draw_text_transformed(x, y, string(text), scale, scale, 0);
     
     // 恢復原始設置
     draw_set_color(original_color);
