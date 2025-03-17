@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2024-03-17T05:30:00Z",
+  "decisions": [
+    {
+      "id": "dec_001",
+      "timestamp": "2024-03-17T05:00:00Z",
+      "topic": "MCP存儲架構設計",
+      "decision": "採用JSON文件系統進行本地存儲",
+      "rationale": "便於版本控制，易於讀寫和維護，支持結構化數據存儲",
+      "impact": [
+        "提供持久化的對話上下文存儲",
+        "支持決策記錄和追蹤",
+        "實現開發進度監控"
+      ],
+      "status": "implemented",
+      "relatedConversation": "conv_2024031705"
+    }
+  ]
+} 

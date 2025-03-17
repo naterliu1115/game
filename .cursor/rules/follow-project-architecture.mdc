@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: false
 ---
+---
+description: 
+globs: 
+alwaysApply: false
+---
 rules:
   -description: "Use Traditional Chinese for all communications."
   -description: "Before generating code, AI must ensure it aligns with the overall project architecture."

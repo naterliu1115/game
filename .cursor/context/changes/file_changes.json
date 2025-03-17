@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-03-17T05:21:58.004Z",
+  "changes": [
+    {
+      "id": "change_1742188917996",
+      "timestamp": "2025-03-17T05:21:57.997Z",
+      "file": "C:\\Users\\moregeek\\GameMakerProjects\\TurnBasedBattle\\.cursor\\tests\\test.gml",
+      "type": "create",
+      "fileType": ".gml",
+      "hash": "cee763a8589103be343d1bf7459dbe67",
+      "relatedDecision": "dec_001",
+      "relatedRequirement": "req_001"
+    }
+  ]
+}
