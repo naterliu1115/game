@@ -18,6 +18,9 @@ if (keyboard_check_pressed(ord("3"))) {
     toggle_monster_manager_ui();
 }
 
+if (keyboard_check_pressed(ord("I"))) {
+    toggle_inventory_ui();
+}
 
 // 檢查UI管理器是否存在，如果不存在則創建
 if (!instance_exists(obj_ui_manager)) {

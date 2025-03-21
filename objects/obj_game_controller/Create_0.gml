@@ -26,6 +26,16 @@ if (!instance_exists(obj_ui_manager)) {
     instance_create_layer(0, 0, "Instances", obj_ui_manager);
 }
 
+// 確保道具管理器存在
+if (!instance_exists(obj_item_manager)) {
+    instance_create_layer(0, 0, "Instances", obj_item_manager);
+}
+
+// 初始化全局道具相關變量
+if (!variable_global_exists("player_inventory")) {
+    global.player_inventory = ds_list_create();
+}
+
 // 添加缺失的变量初始化 - 解决警告
 info_timer = 0;
 open_animation = 0;
@@ -374,3 +384,65 @@ toggle_capture_ui = function() {
     
     show_debug_message("===== 捕獲檢查結束 =====");
 }
+
+toggle_inventory_ui = function() {
+    if (!ui_enabled || ui_cooldown > 0) return;
+    
+    show_debug_message("===== 開始切換道具UI =====");
+    
+    // 檢查必要的系統依賴
+    var systems_ready = true;
+    var missing_systems = "";
+    
+    // 檢查UI管理器
+    if (!instance_exists(obj_ui_manager)) {
+        systems_ready = false;
+        missing_systems += "UI管理器、";
+    }
+    
+    // 檢查事件管理器
+    if (!instance_exists(obj_event_manager)) {
+        systems_ready = false;
+        missing_systems += "事件管理器、";
+    }
+    
+    // 檢查物品管理器
+    if (!instance_exists(obj_item_manager)) {
+        systems_ready = false;
+        missing_systems += "物品管理器、";
+    }
+    
+    if (!systems_ready) {
+        missing_systems = string_delete(missing_systems, string_length(missing_systems), 1);
+        show_debug_message("錯誤：無法開啟道具UI，缺少必要系統：" + missing_systems);
+        return;
+    }
+    
+    // 獲取或創建物品欄UI實例
+    var inventory_ui_inst;
+    if (instance_exists(obj_inventory_ui)) {
+        inventory_ui_inst = instance_find(obj_inventory_ui, 0);
+        
+        // 如果UI已經開啟，則關閉它
+        if (inventory_ui_inst.active) {
+            show_debug_message("關閉已開啟的道具UI");
+            with (obj_ui_manager) {
+                hide_ui(inventory_ui_inst);
+            }
+            ui_cooldown = 5;
+            return;
+        }
+    } else {
+        show_debug_message("創建新的道具UI實例");
+        inventory_ui_inst = instance_create_layer(0, 0, "Instances", obj_inventory_ui);
+    }
+    
+    // 使用UI管理器顯示UI
+    show_debug_message("顯示道具UI");
+    with (obj_ui_manager) {
+        show_ui(inventory_ui_inst, "main");
+    }
+    
+    ui_cooldown = 5;
+    show_debug_message("===== 道具UI切換完成 =====");
+};

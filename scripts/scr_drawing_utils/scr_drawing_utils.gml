@@ -147,44 +147,119 @@ function draw_sprite_safe(sprite_id, subimg, x, y, xscale = 1, yscale = 1, rot =
 // UI 元素繪製函數
 #region UI ELEMENT FUNCTIONS
 
-/// @function draw_ui_button(x, y, width, height, text)
-/// @description 繪製一個簡單的按鈕
+/// @function draw_ui_panel(x, y, width, height, title, show_title)
+/// @description 繪製一個UI面板
+/// @param {real} x 面板左上角X座標
+/// @param {real} y 面板左上角Y座標
+/// @param {real} width 面板寬度
+/// @param {real} height 面板高度
+/// @param {string} title 面板標題
+/// @param {bool} show_title 是否顯示標題欄
+function draw_ui_panel(x, y, width, height, title, show_title) {
+    var bg_color = make_color_rgb(40, 40, 40);
+    var frame_color = make_color_rgb(60, 60, 60);
+    var text_color = c_white;
+    
+    // 繪製背景
+    draw_set_alpha(0.9);
+    draw_rectangle_color(x, y, x + width, y + height,
+        bg_color, bg_color, bg_color, bg_color, false);
+    
+    // 繪製邊框
+    draw_set_alpha(1);
+    draw_rectangle_color(x, y, x + width, y + height,
+        frame_color, frame_color, frame_color, frame_color, true);
+    
+    // 繪製標題欄
+    if (show_title) {
+        var title_height = 40;
+        draw_rectangle_color(x, y, x + width, y + title_height,
+            frame_color, frame_color, frame_color, frame_color, false);
+        
+        draw_text_safe(x + 20, y + title_height/2, title, text_color,
+            TEXT_ALIGN_LEFT, TEXT_VALIGN_MIDDLE);
+    }
+}
+
+/// @function draw_ui_button(x, y, width, height, text, is_selected)
+/// @description 繪製一個UI按鈕
 /// @param {real} x 按鈕左上角X座標
 /// @param {real} y 按鈕左上角Y座標
 /// @param {real} width 按鈕寬度
 /// @param {real} height 按鈕高度
 /// @param {string} text 按鈕文字
-function draw_ui_button(x, y, width, height, text) {
-    // 預設顏色
-    var bg_color = c_blue;
-    var border_color = c_white;
+/// @param {bool} is_selected 是否被選中
+function draw_ui_button(x, y, width, height, text, is_selected = false) {
+    var bg_color = is_selected ? make_color_rgb(80, 80, 80) : make_color_rgb(60, 60, 60);
+    var frame_color = is_selected ? c_white : make_color_rgb(60, 60, 60);
     var text_color = c_white;
     
-    // 按照文字內容選擇顏色
-    if (text == "關閉" || text == "取消") {
-        bg_color = c_red;
-    } else if (text == "捕獲") {
-        bg_color = c_lime;
-        text_color = c_black;
-    }
-    
     // 繪製按鈕背景
-    draw_set_color(bg_color);
-    draw_rectangle(x, y, x + width, y + height, false);
+    draw_rectangle_color(x, y, x + width, y + height,
+        bg_color, bg_color, bg_color, bg_color, false);
     
     // 繪製按鈕邊框
-    draw_set_color(border_color);
-    draw_rectangle(x, y, x + width, y + height, true);
+    draw_rectangle_color(x, y, x + width, y + height,
+        frame_color, frame_color, frame_color, frame_color, true);
     
     // 繪製按鈕文字
-    draw_text_safe(
-        x + width / 2,
-        y + height / 2,
-        text,
-        text_color,
-        TEXT_ALIGN_CENTER,
-        TEXT_VALIGN_MIDDLE
-    );
+    draw_text_safe(x + width/2, y + height/2, text, text_color,
+        TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+}
+
+/// @function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected)
+/// @description 繪製一個物品槽
+/// @param {real} x 槽位左上角X座標
+/// @param {real} y 槽位左上角Y座標
+/// @param {real} width 槽位寬度
+/// @param {real} height 槽位高度
+/// @param {struct} item_data 物品數據
+/// @param {real} quantity 物品數量
+/// @param {bool} is_selected 是否被選中
+function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected) {
+    var slot_color = make_color_rgb(60, 60, 60);
+    var frame_color = is_selected ? c_white : make_color_rgb(60, 60, 60);
+    var text_color = c_white;
+    
+    // 繪製槽位背景
+    draw_rectangle_color(x, y, x + width, y + height,
+        slot_color, slot_color, slot_color, slot_color, false);
+    
+    // 繪製物品圖示
+    var sprite = asset_get_index(item_data.IconSprite);
+    if (sprite_exists(sprite)) {
+        draw_sprite_stretched(sprite, 0,
+            x + 4, y + 4,
+            width - 8, height - 8);
+    }
+    
+    // 繪製數量
+    if (quantity > 1) {
+        draw_text_safe(x + width - 4, y + height - 4,
+            string(quantity), text_color,
+            TEXT_ALIGN_RIGHT, TEXT_VALIGN_BOTTOM);
+    }
+    
+    // 繪製選中框
+    if (is_selected) {
+        draw_rectangle_color(x, y, x + width, y + height,
+            frame_color, frame_color, frame_color, frame_color, true);
+    }
+}
+
+/// @function draw_ui_dragged_item(x, y, size, item_data)
+/// @description 繪製正在拖動的物品
+/// @param {real} x 物品左上角X座標
+/// @param {real} y 物品左上角Y座標
+/// @param {real} size 物品大小
+/// @param {struct} item_data 物品數據
+function draw_ui_dragged_item(x, y, size, item_data) {
+    var sprite = asset_get_index(item_data.IconSprite);
+    if (sprite_exists(sprite)) {
+        draw_sprite_ext(sprite, 0,
+            x, y, size/sprite_get_width(sprite), size/sprite_get_height(sprite),
+            0, c_white, 0.7);
+    }
 }
 
 /// @function draw_progress_bar(x, y, width, height, value, max_value, colors, show_text)
