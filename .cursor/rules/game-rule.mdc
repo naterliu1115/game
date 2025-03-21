@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- based on [README.md](mdc:README.md)
+- Encoding using GML
+- always use traditional chinses
+- use Gamemaker to make games
