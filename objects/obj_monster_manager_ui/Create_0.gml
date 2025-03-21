@@ -3,6 +3,7 @@ event_inherited();
 // 基本設置
 visible = false; // 初始不可見
 active = false;  // 初始非活動狀態
+allow_player_movement = true; // 初始允許玩家移動
 // 明確設置字體 - 與obj_dialogue_box相同
 draw_set_font(fnt_dialogue);
 
@@ -14,6 +15,7 @@ show = function() {
     open_animation = 0; // 重置動畫
     surface_needs_update = true;
     details_needs_update = true;
+    allow_player_movement = false; // 顯示UI時禁止玩家移動
     
     // 刷新怪物列表
     refresh_monster_list();
@@ -21,11 +23,14 @@ show = function() {
     
     // 預選第一個怪物
     selected_monster = (ds_list_size(filtered_list) > 0) ? 0 : -1;
+    
+    show_debug_message("怪物管理UI已顯示，禁止玩家移動");
 };
 
 hide = function() {
     active = false;
     visible = false;
+    allow_player_movement = true; // 隱藏UI時允許玩家移動
     
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
@@ -37,6 +42,8 @@ hide = function() {
         surface_free(ui_details_surface);
         ui_details_surface = -1;
     }
+    
+    show_debug_message("怪物管理UI已隱藏，允許玩家移動");
 };
 
 // 初始化 UI 信息透明度變數

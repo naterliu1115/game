@@ -1,12 +1,74 @@
+// 檢查是否有活躍的UI阻止移動
+var can_move = true;
+if (instance_exists(obj_ui_manager)) {
+    with (obj_ui_manager) {
+        var keys = ds_map_keys_to_array(active_ui);
+        for (var i = 0; i < array_length(keys); i++) {
+            var layer_name = keys[i];
+            var active_list = active_ui[? layer_name];
+            for (var j = 0; j < ds_list_size(active_list); j++) {
+                var ui = active_list[| j];
+                if (instance_exists(ui) && variable_instance_exists(ui, "allow_player_movement") && !ui.allow_player_movement) {
+                    can_move = false;
+                    break;
+                }
+            }
+            if (!can_move) break;
+        }
+    }
+}
 
-
+if (!can_move) {
+    // 清除移動輸入
+    move_x = 0;
+    move_y = 0;
+    exit;
+}
 
 // **获取输入**
 var move_x = keyboard_check(vk_right) - keyboard_check(vk_left);
 var move_y = keyboard_check(vk_down) - keyboard_check(vk_up);
 
+// 更新動畫狀態
+if (move_x == 0 && move_y == 0) {
+    // 待機動畫
+    if (image_index < 0 || image_index > 4) {
+        image_index = 0;
+    }
+    image_speed = 0.8;  // 設置動畫速度
+} else {
+    if (abs(move_x) > abs(move_y)) {
+        // 水平移動
+        if (move_x > 0) {
+            // 往右走
+            if (image_index < 10 || image_index > 14) {
+                image_index = 10;
+            }
+        } else {
+            // 往左走
+            if (image_index < 20 || image_index > 24) {
+                image_index = 20;
+            }
+        }
+    } else {
+        // 垂直移動
+        if (move_y > 0) {
+            // 往下走
+            if (image_index < 5 || image_index > 9) {
+                image_index = 5;
+            }
+        } else {
+            // 往上走
+            if (image_index < 15 || image_index > 19) {
+                image_index = 15;
+            }
+        }
+    }
+    image_speed = 0.8;  // 設置動畫速度
+}
+
 // **设置移动速度变量**
-var move_speed = 4;
+var move_speed = 3;
 
 // 获取战斗状态相关变量 - 整合到一处以提高代码可读性
 var in_battle = global.in_battle;
@@ -51,7 +113,6 @@ if (move_x != 0 || move_y != 0) {
             }
             x_remainder = 0;
         }
-        image_xscale = (hsp > 0) ? 1 : -1;
     }
 
     // Y轴移动与碰撞

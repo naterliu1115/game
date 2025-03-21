@@ -34,3 +34,34 @@ active = false;
 // 其他在Step中使用但未声明的变量
 // 注意：根据游戏逻辑，可能需要调整这些初始值
 battle_info = "";
+
+// 動畫相關變數
+enum PLAYER_ANIMATION {
+    IDLE = 0,
+    WALK_DOWN = 1,
+    WALK_RIGHT = 2,
+    WALK_UP = 3,
+    WALK_LEFT = 4
+}
+
+// 動畫幀範圍
+ANIMATION_FRAMES = {
+    IDLE: [0, 4],
+    WALK_DOWN: [5, 9],
+    WALK_RIGHT: [10, 14],
+    WALK_UP: [15, 19],
+    WALK_LEFT: [20, 24]
+}
+
+// 動畫播放速度 (根據sprite的playbackSpeed設置)
+ANIMATION_SPEED = 1/8; // 8 FPS
+animation_timer = 0;
+current_animation = PLAYER_ANIMATION.IDLE;
+current_frame = 0;
+
+// 設置sprite的初始狀態
+image_speed = 0; // 手動控制動畫
+image_index = 0; // 從第一幀開始
+
+// 移動相關變數
+move_speed = 4;

@@ -26,18 +26,37 @@ info_text = "";
 info_alpha = 1.0;
 info_timer = 0;
 
+// 控制設置
+allow_player_movement = false; // 是否允許玩家移動
+allow_game_controls = false;   // 是否允許遊戲控制（如互動、召喚等）
+
+// 狀態追蹤
+last_active_state = false;     // 用於追蹤狀態變化
+
 // 統一的介面方法
 show = function() {
+    if (!active) {  // 只在狀態改變時輸出
+        show_debug_message("UI顯示: " + object_get_name(object_index));
+        show_debug_message("允許移動: " + string(allow_player_movement));
+        show_debug_message("允許遊戲控制: " + string(allow_game_controls));
+    }
+    
     visible = true;
     active = true;
     surface_needs_update = true;
+    last_active_state = true;
     // 子類應覆蓋此方法
-	
 };
 
 hide = function() {
+    if (active) {  // 只在狀態改變時輸出
+        show_debug_message("UI隱藏: " + object_get_name(object_index));
+    }
+    
     visible = false;
     active = false;
+    last_active_state = false;
+    
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
         surface_free(ui_surface);

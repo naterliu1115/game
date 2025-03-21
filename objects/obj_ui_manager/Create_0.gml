@@ -414,3 +414,45 @@ on_show_battle_result = function(data) {
     
     add_battle_log("顯示戰鬥結果!");
 };
+
+// 從UI管理器中移除UI
+function remove_ui(ui_instance) {
+    if (!instance_exists(ui_instance)) {
+        show_debug_message("警告：嘗試移除不存在的UI實例");
+        return;
+    }
+    
+    // 檢查數據結構是否有效
+    if (!ds_exists(ui_layers, ds_type_map) || !ds_exists(active_ui, ds_type_map)) {
+        show_debug_message("警告：UI管理器的數據結構已被銷毀");
+        return;
+    }
+    
+    // 從所有層級中移除
+    var keys = ds_map_keys_to_array(ui_layers);
+    for (var i = 0; i < array_length(keys); i++) {
+        var layer_name = keys[i];
+        if (ds_exists(ui_layers[? layer_name], ds_type_list)) {
+            var ui_list = ui_layers[? layer_name];
+            var index = ds_list_find_index(ui_list, ui_instance);
+            if (index != -1) {
+                ds_list_delete(ui_list, index);
+                show_debug_message("UI已從層級 " + layer_name + " 移除");
+            }
+        }
+    }
+    
+    // 從活躍UI列表中移除
+    keys = ds_map_keys_to_array(active_ui);
+    for (var i = 0; i < array_length(keys); i++) {
+        var layer_name = keys[i];
+        if (ds_exists(active_ui[? layer_name], ds_type_list)) {
+            var active_list = active_ui[? layer_name];
+            var index = ds_list_find_index(active_list, ui_instance);
+            if (index != -1) {
+                ds_list_delete(active_list, index);
+                show_debug_message("UI已從活躍列表中移除");
+            }
+        }
+    }
+}

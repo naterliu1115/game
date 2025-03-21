@@ -347,3 +347,19 @@ switch(current_tab) {
 // 重置繪圖設置
 draw_set_color(c_white);
 draw_set_alpha(1.0);
+
+// 在畫面上顯示 UI 狀態調試信息
+if (active && global.game_debug_mode) {
+    // 使用預設字體或已知存在的字體，而不是 fnt_debug
+    var old_font = draw_get_font();
+    draw_set_font(fnt_dialogue); // 使用對話字體替代
+    
+    draw_set_color(c_red);
+    draw_text(10, 300, "怪物管理器UI活躍狀態：" + string(active));
+    draw_text(10, 320, "允許移動：" + string(allow_player_movement));
+    draw_text(10, 340, "玩家物件存在：" + string(instance_exists(Player)));
+    
+    // 還原原始字體
+    draw_set_font(old_font);
+    draw_set_color(c_white);
+}
