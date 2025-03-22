@@ -78,6 +78,7 @@
     {"id":{"name":"dialogue_functions","path":"scripts/dialogue_functions/dialogue_functions.yy",},},
     {"id":{"name":"scr_drawing_utils","path":"scripts/scr_drawing_utils/scr_drawing_utils.yy",},},
     {"id":{"name":"scr_event_system","path":"scripts/scr_event_system/scr_event_system.yy",},},
+    {"id":{"name":"catbao","path":"sprites/catbao/catbao.yy",},},
     {"id":{"name":"Monster1","path":"sprites/Monster1/Monster1.yy",},},
     {"id":{"name":"Monster2","path":"sprites/Monster2/Monster2.yy",},},
     {"id":{"name":"player_2","path":"sprites/player_2/player_2.yy",},},
