@@ -22,7 +22,64 @@ TurnBasedBattle/
 
 ## 核心系統
 
-### 1. 事件系統 (Event System)
+### 1. 角色動畫系統 (Animation System)
+
+角色動畫系統提供了一個統一且高度可定制的動畫播放機制，確保動畫幀循環順暢且不會跳幀。
+
+**主要組件:**
+- `Player`: 玩家角色，使用八方向動畫系統
+- `obj_battle_unit_parent`: 戰鬥單位的父類，也使用相同的動畫系統
+
+**動畫參數:**
+- `animation_speed`: 基礎動畫速度（1=正常速度，2=兩倍速，0.5=半速）
+- `animation_update_rate`: 更新間隔（步數，越小越快，越大越慢）
+- `idle_animation_speed`: IDLE動畫專用速度（允許IDLE使用不同的速度）
+- `idle_update_rate`: IDLE動畫更新間隔（允許更精確的IDLE動畫控制）
+
+**主要功能:**
+- 八方向動畫實現：基於移動方向自動選擇相應的動畫
+- 幀序列管理：使用固定的幀序列系統確保每幀都完整播放
+- 動畫狀態檢測：自動檢測動畫變更並重設序列
+- 差異化動畫速度：可以為不同動畫類型設置不同速度
+- 動畫調試：內建詳細的調試輸出機制
+
+**使用示例:**
+```gml
+// 在Create_0.gml中設置基本動畫參數
+animation_speed = 1.0;
+animation_update_rate = 5;
+idle_animation_speed = 0.5;
+idle_update_rate = 8;
+
+// 在Step_0.gml中會自動基於這些參數更新動畫
+```
+
+**新增怪物時的動畫配置:**
+```gml
+// 設置新的動畫配置
+animation_frames = {
+    WALK_DOWN_RIGHT: [0, 4],   // 0-4是右下角移動
+    WALK_UP_RIGHT: [5, 9],     // 5-9是右上角移動
+    WALK_UP_LEFT: [10, 14],    // 10-14是左上角移動 
+    WALK_DOWN_LEFT: [15, 19],  // 15-19是左下角移動
+    WALK_DOWN: [20, 24],       // 20-24是正下方移動
+    WALK_RIGHT: [25, 29],      // 25-29是右邊移動
+    WALK_UP: [30, 34],         // 30-34是上面移動
+    WALK_LEFT: [35, 39],       // 35-39是左邊移動
+    IDLE: [40, 44],            // 待機動畫
+    ATTACK: [45, 49],          // 攻擊動畫
+    HURT: [50, 54],            // 受傷動畫
+    DIE: [55, 59]              // 死亡動畫
+}
+
+// 調整動畫速度（可選）
+animation_speed = 0.8;
+animation_update_rate = 5;
+idle_animation_speed = 0.4;
+idle_update_rate = 9;
+```
+
+### 2. 事件系統 (Event System)
 
 事件系統採用發布-訂閱模式，允許遊戲對象之間進行鬆耦合的通信。
 
@@ -46,7 +103,7 @@ with (obj_event_manager) {
 broadcast_event("player_damaged", { damage: 10 });
 ```
 
-### 2. 戰鬥系統 (Battle System)
+### 3. 戰鬥系統 (Battle System)
 
 戰鬥系統管理整個戰鬥流程，包括單位的行動、回合控制和戰鬥結果處理。
 
@@ -69,7 +126,7 @@ broadcast_event("player_damaged", { damage: 10 });
 - 獎勵分配
 - 經驗系統
 
-### 3. 單位系統 (Unit System)
+### 4. 單位系統 (Unit System)
 
 單位系統管理所有戰鬥單位的創建、銷毀和行為。
 
@@ -88,7 +145,7 @@ broadcast_event("player_damaged", { damage: 10 });
 - 使用對象池系統優化單位創建和回收
 - 追蹤單位統計信息以便進行遊戲平衡
 
-### 4. 對話系統 (Dialogue System)
+### 5. 對話系統 (Dialogue System)
 
 對話系統管理遊戲中的對話流程，支持 NPC 交互。
 
@@ -113,7 +170,7 @@ if (keyboard_check_pressed(vk_space)) {
 }
 ```
 
-### 5. 道具系統 (Item System)
+### 6. 道具系統 (Item System)
 
 道具系統管理遊戲中的所有物品，包括消耗品、裝備、捕捉道具和材料。
 
@@ -180,7 +237,7 @@ enum ITEM_RARITY {
 - 精靈資源缺失處理（使用預設精靈 `spr_gold`）
 - 物品驗證失敗處理
 
-### 6. UI 管理系統
+### 7. UI 管理系統
 
 UI 系統管理遊戲中的各種用戶界面元素。
 
@@ -242,6 +299,13 @@ UI 系統管理遊戲中的各種用戶界面元素。
 1. 創建一個繼承自 `obj_player_summon_parent` 或 `obj_enemy_parent` 的新對象
 2. 在 Create 事件中設置單位屬性
 3. 在 `obj_unit_manager` 中註冊新單位類型
+4. 設置單位的動畫幀範圍和速度參數
+
+### 自定義角色動畫
+1. 修改角色的 `animation_frames` 結構體來定義各種動畫的幀範圍
+2. 調整 `animation_speed` 和 `animation_update_rate` 變數控制動畫速度
+3. 可以為特定動畫類型(如IDLE)設置專用速度參數
+4. 在 `Create_0.gml` 中集中定義動畫參數，便於統一管理
 
 ### 添加新事件
 1. 在需要監聽事件的對象中添加對應的回調方法
@@ -273,4 +337,5 @@ UI 系統管理遊戲中的各種用戶界面元素。
 
 - 使用 `show_debug_message()` 輸出調試信息
 - 啟用事件系統的 `event_debug_mode` 跟踪事件流
-- 使用 `obj_battle_manager` 中的調試繪制功能可視化戰鬥區域和單位狀態 
+- 使用 `obj_battle_manager` 中的調試繪制功能可視化戰鬥區域和單位狀態
+- 利用動畫系統的調試輸出監控角色動畫狀態變化 

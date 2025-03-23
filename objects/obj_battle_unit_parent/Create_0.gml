@@ -1,3 +1,46 @@
+// 動畫相關變數
+enum UNIT_ANIMATION {
+    WALK_DOWN_RIGHT = 0, // 0-4是右下角移動
+    WALK_UP_RIGHT = 1,   // 5-9是右上角移動
+    WALK_UP_LEFT = 2,    // 10-14是左上角移動
+    WALK_DOWN_LEFT = 3,  // 15-19是左下角移動
+    WALK_DOWN = 4,       // 20-24是正下方移動
+    WALK_RIGHT = 5,      // 25-29是右邊移動
+    WALK_UP = 6,         // 30-34是上面移動
+    WALK_LEFT = 7,       // 35-39是左邊移動
+    IDLE = 8,            // 臨時用右下角移動替代
+    ATTACK = 9,          // 臨時用右下角移動替代
+    HURT = 10,           // 臨時用右下角移動替代
+    DIE = 11             // 臨時用右下角移動替代
+}
+
+// 默認動畫配置 (子類可覆寫)
+animation_frames = {
+    WALK_DOWN_RIGHT: [0, 4],
+    WALK_UP_RIGHT: [5, 9],
+    WALK_UP_LEFT: [10, 14],
+    WALK_DOWN_LEFT: [15, 19],
+    WALK_DOWN: [20, 24],
+    WALK_RIGHT: [25, 29],
+    WALK_UP: [30, 34],
+    WALK_LEFT: [35, 39],
+    IDLE: [0, 4],        // 臨時用右下角移動替代
+    ATTACK: [0, 4],      // 臨時用右下角移動替代
+    HURT: [0, 4],        // 臨時用右下角移動替代
+    DIE: [0, 4]          // 臨時用右下角移動替代
+}
+
+// 動畫控制變數
+animation_speed = 1;               // 基礎動畫速度（1=正常速度）
+animation_update_rate = 6;         // 動畫更新間隔（步數，越小越快）
+current_animation = UNIT_ANIMATION.IDLE;  // 當前動畫狀態
+is_moving = false;                 // 移動狀態標記
+last_x = x;                        // 上一幀X位置
+last_y = y;                        // 上一幀Y位置
+
+// 停用GameMaker的自動動畫系統
+image_speed = 0;
+
 // 基础属性
 max_hp = 100;
 hp = max_hp;
@@ -40,13 +83,18 @@ dead = false;       // 是否已死亡
 
 // 初始化方法(子类可以覆盖此方法添加自己的初始化)
 initialize = function() {
+    // 初始化戰鬥計時器（如果尚未定義）
+    if (!variable_global_exists("battle_timer")) {
+        global.battle_timer = 0;
+    }
+    
     // 这里可以添加通用初始化代码
-    show_debug_message("战斗单位初始化: " + string(id));
+    // show_debug_message("战斗单位初始化: " + string(id));
 }
 
 // 准备行动
 prepare_action = function() {
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") ATB已满，准备行动");
+    // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") ATB已满，准备行动");
     // AI决定下一步行动
     choose_target_and_skill();
 }
@@ -67,25 +115,25 @@ choose_target_and_skill = function() {
 // 寻找新目标
 find_new_target = function() {
     // 获取潜在目标列表(敌对阵营)
-    show_debug_message("===== 開始尋找目標 =====");
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ")");
-    show_debug_message("- 當前隊伍: " + string(team));
+    // show_debug_message("===== 開始尋找目標 =====");
+    // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ")");
+    // show_debug_message("- 當前隊伍: " + string(team));
     
     var potential_targets = ds_list_create();
     
     if (instance_exists(obj_unit_manager)) {
         var enemy_list = (team == 0) ? obj_unit_manager.enemy_units : obj_unit_manager.player_units;
-        show_debug_message("- 查找列表: " + (team == 0 ? "enemy_units" : "player_units"));
-        show_debug_message("- 潛在目標數量: " + string(ds_list_size(enemy_list)));
+        // show_debug_message("- 查找列表: " + (team == 0 ? "enemy_units" : "player_units"));
+        // show_debug_message("- 潛在目標數量: " + string(ds_list_size(enemy_list)));
         
         // 列出所有潛在目標的信息
         for (var i = 0; i < ds_list_size(enemy_list); i++) {
             var check_target = enemy_list[| i];
-            show_debug_message("  目標 " + string(i) + ":");
-            show_debug_message("  - ID: " + string(check_target));
-            show_debug_message("  - 類型: " + object_get_name(check_target.object_index));
-            show_debug_message("  - Team: " + string(check_target.team));
-            show_debug_message("  - 是否存活: " + (!check_target.dead ? "是" : "否"));
+            // show_debug_message("  目標 " + string(i) + ":");
+            // show_debug_message("  - ID: " + string(check_target));
+            // show_debug_message("  - 類型: " + object_get_name(check_target.object_index));
+            // show_debug_message("  - Team: " + string(check_target.team));
+            // show_debug_message("  - 是否存活: " + (!check_target.dead ? "是" : "否"));
             
             if (instance_exists(check_target) && 
                 !check_target.dead && 
@@ -94,10 +142,10 @@ find_new_target = function() {
             }
         }
     } else {
-        show_debug_message("- 警告：單位管理器不存在！");
+        // show_debug_message("- 警告：單位管理器不存在！");
     }
     
-    show_debug_message("- 有效目標數量: " + string(ds_list_size(potential_targets)));
+    // show_debug_message("- 有效目標數量: " + string(ds_list_size(potential_targets)));
     
     // 如果有標記的目標，優先選擇
     var marked_target = noone;
@@ -105,14 +153,14 @@ find_new_target = function() {
         var potential_target = potential_targets[| i];
         if (potential_target.marked) {
             marked_target = potential_target;
-            show_debug_message("- 找到被標記的目標: " + string(marked_target));
+            // show_debug_message("- 找到被標記的目標: " + string(marked_target));
             break;
         }
     }
     
     if (marked_target != noone) {
         target = marked_target;
-        show_debug_message("- 選擇了被標記的目標: " + string(target));
+        // show_debug_message("- 選擇了被標記的目標: " + string(target));
     }
     // 根據 AI 模式選擇目標
     else if (ds_list_size(potential_targets) > 0) {
@@ -132,7 +180,7 @@ find_new_target = function() {
                 }
                 
                 target = nearest_target;
-                show_debug_message("- 選擇了最近的目標: " + string(target) + "，距離: " + string(nearest_dist));
+                // show_debug_message("- 選擇了最近的目標: " + string(target) + "，距離: " + string(nearest_dist));
                 break;
                 
             case AI_MODE.DEFENSIVE:
@@ -150,26 +198,26 @@ find_new_target = function() {
                 }
                 
                 target = weakest_target;
-                show_debug_message("- 選擇了最弱的目標: " + string(target) + "，HP比例: " + string(lowest_hp_ratio));
+                // show_debug_message("- 選擇了最弱的目標: " + string(target) + "，HP比例: " + string(lowest_hp_ratio));
                 break;
                 
             case AI_MODE.PURSUIT:
                 // 如果已有目標且目標仍然有效，保持追蹤
                 if (target != noone && instance_exists(target) && !target.dead) {
-                    show_debug_message("- 繼續追蹤現有目標: " + string(target));
+                    // show_debug_message("- 繼續追蹤現有目標: " + string(target));
                 } else {
                     // 否則選擇隨機目標
                     target = potential_targets[| irandom(ds_list_size(potential_targets) - 1)];
-                    show_debug_message("- 選擇了隨機目標: " + string(target));
+                    // show_debug_message("- 選擇了隨機目標: " + string(target));
                 }
                 break;
         }
     } else {
         target = noone;
-        show_debug_message("- 沒有找到任何有效目標!");
+        // show_debug_message("- 沒有找到任何有效目標!");
     }
     
-    show_debug_message("===== 目標搜索結束 =====");
+    // show_debug_message("===== 目標搜索結束 =====");
     
     // 清理臨時列表
     ds_list_destroy(potential_targets);
@@ -193,7 +241,7 @@ choose_skill = function() {
     if (ds_list_size(available_skills) > 0) {
         // 这里可以添加更复杂的技能选择逻辑
         current_skill = available_skills[| irandom(ds_list_size(available_skills) - 1)];
-        show_debug_message(object_get_name(object_index) + " 选择技能: " + current_skill.name);
+        // show_debug_message(object_get_name(object_index) + " 选择技能: " + current_skill.name);
     } else {
         // 没有可用技能，使用默认攻击
         current_skill = {
@@ -203,54 +251,74 @@ choose_skill = function() {
             range: 50,
             cooldown: 30
         };
-        show_debug_message(object_get_name(object_index) + " 无可用技能，使用默认攻击");
+        // show_debug_message(object_get_name(object_index) + " 无可用技能，使用默认攻击");
     }
     
+    // 清理临时列表
     ds_list_destroy(available_skills);
 }
 
 // 执行AI行动
 execute_ai_action = function() {
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") 正在执行AI行动");
-    
-    if (target == noone || !instance_exists(target)) {
-        show_debug_message("  - 目标无效，重置ATB并寻找新目标");
+    // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") 正在执行AI行动");
+    // 检查目标是否有效
+    if (target == noone || !instance_exists(target) || target.dead) {
+        // show_debug_message("  - 目标无效，重置ATB并寻找新目标");
         atb_current = 0;
         atb_ready = false;
         find_new_target();
         return;
     }
     
-    // 检查与目标的距离
+    // 检查是否在射程内
     var dist_to_target = point_distance(x, y, target.x, target.y);
-    show_debug_message("  - 与目标距离: " + string(dist_to_target) + ", 技能范围: " + string(current_skill.range));
+    // show_debug_message("  - 与目标距离: " + string(dist_to_target) + ", 技能范围: " + string(current_skill.range));
     
+    // 如果在范围内，直接攻击
     if (dist_to_target <= current_skill.range) {
-        show_debug_message("  - 在技能范围内，执行技能");
-        is_acting = true;
+        // show_debug_message("  - 在技能范围内，执行技能");
         use_skill(current_skill, target);
     } else {
-        show_debug_message("  - 不在范围内，移动接近目标");
+        // 如果不在范围内，移动接近目标
+        // show_debug_message("  - 不在范围内，移动接近目标");
         move_towards_target();
     }
 }
 
 // 使用技能
-use_skill = function(skill, target) {
-    // 这里实现实际的技能效果
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ") 使用技能 " + skill.name + " 攻击 " + object_get_name(target.object_index) + " (ID: " + string(target.id) + ")");
+use_skill = function(skill, _target) {
+    is_acting = true;
     
-    // 造成伤害
-    with (target) {
-        take_damage(other.attack);
+    // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ") 使用技能 " + skill.name + " 攻击 " + object_get_name(target.object_index) + " (ID: " + string(target.id) + ")");
+    
+    // 暂时设置为攻击动画帧
+    current_animation = UNIT_ANIMATION.ATTACK;
+    
+    // 计算伤害
+    var damage = skill.damage;
+    var target_def = _target.defense;
+    var actual_damage = damage - target_def;
+    actual_damage = max(1, actual_damage); // 确保至少造成1点伤害
+    
+    // 应用伤害
+    with(_target) {
+        take_damage(actual_damage, other.id);
     }
     
     // 设置技能冷却
     ds_map_set(skill_cooldowns, skill.id, skill.cooldown);
     
-    // 重置ATB
+    // 消耗ATB
     atb_current = 0;
     atb_ready = false;
+    
+    // 恢复动画状态
+    current_animation = UNIT_ANIMATION.IDLE;
+    
+    // 重置当前技能
+    current_skill = noone;
+    
+    // 结束行动
     is_acting = false;
 }
 
@@ -262,6 +330,10 @@ move_towards_target = function() {
         var move_x = lengthdir_x(move_speed, dir);
         var move_y = lengthdir_y(move_speed, dir);
         
+        // 记录移动前位置
+        var prev_x = x;
+        var prev_y = y;
+        
         // 检查碰撞并移动
         if (!place_meeting(x + move_x, y, obj_battle_unit_parent)) {
             x += move_x;
@@ -270,30 +342,39 @@ move_towards_target = function() {
         if (!place_meeting(x, y + move_y, obj_battle_unit_parent)) {
             y += move_y;
         }
+        
+        // 检查是否实际移动了并设置移动标记
+        is_moving = (prev_x != x || prev_y != y);
     }
 }
 
 // 受到伤害
-take_damage = function(amount) {
-    var actual_damage = max(1, amount - defense);
-    hp -= actual_damage;
+take_damage = function(damage, attacker) {
+    // 应用伤害
+    hp -= damage;
     
-    show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ") 受到伤害: " + string(actual_damage) + ", 剩余HP: " + string(hp) + "/" + string(max_hp));
+    // 播放受伤动画
+    current_animation = UNIT_ANIMATION.HURT;
     
-    // 显示伤害数字
-    // 这里可以添加创建伤害数字对象的代码
+    // 触发事件（可以在这里添加受伤音效等）
     
     // 检查是否死亡
     if (hp <= 0) {
         hp = 0;
         die();
     }
+    
+    // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ") 受到伤害: " + string(damage) + ", 剩余HP: " + string(hp) + "/" + string(max_hp));
 }
 
 // 死亡处理
 die = function() {
     if (!dead) {
         dead = true;
+        
+        // 设置死亡动画
+        current_animation = UNIT_ANIMATION.DIE;
+        
         // 發送死亡事件
         broadcast_event("unit_died", {
             unit_id: id,

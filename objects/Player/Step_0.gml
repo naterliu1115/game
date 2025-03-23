@@ -1,3 +1,9 @@
+// 更新全局戰鬥計時器
+if (!variable_global_exists("battle_timer")) {
+    global.battle_timer = 0;
+}
+global.battle_timer++;
+
 // 檢查是否有活躍的UI阻止移動
 var can_move = true;
 if (instance_exists(obj_ui_manager)) {
@@ -29,48 +35,150 @@ if (!can_move) {
 var move_x = keyboard_check(vk_right) - keyboard_check(vk_left);
 var move_y = keyboard_check(vk_down) - keyboard_check(vk_up);
 
-// 更新動畫狀態
+// 保存上一幀的位置
+last_x = x;
+last_y = y;
+
+// 更新動畫狀態 - 八方向實現
 if (move_x == 0 && move_y == 0) {
     // 待機動畫
-    if (image_index < 0 || image_index > 4) {
-        image_index = 0;
-    }
-    image_speed = 0.8;  // 設置動畫速度
+    current_animation = PLAYER_ANIMATION.IDLE;
 } else {
-    if (abs(move_x) > abs(move_y)) {
-        // 水平移動
-        if (move_x > 0) {
-            // 往右走
-            if (image_index < 10 || image_index > 14) {
-                image_index = 10;
-            }
-        } else {
-            // 往左走
-            if (image_index < 20 || image_index > 24) {
-                image_index = 20;
-            }
+    // 計算移動方向
+    var move_dir = point_direction(0, 0, move_x, move_y);
+
+    // 將360度分成8個區域，每個區域45度
+    var angle_segment = move_dir + 22.5;
+    if (angle_segment >= 360) angle_segment -= 360;
+
+    var animation_index = floor(angle_segment / 45);
+
+    switch(animation_index) {
+        case 0: current_animation = PLAYER_ANIMATION.WALK_RIGHT; break;
+        case 1: current_animation = PLAYER_ANIMATION.WALK_UP_RIGHT; break;
+        case 2: current_animation = PLAYER_ANIMATION.WALK_UP; break;
+        case 3: current_animation = PLAYER_ANIMATION.WALK_UP_LEFT; break;
+        case 4: current_animation = PLAYER_ANIMATION.WALK_LEFT; break;
+        case 5: current_animation = PLAYER_ANIMATION.WALK_DOWN_LEFT; break;
+        case 6: current_animation = PLAYER_ANIMATION.WALK_DOWN; break;
+        case 7: current_animation = PLAYER_ANIMATION.WALK_DOWN_RIGHT; break;
+    }
+}
+
+// 根據當前動畫設置sprite範圍
+var frame_range;
+switch(current_animation) {
+    case PLAYER_ANIMATION.IDLE: frame_range = ANIMATION_FRAMES.IDLE; break;
+    case PLAYER_ANIMATION.WALK_DOWN: frame_range = ANIMATION_FRAMES.WALK_DOWN; break;
+    case PLAYER_ANIMATION.WALK_DOWN_RIGHT: frame_range = ANIMATION_FRAMES.WALK_DOWN_RIGHT; break;
+    case PLAYER_ANIMATION.WALK_RIGHT: frame_range = ANIMATION_FRAMES.WALK_RIGHT; break;
+    case PLAYER_ANIMATION.WALK_UP_RIGHT: frame_range = ANIMATION_FRAMES.WALK_UP_RIGHT; break;
+    case PLAYER_ANIMATION.WALK_UP: frame_range = ANIMATION_FRAMES.WALK_UP; break;
+    case PLAYER_ANIMATION.WALK_UP_LEFT: frame_range = ANIMATION_FRAMES.WALK_UP_LEFT; break;
+    case PLAYER_ANIMATION.WALK_LEFT: frame_range = ANIMATION_FRAMES.WALK_LEFT; break;
+    case PLAYER_ANIMATION.WALK_DOWN_LEFT: frame_range = ANIMATION_FRAMES.WALK_DOWN_LEFT; break;
+}
+
+// 使用完全固定的動畫序列來確保顯示所有幀
+if (is_array(frame_range)) {
+    // 初始化動畫系統（只會在第一次執行時設定）
+    if (!variable_instance_exists(id, "anim_timer")) {
+        anim_timer = 0;
+        frame_sequence = []; // 用於儲存完整的幀序列
+        current_frame_index = 0; // 當前幀在序列中的索引
+        current_animation_name = ""; // 用於檢測動畫變更
+        last_image_index = 0; // 上一幀的索引，用於調試
+    }
+    
+    // 檢測動畫是否變更
+    var animation_name = string(current_animation);
+    if (animation_name != current_animation_name) {
+        // 動畫變更，重新建立序列
+        current_animation_name = animation_name;
+        frame_sequence = [];
+        
+        // 對於IDLE和其他動畫，將所有幀添加到序列中
+        var start_frame = frame_range[0];
+        var end_frame = frame_range[1];
+        
+        // 強制添加所有幀到序列（確保包含end_frame）
+        for (var i = start_frame; i <= end_frame; i++) {
+            array_push(frame_sequence, i);
         }
-    } else {
-        // 垂直移動
-        if (move_y > 0) {
-            // 往下走
-            if (image_index < 5 || image_index > 9) {
-                image_index = 5;
-            }
-        } else {
-            // 往上走
-            if (image_index < 15 || image_index > 19) {
-                image_index = 15;
-            }
+        
+        // 重置計數器
+        current_frame_index = 0;
+        anim_timer = 0;
+        
+        // 調試幀序列創建
+        var seq_debug = "創建序列:[";
+        for (var i = 0; i < array_length(frame_sequence); i++) {
+            seq_debug += string(frame_sequence[i]);
+            if (i < array_length(frame_sequence) - 1) seq_debug += ",";
+        }
+        seq_debug += "]";
+        show_debug_message("[動畫初始化] " + object_get_name(object_index) + " " + seq_debug);
+    }
+    
+    // 為IDLE狀態設置特殊的動畫速度
+    var current_animation_speed = animation_speed;
+    var current_update_rate = animation_update_rate;
+    
+    // 如果是IDLE動畫，使用專門為IDLE設計的速度
+    if (current_animation == PLAYER_ANIMATION.IDLE) {
+        // 使用在Create_0.gml中定義的IDLE專用參數
+        current_animation_speed = idle_animation_speed;
+        current_update_rate = idle_update_rate;
+    }
+    
+    // 更新計時器，使用動畫速度參數
+    anim_timer += current_animation_speed;
+    
+    // 當計時器達到更新閾值時更新幀
+    // 更新閾值由animation_update_rate控制，越小動畫越快
+    if (anim_timer >= current_update_rate) {
+        anim_timer = 0;
+        
+        // 移動到序列中的下一幀
+        current_frame_index = (current_frame_index + 1) % array_length(frame_sequence);
+        
+        // 設置當前幀
+        image_index = frame_sequence[current_frame_index];
+        
+        // 如果是IDLE動畫，額外調試輸出
+        if (current_animation == PLAYER_ANIMATION.IDLE) {
+            show_debug_message("[幀更新] Player IDLE 幀變更為:" + string(image_index) + 
+                              " (索引:" + string(current_frame_index) + "/" + 
+                              string(array_length(frame_sequence)-1) + ")");
         }
     }
-    image_speed = 0.8;  // 設置動畫速度
+    
+    image_speed = 0; // 停用GameMaker的自動動畫
+    
+    // Debug輸出（每30步輸出一次，減少輸出頻率）
+    if (global.battle_timer % 30 == 0) {
+        var seq_info = "序列:[";
+        for (var i = 0; i < array_length(frame_sequence); i++) {
+            seq_info += string(frame_sequence[i]);
+            if (i < array_length(frame_sequence) - 1) seq_info += ",";
+        }
+        seq_info += "]";
+        
+        show_debug_message("[動畫詳細] " + object_get_name(object_index) + " ID:" + string(id) + 
+                          " 動畫:" + string(current_animation_name) + 
+                          " 範圍:[" + string(frame_range[0]) + "," + string(frame_range[1]) + "]" + 
+                          " 當前幀:" + string(image_index) + 
+                          " 幀索引:" + string(current_frame_index) + "/" + string(array_length(frame_sequence)-1) + 
+                          " " + seq_info + 
+                          " 動畫速度:" + string(current_animation_speed) + 
+                          " 更新率:" + string(current_update_rate));
+    }
 }
 
 // **设置移动速度变量**
 var move_speed = 3;
 
-// 获取战斗状态相关变量 - 整合到一处以提高代码可读性
+// 获取战斗状态相关变量
 var in_battle = global.in_battle;
 var battle_manager_exists = instance_exists(obj_battle_manager);
 var boundary_radius = 0;
@@ -85,10 +193,9 @@ if (in_battle && battle_manager_exists) {
 var move_dir = 0;
 var move_len = 0;
 
-// 只有当玩家实际移动时才进行计算
 if (move_x != 0 || move_y != 0) {
     move_dir = point_direction(0, 0, move_x, move_y);
-    move_len = (move_x != 0 && move_y != 0) ? move_speed : move_speed;
+    move_len = move_speed;
 
     var hsp = lengthdir_x(move_len, move_dir);
     var vsp = lengthdir_y(move_len, move_dir);
@@ -102,7 +209,6 @@ if (move_x != 0 || move_y != 0) {
     x_remainder = hsp - hsp_final;
     y_remainder = vsp - vsp_final;
 
-    // X轴移动与碰撞
     if (hsp_final != 0) {
         var target_x = x + hsp_final;
         if (!place_meeting(target_x, y, obj_solid)) {
@@ -115,7 +221,6 @@ if (move_x != 0 || move_y != 0) {
         }
     }
 
-    // Y轴移动与碰撞
     if (vsp_final != 0) {
         var target_y = y + vsp_final;
         if (!place_meeting(x, target_y, obj_solid)) {
@@ -129,11 +234,10 @@ if (move_x != 0 || move_y != 0) {
     }
 }
 
-// 保存当前精确位置以供下一步使用
 xprevious_precise = x;
 yprevious_precise = y;
 
-// **优化后的相机跟随代码**
+// **相機跟隨**
 var view_w = camera_get_view_width(view_camera[0]);
 var view_h = camera_get_view_height(view_camera[0]);
 
@@ -152,11 +256,11 @@ cam_y = round(cam_y);
 
 camera_set_view_pos(view_camera[0], cam_x, cam_y);
 
-// **玩家与 NPC 互动**
+// **玩家與 NPC 互動**
 if (!is_dialogue_active()) {
     var interact_radius = 50;
     var nearest_npc = instance_nearest(x, y, obj_npc_parent);
-    
+
     if (nearest_npc != noone) {
         var dist = point_distance(x, y, nearest_npc.x, nearest_npc.y);
         if (dist <= interact_radius && keyboard_check_pressed(ord("E"))) {
@@ -165,12 +269,11 @@ if (!is_dialogue_active()) {
     }
 }
 
-// 玩家按 E 或 Enter 继续对话
 if (is_dialogue_active() && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(ord("E")))) {
     advance_dialogue();
 }
 
-// **检测战斗并触发**
+// **進入戰鬥檢查**
 if (!in_battle) {
     var enemy = instance_place(x, y, obj_enemy_parent);
     if (enemy != noone && battle_manager_exists) {
@@ -180,39 +283,35 @@ if (!in_battle) {
     }
 }
 
-// **在战斗中按空格键打开召唤UI**
+// **空白鍵開啟召喚UI**
 if (in_battle && keyboard_check_pressed(vk_space)) {
     if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
-        // 只在准备阶段允许召唤
         if (instance_exists(obj_game_controller)) {
             with (obj_game_controller) {
                 toggle_summon_ui();
             }
         } else {
-            // 后备方案：直接创建和操作召唤UI
             if (!instance_exists(obj_summon_ui)) {
                 instance_create_layer(0, 0, "Instances", obj_summon_ui);
             }
-            
-            // 确保UI存在后再调用其方法
+
             if (instance_exists(obj_summon_ui)) {
                 with (obj_summon_ui) {
-                    from_preparing_phase = true; // 标记为准备阶段打开
+                    from_preparing_phase = true;
                     open_summon_ui();
                 }
             }
         }
     } else if (instance_exists(obj_battle_ui)) {
-        // 在其他阶段显示提示
         obj_battle_ui.show_info("只能在戰鬥準備階段召喚怪物！");
     }
 }
 
-// **在战斗中按M键标记目标**
+// **M鍵標記敵人**
 if (in_battle && keyboard_check_pressed(ord("M"))) {
     var nearest_enemy = noone;
-    var min_dist = 100000;   
-    
+    var min_dist = 100000;
+
     with (obj_enemy_parent) {
         var dist = point_distance(x, y, other.x, other.y);
         if (dist < min_dist) {
@@ -220,25 +319,21 @@ if (in_battle && keyboard_check_pressed(ord("M"))) {
             nearest_enemy = id;
         }
     }
-    
+
     if (nearest_enemy != noone) {
-        // 清除所有单位的标记状态
         with (obj_battle_unit_parent) {
             marked = false;
         }
-        
-        // 标记选中的敌人
+
         nearest_enemy.marked = true;
-        show_debug_message("标记了敌人: " + string(nearest_enemy));
-        
-        // 更新UI信息
+        show_debug_message("標記了敵人: " + string(nearest_enemy));
+
         if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.battle_info = "已标记敌人为目标!";
+            obj_battle_ui.battle_info = "已標記敵人為目標!";
         }
     } else {
-        // 没有找到敌人时的提示
         if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.battle_info = "没有可标记的敌人!";
+            obj_battle_ui.battle_info = "沒有可標記的敵人!";
         }
     }
 }
