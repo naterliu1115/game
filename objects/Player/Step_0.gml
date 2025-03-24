@@ -79,99 +79,25 @@ switch(current_animation) {
     case PLAYER_ANIMATION.WALK_DOWN_LEFT: frame_range = ANIMATION_FRAMES.WALK_DOWN_LEFT; break;
 }
 
-// 使用完全固定的動畫序列來確保顯示所有幀
+// 動畫更新邏輯
 if (is_array(frame_range)) {
-    // 初始化動畫系統（只會在第一次執行時設定）
-    if (!variable_instance_exists(id, "anim_timer")) {
-        anim_timer = 0;
-        frame_sequence = []; // 用於儲存完整的幀序列
-        current_frame_index = 0; // 當前幀在序列中的索引
-        current_animation_name = ""; // 用於檢測動畫變更
-        last_image_index = 0; // 上一幀的索引，用於調試
-    }
-    
-    // 檢測動畫是否變更
+    // 檢測動畫變更
     var animation_name = string(current_animation);
     if (animation_name != current_animation_name) {
-        // 動畫變更，重新建立序列
         current_animation_name = animation_name;
-        frame_sequence = [];
-        
-        // 對於IDLE和其他動畫，將所有幀添加到序列中
-        var start_frame = frame_range[0];
-        var end_frame = frame_range[1];
-        
-        // 強制添加所有幀到序列（確保包含end_frame）
-        for (var i = start_frame; i <= end_frame; i++) {
-            array_push(frame_sequence, i);
-        }
-        
-        // 重置計數器
-        current_frame_index = 0;
-        anim_timer = 0;
-        
-        // 調試幀序列創建
-        var seq_debug = "創建序列:[";
-        for (var i = 0; i < array_length(frame_sequence); i++) {
-            seq_debug += string(frame_sequence[i]);
-            if (i < array_length(frame_sequence) - 1) seq_debug += ",";
-        }
-        seq_debug += "]";
-        show_debug_message("[動畫初始化] " + object_get_name(object_index) + " " + seq_debug);
+        image_index = frame_range[0];
+        image_speed = (current_animation == PLAYER_ANIMATION.IDLE) ? 
+            idle_animation_speed : animation_speed;
     }
     
-    // 為IDLE狀態設置特殊的動畫速度
-    var current_animation_speed = animation_speed;
-    var current_update_rate = animation_update_rate;
-    
-    // 如果是IDLE動畫，使用專門為IDLE設計的速度
-    if (current_animation == PLAYER_ANIMATION.IDLE) {
-        // 使用在Create_0.gml中定義的IDLE專用參數
-        current_animation_speed = idle_animation_speed;
-        current_update_rate = idle_update_rate;
+    // 確保幀在正確範圍內
+    if (image_index < frame_range[0] || image_index > frame_range[1]) {
+        image_index = frame_range[0];
     }
     
-    // 更新計時器，使用動畫速度參數
-    anim_timer += current_animation_speed;
-    
-    // 當計時器達到更新閾值時更新幀
-    // 更新閾值由animation_update_rate控制，越小動畫越快
-    if (anim_timer >= current_update_rate) {
-        anim_timer = 0;
-        
-        // 移動到序列中的下一幀
-        current_frame_index = (current_frame_index + 1) % array_length(frame_sequence);
-        
-        // 設置當前幀
-        image_index = frame_sequence[current_frame_index];
-        
-        // 如果是IDLE動畫，額外調試輸出
-        if (current_animation == PLAYER_ANIMATION.IDLE) {
-            show_debug_message("[幀更新] Player IDLE 幀變更為:" + string(image_index) + 
-                              " (索引:" + string(current_frame_index) + "/" + 
-                              string(array_length(frame_sequence)-1) + ")");
-        }
-    }
-    
-    image_speed = 0; // 停用GameMaker的自動動畫
-    
-    // Debug輸出（每30步輸出一次，減少輸出頻率）
-    if (global.battle_timer % 30 == 0) {
-        var seq_info = "序列:[";
-        for (var i = 0; i < array_length(frame_sequence); i++) {
-            seq_info += string(frame_sequence[i]);
-            if (i < array_length(frame_sequence) - 1) seq_info += ",";
-        }
-        seq_info += "]";
-        
-        show_debug_message("[動畫詳細] " + object_get_name(object_index) + " ID:" + string(id) + 
-                          " 動畫:" + string(current_animation_name) + 
-                          " 範圍:[" + string(frame_range[0]) + "," + string(frame_range[1]) + "]" + 
-                          " 當前幀:" + string(image_index) + 
-                          " 幀索引:" + string(current_frame_index) + "/" + string(array_length(frame_sequence)-1) + 
-                          " " + seq_info + 
-                          " 動畫速度:" + string(current_animation_speed) + 
-                          " 更新率:" + string(current_update_rate));
+    // Debug輸出
+    if (current_animation == PLAYER_ANIMATION.IDLE && global.battle_timer % 30 == 0) {
+        show_debug_message("[IDLE動畫] 當前幀: " + string(image_index));
     }
 }
 

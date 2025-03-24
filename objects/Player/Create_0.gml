@@ -53,40 +53,32 @@ enum PLAYER_ANIMATION {
     WALK_DOWN_LEFT = 8
 }
 
-// 動畫幀範圍 - 修改為八方向
+// 動畫幀範圍
 ANIMATION_FRAMES = {
-    IDLE: [0, 4],           // 待機動畫
-    WALK_DOWN: [5, 9],      // 向下走
-    WALK_DOWN_RIGHT: [10, 14], // 右下走
-    WALK_RIGHT: [15, 19],    // 向右走
-    WALK_UP_RIGHT: [20, 24], // 右上走
-    WALK_UP: [25, 29],      // 向上走
-    WALK_UP_LEFT: [30, 34],  // 左上走
-    WALK_LEFT: [35, 39],     // 向左走
-    WALK_DOWN_LEFT: [40, 44] // 左下走
+    IDLE: [0, 4],           
+    WALK_DOWN: [5, 9],      
+    WALK_DOWN_RIGHT: [10, 14],
+    WALK_RIGHT: [15, 19],    
+    WALK_UP_RIGHT: [20, 24],
+    WALK_UP: [25, 29],      
+    WALK_UP_LEFT: [30, 34],  
+    WALK_LEFT: [35, 39],     
+    WALK_DOWN_LEFT: [40, 44]
 }
 
 // 動畫系統變數
-current_animation = PLAYER_ANIMATION.IDLE; // 當前動畫類型
-last_x = x;
-last_y = y;
-
-// 自定義動畫系統參數
-animation_speed = 0.8;                       // 基礎動畫速度（1=正常速度）
-animation_update_rate = 4;                   // 動畫更新間隔（步數，越小越快）
-
-// IDLE動畫專用速度參數
-idle_animation_speed = 0.7;                  // IDLE動畫專用速度（較慢）
-idle_update_rate = 8;                        // IDLE更新間隔（較大=較慢）
-
-anim_timer = 0;                              // 初始化動畫計時器
-frame_sequence = [];                         // 用於存儲完整幀序列
-current_frame_index = 0;                     // 當前幀在序列中的索引
-current_animation_name = "";                 // 用於檢測動畫變更
-image_speed = 0;                             // 停用GameMaker的自動動畫
+current_animation = PLAYER_ANIMATION.IDLE;
+current_animation_name = "";
+animation_speed = 1;        // 一般動畫速度
+idle_animation_speed = 0.7;   // IDLE動畫速度
 
 // 初始化動畫
-image_index = ANIMATION_FRAMES.IDLE[0];    // 從第一幀開始
+image_index = ANIMATION_FRAMES.IDLE[0];
+image_speed = idle_animation_speed;
+
+// 位置追蹤
+last_x = x;
+last_y = y;
 
 // 移動相關變數
 move_speed = 4;

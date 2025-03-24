@@ -1,20 +1,20 @@
 // 動畫相關變數
 enum UNIT_ANIMATION {
-    WALK_DOWN_RIGHT = 0, // 0-4是右下角移動
-    WALK_UP_RIGHT = 1,   // 5-9是右上角移動
-    WALK_UP_LEFT = 2,    // 10-14是左上角移動
-    WALK_DOWN_LEFT = 3,  // 15-19是左下角移動
-    WALK_DOWN = 4,       // 20-24是正下方移動
-    WALK_RIGHT = 5,      // 25-29是右邊移動
-    WALK_UP = 6,         // 30-34是上面移動
-    WALK_LEFT = 7,       // 35-39是左邊移動
-    IDLE = 8,            // 臨時用右下角移動替代
-    ATTACK = 9,          // 臨時用右下角移動替代
-    HURT = 10,           // 臨時用右下角移動替代
-    DIE = 11             // 臨時用右下角移動替代
+    WALK_DOWN_RIGHT = 0,
+    WALK_UP_RIGHT = 1,
+    WALK_UP_LEFT = 2,
+    WALK_DOWN_LEFT = 3,
+    WALK_DOWN = 4,
+    WALK_RIGHT = 5,
+    WALK_UP = 6,
+    WALK_LEFT = 7,
+    IDLE = 8,
+    ATTACK = 9,
+    HURT = 10,
+    DIE = 11
 }
 
-// 默認動畫配置 (子類可覆寫)
+// 動畫幀範圍
 animation_frames = {
     WALK_DOWN_RIGHT: [0, 4],
     WALK_UP_RIGHT: [5, 9],
@@ -31,12 +31,19 @@ animation_frames = {
 }
 
 // 動畫控制變數
-animation_speed = 1;               // 基礎動畫速度（1=正常速度）
-animation_update_rate = 6;         // 動畫更新間隔（步數，越小越快）
-current_animation = UNIT_ANIMATION.IDLE;  // 當前動畫狀態
-is_moving = false;                 // 移動狀態標記
-last_x = x;                        // 上一幀X位置
-last_y = y;                        // 上一幀Y位置
+current_animation = UNIT_ANIMATION.IDLE;
+current_animation_name = "";
+animation_speed = 1;        // 一般動畫速度
+idle_animation_speed = 0.7;   // IDLE動畫速度
+
+// 初始化動畫
+image_index = animation_frames.IDLE[0];
+image_speed = idle_animation_speed;
+
+// 位置追蹤
+last_x = x;
+last_y = y;
+is_moving = false;
 
 // 停用GameMaker的自動動畫系統
 image_speed = 0;
