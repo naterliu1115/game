@@ -37,6 +37,7 @@ hide = function() {
     active = false; 
     visible = false;
     depth = 0;
+    allow_player_movement = true;  // 添加這行來恢復玩家移動能力
     
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
