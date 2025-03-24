@@ -25,8 +25,9 @@ animation_frames = {
 }
 
 // 設置動畫速度 (使用精確值避免小數點問題)
-animation_speed = 1; 
+animation_speed = 0.8;
 image_speed = animation_speed; // 確保image_speed也更新
+idle_animation_speed = 0.3;
 
 // 確保初始幀設置正確
 image_index = animation_frames.IDLE[0];
