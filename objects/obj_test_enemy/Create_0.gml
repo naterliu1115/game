@@ -1,14 +1,7 @@
 // 將父對象事件繼承
 event_inherited();
 
-// 初始化屬性
-max_hp = 120;
-hp = max_hp;
-attack = 12;
-defense = 3;
-spd = 3;
-
-// 設置新的動畫配置
+// 設置動畫配置
 animation_frames = {
     WALK_DOWN_RIGHT: [0, 4],   // 0-4是右下角移動
     WALK_UP_RIGHT: [5, 9],     // 5-9是右上角移動
@@ -24,41 +17,36 @@ animation_frames = {
     DIE: [0, 4]                // 臨時用右下角移動替代
 }
 
-// 設置動畫速度 (使用精確值避免小數點問題)
-animation_speed = 0.8;
-image_speed = animation_speed; // 確保image_speed也更新
-idle_animation_speed = 0.3;
-
-// 確保初始幀設置正確
-image_index = animation_frames.IDLE[0];
-
-// 設置技能
-var fireball = {
-    id: "fireball",
-    name: "火球術",
-    damage: attack * 1.2,
-    range: 150,
-    cooldown: 120
-};
-
-ds_list_add(skills, fireball);
-
-// 設置AI模式
-ai_mode = AI_MODE.AGGRESSIVE;
-
 // 初始化函數（安裝完成時執行）
 initialize = function() {
-    // 呼叫父對象的初始化方法
+    // 呼叫父對象的初始化方法（這會設置基本攻擊）
     event_inherited();
     
     // 註釋掉調試輸出
     // show_debug_message("測試敵人初始化: " + string(id));
     
-    // 初始化技能冷卻時間
-    for (var i = 0; i < ds_list_size(skills); i++) {
-        var skill = skills[| i];
-        ds_map_add(skill_cooldowns, skill.id, 0);
-    }
+    // 設置敵人特定屬性
+    max_hp = 120;
+    hp = max_hp;
+    attack = 12;
+    defense = 3;
+    spd = 3;
+    
+    // 確保隊伍設置為敵方
+    team = 1;
+    
+    // 設置動畫速度
+    animation_speed = 0.8;
+    idle_animation_speed = 0.3;
+    
+    // 確保初始幀設置正確
+    image_index = animation_frames.IDLE[0];
+    
+    // 添加火球術技能
+    add_skill("fireball");
+    
+    // 設置AI模式
+    ai_mode = AI_MODE.AGGRESSIVE;
 }
 
 // 執行初始化

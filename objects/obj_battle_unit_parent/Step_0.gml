@@ -26,9 +26,14 @@ if (is_moving) {
         case 6: current_animation = UNIT_ANIMATION.WALK_DOWN; break;      // 改為向下
         case 7: current_animation = UNIT_ANIMATION.WALK_DOWN_RIGHT; break; // 改為向下
     }
-} else {
-    // 不移動時使用閒置動畫
+} else if (!is_attacking && !skill_animation_playing) {
+    // 不移動且非攻擊狀態時使用閒置動畫
     current_animation = UNIT_ANIMATION.IDLE;
+}
+
+// 如果正在播放技能動畫，更新動畫
+if (skill_animation_playing) {
+    update_skill_animation();
 }
 
 // 根據當前動畫設置sprite範圍
@@ -78,8 +83,8 @@ if (!instance_exists(obj_battle_manager) || obj_battle_manager.battle_state != B
     exit;
 }
 
-// 更新ATB
-if (!atb_ready && !is_acting) {
+// 更新ATB (添加ATB暫停邏輯)
+if (!atb_ready && !is_acting && !atb_paused) {
     atb_current += atb_rate;
     
     // 註釋掉調試輸出
@@ -111,4 +116,28 @@ for (var i = 0; i < array_length(_keys); i++) {
 // AI决策和行动
 if (atb_ready && !is_acting) {
     execute_ai_action();
+}
+
+// ATB 暫停時，檢查目標範圍
+if (atb_paused && atb_ready) {
+    // 如果有目標，且目標進入範圍，則恢復行動
+    if (target != noone && instance_exists(target) && !target.dead) {
+        var distance_to_target = point_distance(x, y, target.x, target.y);
+        if (current_skill != noone && distance_to_target <= current_skill.range) {
+            atb_paused = false;
+            execute_ai_action();
+        } else {
+            // 目標不在範圍內，繼續接近
+            move_towards_target();
+        }
+    } else {
+        // 如果目標無效，重新選擇目標
+        find_new_target();
+        if (target == noone) {
+            // 沒有目標，重置ATB
+            atb_current = 0;
+            atb_ready = false;
+            atb_paused = false;
+        }
+    }
 }

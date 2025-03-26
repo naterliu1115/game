@@ -35,6 +35,7 @@
   ],
   "IncludedFiles":[
     {"$GMIncludedFile":"","%Name":"items_data.csv","CopyToMask":3035426170322551022,"filePath":"datafiles","name":"items_data.csv","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
+    {"$GMIncludedFile":"","%Name":"skills.csv","CopyToMask":-1,"filePath":"datafiles/skills","name":"skills.csv","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
   ],
   "isEcma":false,
   "LibraryEmitters":[],
@@ -56,6 +57,7 @@
     {"id":{"name":"obj_enemy_parent","path":"objects/obj_enemy_parent/obj_enemy_parent.yy",},},
     {"id":{"name":"obj_event_manager","path":"objects/obj_event_manager/obj_event_manager.yy",},},
     {"id":{"name":"obj_game_controller","path":"objects/obj_game_controller/obj_game_controller.yy",},},
+    {"id":{"name":"obj_hurt_effect","path":"objects/obj_hurt_effect/obj_hurt_effect.yy",},},
     {"id":{"name":"obj_inventory_ui","path":"objects/obj_inventory_ui/obj_inventory_ui.yy",},},
     {"id":{"name":"obj_item_manager","path":"objects/obj_item_manager/obj_item_manager.yy",},},
     {"id":{"name":"obj_monster_manager_ui","path":"objects/obj_monster_manager_ui/obj_monster_manager_ui.yy",},},
@@ -63,6 +65,7 @@
     {"id":{"name":"obj_player_summon_parent","path":"objects/obj_player_summon_parent/obj_player_summon_parent.yy",},},
     {"id":{"name":"obj_recall_effect","path":"objects/obj_recall_effect/obj_recall_effect.yy",},},
     {"id":{"name":"obj_reward_system","path":"objects/obj_reward_system/obj_reward_system.yy",},},
+    {"id":{"name":"obj_skill_manager","path":"objects/obj_skill_manager/obj_skill_manager.yy",},},
     {"id":{"name":"obj_solid","path":"objects/obj_solid/obj_solid.yy",},},
     {"id":{"name":"obj_summon_effect","path":"objects/obj_summon_effect/obj_summon_effect.yy",},},
     {"id":{"name":"obj_summon_ui","path":"objects/obj_summon_ui/obj_summon_ui.yy",},},

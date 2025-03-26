@@ -1,0 +1,8 @@
+id,name,damage_multiplier,range,cooldown,area_type,area_radius,particle_effect,anim_frames,anim_damage_frames,description
+basic_attack,基本攻擊,1.0,40,30,single,0,basic_hit,12,6;7,普通攻擊
+water_blast,水彈,1.2,80,60,circle,10,water_splash,15,6;7;8,發射水彈攻擊敵人
+fireball,火球術,1.2,150,120,circle,15,fire_burst,18,8;9;10,發射燃燒的火球
+slash,斬擊,1.5,45,90,arc,20,slash_effect,14,7;8,揮動武器造成範圍傷害
+heal,治療,0.8,80,180,circle,30,heal_glow,20,10;11;12,恢復隊友生命值
+poison_cloud,毒霧,0.7,100,150,circle,40,poison_mist,24,10;11;12;13;14,釋放毒霧持續傷害
+thunder_strike,雷擊,1.8,120,200,circle,25,lightning_flash,16,8,召喚雷電攻擊目標 

@@ -6,7 +6,12 @@ alwaysApply: false
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
+---
+---
+description: rule
+globs: 
+alwayse
 ---
 
 # Your rule content
@@ -15,3 +20,6 @@ alwaysApply: false
 - Encoding using GML
 - always use traditional chinses
 - use Gamemaker to make games
+- AI agent在調整代碼時必須記憶專案架構
+- 以專案架構為前提進行設計
+- 必須參照GML的規格並適時透過網路搜尋參考官方文檔

@@ -1,20 +1,19 @@
 {
   "$GMObject":"",
-  "%Name":"obj_test_summon",
+  "%Name":"obj_hurt_effect",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":2,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_test_summon",
+  "name":"obj_hurt_effect",
   "overriddenProperties":[],
   "parent":{
-    "name":"Monster",
-    "path":"folders/物体/Monster.yy",
+    "name":"effect",
+    "path":"folders/物体/effect.yy",
   },
-  "parentObjectId":{
-    "name":"obj_player_summon_parent",
-    "path":"objects/obj_player_summon_parent/obj_player_summon_parent.yy",
-  },
+  "parentObjectId":null,
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
@@ -32,10 +31,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"Monster1",
-    "path":"sprites/Monster1/Monster1.yy",
-  },
+  "spriteId":null,
   "spriteMaskId":null,
   "visible":true,
 }

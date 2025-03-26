@@ -6,7 +6,7 @@ initialize = function() {
     // show_debug_message("===== obj_test_summon 初始化開始 =====");
     // show_debug_message("初始化前 team = " + string(team));
     
-    // 调用父类的初始化（这会设置team=0）
+    // 调用父类的初始化（这会设置team=0和基本攻擊）
     event_inherited();
     
     // show_debug_message("父類初始化後 team = " + string(team));
@@ -26,17 +26,8 @@ initialize = function() {
     atb_ready = false;
     atb_rate = 1 + (spd * 0.1);
     
-    // 添加特殊技能
-    var special_attack = {
-        id: "water_blast",
-        name: "水弹",
-        damage: attack * 1.2,
-        range: 80,
-        cooldown: 60
-    };
-    
-    ds_list_add(skills, special_attack);
-    ds_map_add(skill_cooldowns, "water_blast", 0);
+    // 添加特殊技能（使用新的技能系統）
+    add_skill("water_blast");
     
     // show_debug_message("測試召喚物屬性設置完成：");
     // show_debug_message("- team = " + string(team));

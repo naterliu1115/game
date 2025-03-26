@@ -75,7 +75,7 @@ function validate_item_data(item_data) {
 }
 
 // 輔助函數：分割字符串
-function string_split(str, delimiter) {
+function custom_string_split(str, delimiter) {
     var result = [];
     var pos = string_pos(delimiter, str);
     
@@ -148,7 +148,7 @@ function load_items_data() {
             EffectValue: real(grid[# 8, i]),
             StackMax: real(grid[# 9, i]),
             SellPrice: real(grid[# 10, i]),
-            Tags: string_split(grid[# 11, i], ";")
+            Tags: custom_string_split(grid[# 11, i], ";")
         };
         
         // 驗證物品數據
