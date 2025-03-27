@@ -2,7 +2,7 @@
 event_inherited();
 
 // 技能緩存系統
-var skill_cache = ds_map_create();
+skill_cache = ds_map_create();
 
 // 基本設置
 visible = false; // 初始不可見
