@@ -65,15 +65,19 @@ atb_paused = false; // 是否暂停ATB充能（等待目标进入范围）
 
 // AI行为相关
 enum AI_MODE {
-    AGGRESSIVE, // 积极攻击
-    DEFENSIVE,  // 防守反击
-    PURSUIT     // 追击特定目标
+    AGGRESSIVE, // 積極攻擊
+    FOLLOW,     // 跟隨主人
+    PASSIVE     // 不作為
 }
 
-ai_mode = AI_MODE.AGGRESSIVE; // 默认行为模式
+ai_mode = AI_MODE.FOLLOW; // 默认行为模式改為跟隨
 target = noone;   // 当前目标
 marked = false;   // 是否被玩家标记
 team = 0;         // 0=玩家方, 1=敌方
+
+// 跟隨相關屬性
+follow_radius = 150;     // 跟隨範圍半徑
+follow_target = noone;   // 跟隨目標（通常是玩家）
 
 // 技能系统 (重構)
 skill_ids = ds_list_create();     // 技能ID列表
@@ -117,6 +121,12 @@ set_timer = function(type, duration) {
 
 // 初始化技能系統
 initialize_skills = function() {
+    // 如果已經初始化過，則不重複初始化
+    if (ds_list_size(skill_ids) > 0) {
+        show_debug_message(object_get_name(object_index) + " 技能已初始化，跳過重複初始化");
+        return;
+    }
+    
     // 清空舊技能資料
     ds_list_clear(skill_ids);
     ds_list_clear(skills);
@@ -134,6 +144,14 @@ add_skill = function(skill_id) {
     if (!instance_exists(obj_skill_manager)) {
         show_debug_message("錯誤：無法添加技能 - 技能管理器不存在");
         return false;
+    }
+    
+    // 檢查技能是否已存在，避免重複添加
+    for (var i = 0; i < ds_list_size(skill_ids); i++) {
+        if (skill_ids[| i] == skill_id) {
+            show_debug_message(object_get_name(object_index) + " 技能已存在，跳過添加: " + skill_id);
+            return false;
+        }
     }
     
     // 從技能管理器獲取技能資料
@@ -191,6 +209,20 @@ choose_target_and_skill = function() {
 
 // 寻找新目标
 find_new_target = function() {
+    // 如果是待命模式，直接清除目標並返回
+    if (ai_mode == AI_MODE.PASSIVE) {
+        target = noone;
+        return;
+    }
+    
+    // 跟隨模式下只有在跟隨範圍內才尋找目標
+    if (ai_mode == AI_MODE.FOLLOW && instance_exists(follow_target)) {
+        if (point_distance(x, y, follow_target.x, follow_target.y) > follow_radius) {
+            target = noone;
+            return;
+        }
+    }
+    
     // 获取潜在目标列表(敌对阵营)
     // show_debug_message("===== 開始尋找目標 =====");
     // show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ")");
@@ -260,33 +292,26 @@ find_new_target = function() {
                 // show_debug_message("- 選擇了最近的目標: " + string(target) + "，距離: " + string(nearest_dist));
                 break;
                 
-            case AI_MODE.DEFENSIVE:
-                // 選擇最弱的目標
-                var lowest_hp_ratio = infinity;
-                var weakest_target = noone;
+            case AI_MODE.FOLLOW:
+                // 選擇最近的目標，但必須在跟隨範圍內
+                var nearest_dist = infinity;
+                var nearest_target = noone;
                 
                 for (var i = 0; i < ds_list_size(potential_targets); i++) {
                     var potential_target = potential_targets[| i];
-                    var hp_ratio = potential_target.hp / potential_target.max_hp;
-                    if (hp_ratio < lowest_hp_ratio) {
-                        lowest_hp_ratio = hp_ratio;
-                        weakest_target = potential_target;
+                    var dist = point_distance(x, y, potential_target.x, potential_target.y);
+                    if (dist < nearest_dist && dist <= follow_radius) {
+                        nearest_dist = dist;
+                        nearest_target = potential_target;
                     }
                 }
                 
-                target = weakest_target;
-                // show_debug_message("- 選擇了最弱的目標: " + string(target) + "，HP比例: " + string(lowest_hp_ratio));
+                target = nearest_target;
                 break;
                 
-            case AI_MODE.PURSUIT:
-                // 如果已有目標且目標仍然有效，保持追蹤
-                if (target != noone && instance_exists(target) && !target.dead) {
-                    // show_debug_message("- 繼續追蹤現有目標: " + string(target));
-                } else {
-                    // 否則選擇隨機目標
-                    target = potential_targets[| irandom(ds_list_size(potential_targets) - 1)];
-                    // show_debug_message("- 選擇了隨機目標: " + string(target));
-                }
+            case AI_MODE.PASSIVE:
+                // 不會攻擊，不選擇目標
+                target = noone;
                 break;
         }
     } else {
@@ -339,37 +364,283 @@ choose_skill = function() {
     ds_list_destroy(available_skills);
 }
 
-// 執行AI行動 (判斷目標是否在範圍內)
-execute_ai_action = function() {
-    if (!atb_ready || is_acting || current_skill == noone) {
+// 單位狀態枚舉
+enum UNIT_STATE {
+    IDLE,           // 閒置狀態
+    FOLLOW,         // 跟隨主人
+    MOVE_TO_TARGET, // 移動至目標
+    ATTACK,         // 攻擊目標
+    DEAD            // 死亡狀態
+}
+
+// 當前狀態
+current_state = UNIT_STATE.IDLE;
+
+// 狀態機更新函數 - 根據AI模式決定狀態轉換
+update_state_machine = function() {
+    // 死亡檢查
+    if (dead) {
+        current_state = UNIT_STATE.DEAD;
         return;
     }
     
-    // 檢查目標是否存在
+    // 根據AI模式和當前狀態決定下一個狀態
+    switch(ai_mode) {
+        case AI_MODE.AGGRESSIVE:
+            update_aggressive_state();
+            break;
+            
+        case AI_MODE.FOLLOW:
+            update_follow_state();
+            break;
+            
+        case AI_MODE.PASSIVE:
+            update_passive_state();
+            break;
+    }
+    
+    // 執行當前狀態的行為
+    execute_state_behavior();
+}
+
+// 新增一個設置AI模式的函數
+set_ai_mode = function(new_mode) {
+    ai_mode = new_mode;
+    
+    // 根據模式設置相應參數
+    switch(ai_mode) {
+        case AI_MODE.AGGRESSIVE:
+            follow_target = noone; // 積極模式不跟隨
+            break;
+            
+        case AI_MODE.FOLLOW:
+            // 設置玩家為跟隨目標
+            if (instance_exists(global.player)) {
+                follow_target = global.player;
+            }
+            break;
+            
+        case AI_MODE.PASSIVE:
+            // 設置玩家為跟隨目標，但保持距離
+            if (instance_exists(global.player)) {
+                follow_target = global.player;
+            }
+            // 保持ATB滿格
+            atb_current = atb_max;
+            atb_ready = true;
+            atb_paused = true;
+            target = noone;
+            break;
+    }
+}
+
+// 積極模式狀態更新
+update_aggressive_state = function() {
+    // 清除跟隨目標，確保不會跟隨玩家
+    follow_target = noone;
+    
+    // 如果正在攻擊，保持當前狀態
+    if (is_attacking) return;
+    
+    // 如果ATB未滿，進入閒置狀態
+    if (!atb_ready) {
+        current_state = UNIT_STATE.IDLE;
+        return;
+    }
+    
+    // 檢查目標
     if (target == noone || !instance_exists(target) || target.dead) {
         find_new_target();
         if (target == noone) {
-            // 沒有目標，保持ATB滿但不行動
-            atb_paused = true;
+            current_state = UNIT_STATE.IDLE;
+            atb_paused = true; // 保持ATB滿格等待目標
             return;
         }
     }
     
-    // 檢查目標是否在技能範圍內
+    // 檢查目標是否在攻擊範圍內
     var distance_to_target = point_distance(x, y, target.x, target.y);
-    if (distance_to_target > current_skill.range) {
-        // 目標不在範圍內，移動接近
-        move_towards_target();
-        // 暫停ATB在100%
+    if (current_skill != noone && distance_to_target <= current_skill.range) {
+        // 在範圍內，進入攻擊狀態
+        current_state = UNIT_STATE.ATTACK;
+        atb_paused = false;
+    } else {
+        // 不在範圍內，移動接近
+        current_state = UNIT_STATE.MOVE_TO_TARGET;
         atb_paused = true;
+    }
+}
+
+// 跟隨模式狀態更新
+update_follow_state = function() {
+    // 如果正在攻擊，保持當前狀態
+    if (is_attacking) return;
+    
+    // 確保跟隨目標設置正確
+    if (follow_target == noone && instance_exists(global.player)) {
+        follow_target = global.player;
+    }
+    
+    // 檢查與主人的距離
+    if (instance_exists(follow_target)) {
+        var dist_to_player = point_distance(x, y, follow_target.x, follow_target.y);
+        
+        // 如果離主人太遠，優先跟隨
+        if (dist_to_player > follow_radius * 0.7) {
+            current_state = UNIT_STATE.FOLLOW;
+            return;
+        }
+    }
+    
+    // 在跟隨範圍內，處理ATB邏輯
+    if (!atb_ready) {
+        current_state = UNIT_STATE.IDLE;
         return;
     }
     
-    // 目標在範圍內，取消ATB暫停
-    atb_paused = false;
+    // 檢查目標
+    if (target == noone || !instance_exists(target) || target.dead) {
+        find_new_target();
+        if (target == noone) {
+            current_state = UNIT_STATE.IDLE;
+            atb_current = 0; // 重置ATB
+            atb_ready = false;
+            return;
+        }
+    }
     
-    // 開始執行技能
-    start_skill_animation();
+    // 檢查目標是否在攻擊範圍內且在跟隨範圍內
+    var distance_to_target = point_distance(x, y, target.x, target.y);
+    if (current_skill != noone && distance_to_target <= current_skill.range) {
+        // 在範圍內，進入攻擊狀態
+        current_state = UNIT_STATE.ATTACK;
+        atb_paused = false;
+    } else if (distance_to_target <= follow_radius) {
+        // 在跟隨範圍內但不在攻擊範圍內，移動接近
+        current_state = UNIT_STATE.MOVE_TO_TARGET;
+        atb_paused = true;
+    } else {
+        // 超出跟隨範圍，放棄目標
+        target = noone;
+        current_state = UNIT_STATE.IDLE;
+        atb_current = 0;
+        atb_ready = false;
+    }
+}
+
+// 待命模式狀態更新
+update_passive_state = function() {
+    // 待命模式只能是跟隨或閒置
+    // 永遠不會進入攻擊或移動至目標狀態
+    
+    // 確保跟隨目標設置正確
+    if (follow_target == noone && instance_exists(global.player)) {
+        follow_target = global.player;
+    }
+    
+    // 清除任何攻擊目標
+    target = noone;
+    
+    // 檢查是否需要跟隨
+    if (instance_exists(follow_target)) {
+        var dist_to_player = point_distance(x, y, follow_target.x, follow_target.y);
+        
+        // 只判斷是否需要跟隨，閾值為更小的距離
+        if (dist_to_player > follow_radius * 0.4) {
+            current_state = UNIT_STATE.FOLLOW;
+        } else {
+            current_state = UNIT_STATE.IDLE;
+        }
+    } else {
+        current_state = UNIT_STATE.IDLE;
+    }
+    
+    // 保持ATB滿格並暫停
+    if (atb_current < atb_max) {
+        atb_current = atb_max;
+    }
+    atb_ready = true;
+    atb_paused = true;
+}
+
+// 執行當前狀態行為
+execute_state_behavior = function() {
+    switch(current_state) {
+        case UNIT_STATE.IDLE:
+            // 閒置狀態：不移動，等待ATB填充
+            if (!is_attacking && !skill_animation_playing) {
+                current_animation = UNIT_ANIMATION.IDLE;
+                is_moving = false;
+            }
+            break;
+            
+        case UNIT_STATE.FOLLOW:
+            // 跟隨狀態：向主人移動
+            // 積極模式不應該執行跟隨
+            if (ai_mode == AI_MODE.AGGRESSIVE) {
+                current_state = UNIT_STATE.IDLE;
+                break;
+            }
+            
+            if (instance_exists(follow_target)) {
+                var move_dir = point_direction(x, y, follow_target.x, follow_target.y);
+                
+                // 根據AI模式調整跟隨速度
+                var follow_speed = (ai_mode == AI_MODE.PASSIVE) ? 
+                    move_speed * 1.8 : move_speed * 1.2;
+                
+                // 移動
+                x += lengthdir_x(follow_speed, move_dir);
+                y += lengthdir_y(follow_speed, move_dir);
+                
+                // 設置移動狀態以更新動畫
+                is_moving = true;
+                
+                // 由Step事件中的方向計算代碼設置正確的動畫
+                // 這裡不直接設置動畫，確保方向計算統一
+            }
+            break;
+            
+        case UNIT_STATE.MOVE_TO_TARGET:
+            // 移動至目標狀態：向戰鬥目標移動
+            // 待命模式不應執行移動至目標
+            if (ai_mode == AI_MODE.PASSIVE) {
+                current_state = UNIT_STATE.IDLE;
+                break;
+            }
+            
+            if (target != noone && instance_exists(target) && !target.dead) {
+                // 使用已有的移動函數
+                move_towards_target();
+                is_moving = true;
+                
+                // 由Step事件中的方向計算代碼設置正確的動畫
+                // 這裡不直接設置動畫，確保方向計算統一
+            } else {
+                // 目標無效，回到閒置狀態
+                current_state = UNIT_STATE.IDLE;
+            }
+            break;
+            
+        case UNIT_STATE.ATTACK:
+            // 攻擊狀態：執行攻擊
+            // 待命模式不應執行攻擊
+            if (ai_mode == AI_MODE.PASSIVE) {
+                current_state = UNIT_STATE.IDLE;
+                break;
+            }
+            
+            if (!is_attacking && !skill_animation_playing) {
+                // 開始技能動畫
+                start_skill_animation();
+            }
+            break;
+            
+        case UNIT_STATE.DEAD:
+            // 死亡狀態：不執行任何動作
+            current_animation = UNIT_ANIMATION.DIE;
+            break;
+    }
 }
 
 // 移動接近目標
@@ -530,6 +801,19 @@ die = function() {
         
         // 設置自我銷毀延遲 (使用新的計時器系統)
         set_timer(TIMER_TYPE.DEATH, 15);
+    }
+}
+
+// 更新技能冷卻
+update_skill_cooldowns = function() {
+    var _keys = ds_map_keys_to_array(skill_cooldowns);
+    for (var i = 0; i < array_length(_keys); i++) {
+        var _skill_id = _keys[i];
+        var _cooldown = skill_cooldowns[? _skill_id];
+        if (_cooldown > 0) {
+            _cooldown--;
+            ds_map_set(skill_cooldowns, _skill_id, _cooldown);
+        }
     }
 }
 

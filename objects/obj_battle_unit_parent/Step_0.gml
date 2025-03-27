@@ -6,8 +6,51 @@ if (variable_global_exists("battle_timer")) {
     global.battle_timer++;
 }
 
-// 如果正在移動，更新動畫方向
-if (is_moving) {
+// 只有在戰鬥狀態下更新
+if (!instance_exists(obj_battle_manager) || obj_battle_manager.battle_state != BATTLE_STATE.ACTIVE) {
+    return;
+}
+
+// 死亡狀態處理
+if (dead) {
+    current_state = UNIT_STATE.DEAD;
+    current_animation = UNIT_ANIMATION.DIE;
+    return;
+}
+
+// 根據AI模式更新跟隨目標
+if (ai_mode == AI_MODE.AGGRESSIVE) {
+    follow_target = noone; // 積極模式不跟隨
+} else if ((ai_mode == AI_MODE.FOLLOW || ai_mode == AI_MODE.PASSIVE) && 
+           follow_target == noone && instance_exists(global.player)) {
+    follow_target = global.player;
+}
+
+// 更新ATB (非暫停且非滿格狀態)
+if (!atb_ready && !is_acting && !atb_paused && ai_mode != AI_MODE.PASSIVE) {
+    atb_current += atb_rate;
+    
+    if (atb_current >= atb_max) {
+        atb_current = atb_max;
+        atb_ready = true;
+        // 准備行動
+        prepare_action();
+    }
+}
+
+// 更新技能冷卻
+update_skill_cooldowns();
+
+// 執行狀態機更新
+update_state_machine();
+
+// 如果正在播放技能動畫，更新動畫
+if (skill_animation_playing) {
+    update_skill_animation();
+}
+
+// 根據移動方向更新動畫
+if (is_moving && !is_attacking && !skill_animation_playing) {
     // 計算移動方向
     var move_dir = point_direction(last_x, last_y, x, y);
     
@@ -15,25 +58,40 @@ if (is_moving) {
     var angle_segment = (move_dir + 22.5) mod 360;
     var animation_index = floor(angle_segment / 45);
     
-    // 選擇對應的動畫（修正上下方向）
+    // 選擇對應的動畫
     switch(animation_index) {
         case 0: current_animation = UNIT_ANIMATION.WALK_RIGHT; break;
-        case 1: current_animation = UNIT_ANIMATION.WALK_UP_RIGHT; break;  // 改為向上
-        case 2: current_animation = UNIT_ANIMATION.WALK_UP; break;        // 改為向上
-        case 3: current_animation = UNIT_ANIMATION.WALK_UP_LEFT; break;   // 改為向上
+        case 1: current_animation = UNIT_ANIMATION.WALK_UP_RIGHT; break;
+        case 2: current_animation = UNIT_ANIMATION.WALK_UP; break;
+        case 3: current_animation = UNIT_ANIMATION.WALK_UP_LEFT; break;
         case 4: current_animation = UNIT_ANIMATION.WALK_LEFT; break;
-        case 5: current_animation = UNIT_ANIMATION.WALK_DOWN_LEFT; break; // 改為向下
-        case 6: current_animation = UNIT_ANIMATION.WALK_DOWN; break;      // 改為向下
-        case 7: current_animation = UNIT_ANIMATION.WALK_DOWN_RIGHT; break; // 改為向下
+        case 5: current_animation = UNIT_ANIMATION.WALK_DOWN_LEFT; break;
+        case 6: current_animation = UNIT_ANIMATION.WALK_DOWN; break;
+        case 7: current_animation = UNIT_ANIMATION.WALK_DOWN_RIGHT; break;
     }
 } else if (!is_attacking && !skill_animation_playing) {
     // 不移動且非攻擊狀態時使用閒置動畫
     current_animation = UNIT_ANIMATION.IDLE;
 }
 
-// 如果正在播放技能動畫，更新動畫
-if (skill_animation_playing) {
-    update_skill_animation();
+// 根據當前動畫設置圖像速度
+if (current_animation == UNIT_ANIMATION.IDLE) {
+    image_speed = 0.5;
+} else if (current_animation == UNIT_ANIMATION.WALK_DOWN || 
+           current_animation == UNIT_ANIMATION.WALK_UP || 
+           current_animation == UNIT_ANIMATION.WALK_LEFT || 
+           current_animation == UNIT_ANIMATION.WALK_RIGHT ||
+           current_animation == UNIT_ANIMATION.WALK_DOWN_RIGHT ||
+           current_animation == UNIT_ANIMATION.WALK_DOWN_LEFT ||
+           current_animation == UNIT_ANIMATION.WALK_UP_RIGHT ||
+           current_animation == UNIT_ANIMATION.WALK_UP_LEFT) {
+    image_speed = 0.8;
+} else if (current_animation == UNIT_ANIMATION.ATTACK) {
+    image_speed = 1.0;
+} else if (current_animation == UNIT_ANIMATION.HURT) {
+    image_speed = 1.0;
+} else if (current_animation == UNIT_ANIMATION.DIE) {
+    image_speed = 0.5;
 }
 
 // 根據當前動畫設置sprite範圍
@@ -70,74 +128,11 @@ if (is_array(frame_range)) {
     }
 }
 
-// 保存當前位置用於下一幀檢測移動
-last_x = x;
-last_y = y;
-
-// 确保速度为0
+// 確保速度為0
+hspeed = 0;
+vspeed = 0;
 speed = 0;
 
-// 只在战斗状态下更新
-if (!instance_exists(obj_battle_manager) || obj_battle_manager.battle_state != BATTLE_STATE.ACTIVE || dead) {
-    // 非战斗状态下不移动
-    exit;
-}
-
-// 更新ATB (添加ATB暫停邏輯)
-if (!atb_ready && !is_acting && !atb_paused) {
-    atb_current += atb_rate;
-    
-    // 註釋掉調試輸出
-    /*
-    if (variable_global_exists("battle_timer") && global.battle_timer % 60 == 0) {
-        show_debug_message(object_get_name(object_index) + " (ID: " + string(id) + ", team: " + string(team) + ") ATB: " + string(atb_current) + "/" + string(atb_max) + " (率: " + string(atb_rate) + ")");
-    }
-    */
-    
-    if (atb_current >= atb_max) {
-        atb_current = atb_max;
-        atb_ready = true;
-        // 准备行动
-        prepare_action();
-    }
-}
-
-// 更新技能冷却
-var _keys = ds_map_keys_to_array(skill_cooldowns);
-for (var i = 0; i < array_length(_keys); i++) {
-    var _skill_id = _keys[i];
-    var _cooldown = skill_cooldowns[? _skill_id];
-    if (_cooldown > 0) {
-        _cooldown--;
-        ds_map_set(skill_cooldowns, _skill_id, _cooldown);
-    }
-}
-
-// AI决策和行动
-if (atb_ready && !is_acting) {
-    execute_ai_action();
-}
-
-// ATB 暫停時，檢查目標範圍
-if (atb_paused && atb_ready) {
-    // 如果有目標，且目標進入範圍，則恢復行動
-    if (target != noone && instance_exists(target) && !target.dead) {
-        var distance_to_target = point_distance(x, y, target.x, target.y);
-        if (current_skill != noone && distance_to_target <= current_skill.range) {
-            atb_paused = false;
-            execute_ai_action();
-        } else {
-            // 目標不在範圍內，繼續接近
-            move_towards_target();
-        }
-    } else {
-        // 如果目標無效，重新選擇目標
-        find_new_target();
-        if (target == noone) {
-            // 沒有目標，重置ATB
-            atb_current = 0;
-            atb_ready = false;
-            atb_paused = false;
-        }
-    }
-}
+// 追蹤上一幀的位置
+last_x = x;
+last_y = y;

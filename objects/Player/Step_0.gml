@@ -94,11 +94,6 @@ if (is_array(frame_range)) {
     if (image_index < frame_range[0] || image_index > frame_range[1]) {
         image_index = frame_range[0];
     }
-    
-    // Debug輸出
-    if (current_animation == PLAYER_ANIMATION.IDLE && global.battle_timer % 30 == 0) {
-        show_debug_message("[IDLE動畫] 當前幀: " + string(image_index));
-    }
 }
 
 // **设置移动速度变量**

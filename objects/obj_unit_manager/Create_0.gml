@@ -116,8 +116,8 @@ enforce_battle_boundary = function() {
                 unit.x = lerp(unit.x, target_x, 0.15);
                 unit.y = lerp(unit.y, target_y, 0.15);
                 
-                // 特殊處理 - 如果單位具有追蹤AI，則重新設定目標
-                if (variable_instance_exists(unit, "ai_mode") && unit.ai_mode == AI_MODE.PURSUIT) {
+                // 特殊處理 - 如果單位具有跟隨AI，則重新設定目標
+                if (variable_instance_exists(unit, "ai_mode") && unit.ai_mode == AI_MODE.FOLLOW) {
                     // 重新選擇目標
                     with (unit) {
                         if (variable_instance_exists(id, "find_new_target")) {
@@ -228,6 +228,18 @@ summon_monster = function(monster_type, position_x, position_y) {
         if (team != 0) {
             team = 0;
             show_debug_message("糾正team值為0（玩家方）");
+        }
+        
+        // 確保 follow_target 設置正確
+        if (variable_instance_exists(id, "follow_target") && follow_target == noone && instance_exists(global.player)) {
+            follow_target = global.player;
+            show_debug_message("為怪物設置跟隨目標為玩家");
+        }
+        
+        // 設置預設 AI 模式為跟隨
+        if (variable_instance_exists(id, "ai_mode")) {
+            ai_mode = AI_MODE.FOLLOW;
+            show_debug_message("設置怪物預設 AI 模式為跟隨");
         }
     }
     

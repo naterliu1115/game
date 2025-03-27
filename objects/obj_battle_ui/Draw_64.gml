@@ -153,18 +153,23 @@ draw_set_color(c_white);
 // 顯示當前戰術模式
 var tactic_text = "";
 var tactic_icon = "";
+var tactic_color = c_white;
 switch(current_tactic) {
     case 0: 
         tactic_text = "積極"; 
+        tactic_color = c_red;
         break;
     case 1: 
-        tactic_text = "防守"; 
+        tactic_text = "跟隨"; 
+        tactic_color = c_lime;
         break;
     case 2: 
-        tactic_text = "追擊"; 
+        tactic_text = "待命"; 
+        tactic_color = c_aqua;
         break;
 }
-draw_text_safe(tactics_btn_x + 20, tactics_btn_y + 15, tactic_icon + " " + tactic_text, c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_MIDDLE);
+draw_set_color(tactic_color);
+draw_text_safe(tactics_btn_x + 20, tactics_btn_y + 15, tactic_icon + " " + tactic_text, tactic_color, TEXT_ALIGN_LEFT, TEXT_VALIGN_MIDDLE);
 
 // 顯示戰鬥信息和提示（帶淡入淡出效果）
 if (info_alpha > 0) {

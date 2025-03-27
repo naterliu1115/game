@@ -40,12 +40,22 @@ if (mouse_check_button_pressed(mb_left)) {
         
         // 顯示戰術切換提示
         var tactic_name = "";
+        var tactic_desc = "";
         switch(current_tactic) {
-            case 0: tactic_name = "積極"; break;
-            case 1: tactic_name = "防守"; break;
-            case 2: tactic_name = "追擊"; break;
+            case 0: 
+                tactic_name = "積極"; 
+                tactic_desc = "主動攻擊附近敵人";
+                break;
+            case 1: 
+                tactic_name = "跟隨"; 
+                tactic_desc = "跟隨在您身邊，攻擊途中敵人";
+                break;
+            case 2: 
+                tactic_name = "待命"; 
+                tactic_desc = "不主動攻擊，只跟隨在您身邊";
+                break;
         }
-        show_info("戰術已切換至: " + tactic_name);
+        show_info("戰術已切換至: " + tactic_name + "\n" + tactic_desc);
         
         // 通知所有玩家單位切換戰術
         if (instance_exists(obj_battle_manager)) {
@@ -54,8 +64,8 @@ if (mouse_check_button_pressed(mb_left)) {
                 if (instance_exists(unit)) {
                     switch(current_tactic) {
                         case 0: unit.ai_mode = AI_MODE.AGGRESSIVE; break;
-                        case 1: unit.ai_mode = AI_MODE.DEFENSIVE; break;
-                        case 2: unit.ai_mode = AI_MODE.PURSUIT; break;
+                        case 1: unit.ai_mode = AI_MODE.FOLLOW; break;
+                        case 2: unit.ai_mode = AI_MODE.PASSIVE; break;
                     }
                 }
             }
