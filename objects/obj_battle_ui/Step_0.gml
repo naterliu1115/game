@@ -36,7 +36,11 @@ if (mouse_check_button_pressed(mb_left)) {
     // 檢測是否點擊了戰術按鈕
     if (point_in_rectangle(mx, my, tactics_btn_x, tactics_btn_y, tactics_btn_x + tactics_btn_width, tactics_btn_y + tactics_btn_height)) {
         // 切換戰術模式
+        var old_tactic = current_tactic;
         current_tactic = (current_tactic + 1) % 3;
+        
+        show_debug_message("===== 戰術切換 =====");
+        show_debug_message("從 " + string(old_tactic) + " 切換到 " + string(current_tactic));
         
         // 顯示戰術切換提示
         var tactic_name = "";
@@ -58,18 +62,28 @@ if (mouse_check_button_pressed(mb_left)) {
         show_info("戰術已切換至: " + tactic_name + "\n" + tactic_desc);
         
         // 通知所有玩家單位切換戰術
-        if (instance_exists(obj_battle_manager)) {
-            for (var i = 0; i < ds_list_size(obj_battle_manager.player_units); i++) {
-                var unit = obj_battle_manager.player_units[| i];
+        if (instance_exists(obj_unit_manager)) {
+            var units_updated = 0;
+            for (var i = 0; i < ds_list_size(obj_unit_manager.player_units); i++) {
+                var unit = obj_unit_manager.player_units[| i];
                 if (instance_exists(unit)) {
+                    var old_mode = unit.ai_mode;
                     switch(current_tactic) {
-                        case 0: unit.ai_mode = AI_MODE.AGGRESSIVE; break;
-                        case 1: unit.ai_mode = AI_MODE.FOLLOW; break;
-                        case 2: unit.ai_mode = AI_MODE.PASSIVE; break;
+                        case 0: unit.set_ai_mode(AI_MODE.AGGRESSIVE); break;
+                        case 1: unit.set_ai_mode(AI_MODE.FOLLOW); break;
+                        case 2: unit.set_ai_mode(AI_MODE.PASSIVE); break;
+                    }
+                    if (unit.ai_mode != old_mode) {
+                        units_updated++;
+                        show_debug_message(object_get_name(unit.object_index) + " AI模式從 " + string(old_mode) + " 切換到 " + string(unit.ai_mode));
                     }
                 }
             }
+            show_debug_message("更新了 " + string(units_updated) + " 個單位的AI模式");
+        } else {
+            show_debug_message("錯誤：找不到單位管理器");
         }
+        show_debug_message("===== 戰術切換完成 =====");
     }
 }
 

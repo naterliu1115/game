@@ -41,7 +41,7 @@ tactics_btn_width = 120;
 tactics_btn_height = 40;
 
 // 當前戰術模式
-current_tactic = 0; // 0=積極，1=防守，2=追击
+current_tactic = 0; // 0=積極，1=跟隨，2=待命
 
 // 戰鬥信息
 battle_info = "";

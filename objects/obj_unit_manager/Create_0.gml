@@ -230,16 +230,14 @@ summon_monster = function(monster_type, position_x, position_y) {
             show_debug_message("糾正team值為0（玩家方）");
         }
         
-        // 確保 follow_target 設置正確
-        if (variable_instance_exists(id, "follow_target") && follow_target == noone && instance_exists(global.player)) {
-            follow_target = global.player;
-            show_debug_message("為怪物設置跟隨目標為玩家");
-        }
-        
-        // 設置預設 AI 模式為跟隨
+        // 檢查 AI 模式是否有效，否則設為積極模式
         if (variable_instance_exists(id, "ai_mode")) {
-            ai_mode = AI_MODE.FOLLOW;
-            show_debug_message("設置怪物預設 AI 模式為跟隨");
+            if (ai_mode < 0 || ai_mode > 2) { // 檢查是否為無效值
+                ai_mode = AI_MODE.AGGRESSIVE;
+                show_debug_message("修正怪物 AI 模式為積極");
+            } else {
+                show_debug_message("怪物 AI 模式為: " + string(ai_mode));
+            }
         }
     }
     

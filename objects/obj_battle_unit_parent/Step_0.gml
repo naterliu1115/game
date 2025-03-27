@@ -18,14 +18,6 @@ if (dead) {
     return;
 }
 
-// 根據AI模式更新跟隨目標
-if (ai_mode == AI_MODE.AGGRESSIVE) {
-    follow_target = noone; // 積極模式不跟隨
-} else if ((ai_mode == AI_MODE.FOLLOW || ai_mode == AI_MODE.PASSIVE) && 
-           follow_target == noone && instance_exists(global.player)) {
-    follow_target = global.player;
-}
-
 // 更新ATB (非暫停且非滿格狀態)
 if (!atb_ready && !is_acting && !atb_paused && ai_mode != AI_MODE.PASSIVE) {
     atb_current += atb_rate;

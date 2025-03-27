@@ -70,7 +70,7 @@ enum AI_MODE {
     PASSIVE     // 不作為
 }
 
-ai_mode = AI_MODE.FOLLOW; // 默认行为模式改為跟隨
+ai_mode = AI_MODE.AGGRESSIVE; // 默认行为模式改為積極
 target = noone;   // 当前目标
 marked = false;   // 是否被玩家标记
 team = 0;         // 0=玩家方, 1=敌方
@@ -440,7 +440,7 @@ set_ai_mode = function(new_mode) {
 
 // 積極模式狀態更新
 update_aggressive_state = function() {
-    // 清除跟隨目標，確保不會跟隨玩家
+    // 明確清除跟隨目標，確保不會跟隨玩家
     follow_target = noone;
     
     // 如果正在攻擊，僅更新關鍵狀態
@@ -621,6 +621,7 @@ execute_state_behavior = function() {
             // 積極模式不應該執行跟隨
             if (ai_mode == AI_MODE.AGGRESSIVE) {
                 current_state = UNIT_STATE.IDLE;
+                follow_target = noone; // 確保清除跟隨目標
                 break;
             }
             
@@ -637,9 +638,6 @@ execute_state_behavior = function() {
                 
                 // 設置移動狀態以更新動畫
                 is_moving = true;
-                
-                // 由Step事件中的方向計算代碼設置正確的動畫
-                // 這裡不直接設置動畫，確保方向計算統一
             }
             break;
             
