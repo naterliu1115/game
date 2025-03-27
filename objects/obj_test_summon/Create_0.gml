@@ -3,10 +3,6 @@ event_inherited();
 
 // 覆盖初始化函数
 initialize = function() {
-    // 調用父類的初始化（這會設置 team=0 和基本攻擊）
-    // 注意：這裡調用父類的initialize，而不是event_inherited()
-    // event_inherited() 是在物件創建時調用，而initialize是手動調用
-    
     // 先檢查是否已初始化
     var already_initialized = false;
     if (ds_list_size(skill_ids) > 0) {
