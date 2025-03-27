@@ -1,5 +1,9 @@
 // obj_monster_manager_ui - Create_0.gml
 event_inherited();
+
+// 技能緩存系統
+var skill_cache = ds_map_create();
+
 // 基本設置
 visible = false; // 初始不可見
 active = false;  // 初始非活動狀態
@@ -117,6 +121,11 @@ refresh_monster_list = function() {
         for (var i = 0; i < array_length(global.player_monsters); i++) {
             var monster = global.player_monsters[i];
             ds_list_add(monster_list, monster);
+            
+            // 預加載怪物技能
+            if (variable_struct_exists(monster, "type") && object_exists(monster.type)) {
+                get_monster_skills(monster);
+            }
         }
     }
 }
@@ -252,6 +261,75 @@ switch_tab = function(new_tab) {
     }
 }
 
+/// 獲取怪物的技能列表
+get_monster_skills = function(monster_data) {
+    var skills_array = [];
+    
+    // 從怪物類型獲取實際的技能列表（唯一的方法）
+    if (variable_struct_exists(monster_data, "type") && object_exists(monster_data.type)) {
+        var monster_obj = monster_data.type;
+        var monster_name = object_get_name(monster_obj);
+        
+        // 檢查緩存中是否已有技能數據
+        if (ds_map_exists(skill_cache, monster_name)) {
+            return skill_cache[? monster_name];
+        }
+        
+        // 檢查這個物件是否是戰鬥單位
+        if (object_is_ancestor(monster_obj, obj_battle_unit_parent)) {
+            // 創建一個臨時實例來獲取技能列表
+            var temp_inst = instance_create_depth(-1000, -1000, 0, monster_obj);
+            
+            // 顯式調用一次初始化（不重複調用）
+            with (temp_inst) {
+                // 檢查是否已經初始化過
+                var already_initialized = false;
+                if (ds_list_size(skill_ids) > 0) {
+                    already_initialized = true;
+                } else {
+                    initialize();
+                }
+                
+                // 確保獲取所有技能（即使有重複）
+                if (ds_exists(skill_ids, ds_type_list) && ds_exists(skills, ds_type_list)) {
+                    for (var i = 0; i < ds_list_size(skill_ids); i++) {
+                        var skill_id = skill_ids[| i];
+                        var skill = skills[| i];
+                        
+                        if (skill != undefined) {
+                            // 檢查技能是否已經存在於結果列表中，避免重複
+                            var skill_exists = false;
+                            for (var j = 0; j < array_length(skills_array); j++) {
+                                if (skills_array[j].id == skill_id) {
+                                    skill_exists = true;
+                                    break;
+                                }
+                            }
+                            
+                            // 如果技能不存在才添加
+                            if (!skill_exists) {
+                                array_push(skills_array, {
+                                    id: skill_id,
+                                    name: skill.name,
+                                    description: skill.description
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 銷毀臨時實例
+            instance_destroy(temp_inst);
+            
+            // 將技能數據存入緩存
+            ds_map_add(skill_cache, monster_name, skills_array);
+        }
+    }
+    
+    return skills_array;
+}
+
 /// 繪製怪物卡片
 /// @param {real} x 卡片x座標
 /// @param {real} y 卡片y座標
@@ -360,6 +438,15 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     // 怪物主要屬性
     draw_text(x + 100, hp_y + hp_height + 25, "攻: " + string(monster_data.attack) + " 防: " + string(monster_data.defense) + " 速: " + string(monster_data.spd));
     
+    // 繪製技能列表
+    var skills = get_monster_skills(monster_data);
+    var skill_y = y + 80;
+    for (var i = 0; i < array_length(skills); i++) {
+        var skill = skills[i];
+        draw_text(x + 10, skill_y, skill.name);
+        skill_y += 20;
+    }
+    
     // 恢復繪圖顏色
     draw_set_color(c_white);
 }
@@ -449,17 +536,11 @@ draw_monster_details = function(monster_data) {
         draw_text(20, data_y, "技能:");
         draw_set_color(c_white);
         
-        if (variable_struct_exists(monster_data, "abilities") && is_array(monster_data.abilities)) {
-            var abilities = monster_data.abilities;
-            
-            if (array_length(abilities) > 0) {
-                for (var i = 0; i < array_length(abilities); i++) {
-                    data_y += 20;
-                    draw_text(40, data_y, "- " + abilities[i]);
-                }
-            } else {
+        var skills = get_monster_skills(monster_data);
+        if (array_length(skills) > 0) {
+            for (var i = 0; i < array_length(skills); i++) {
                 data_y += 20;
-                draw_text(40, data_y, "沒有特殊技能");
+                draw_text(40, data_y, "- " + skills[i].name);
             }
         } else {
             data_y += 20;

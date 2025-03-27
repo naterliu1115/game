@@ -147,17 +147,21 @@ summon_selected_monster = function() {
                 defense = monster_data.defense;
                 spd = monster_data.spd;
                 
-                // 確保abilities是一個陣列
-                if (variable_struct_exists(monster_data, "abilities") && is_array(monster_data.abilities)) {
-                    // 這裡需要深度複製，而不是直接引用
-                    abilities = [];
-                    for (var i = 0; i < array_length(monster_data.abilities); i++) {
-                        array_push(abilities, monster_data.abilities[i]);
-                    }
+                // 確保技能列表已經創建
+                if (ds_exists(skill_ids, ds_type_list)) {
+                    ds_list_clear(skill_ids);
+                }
+                if (ds_exists(skills, ds_type_list)) {
+                    ds_list_clear(skills);
                 }
                 
-                // 重新初始化以應用新屬性
+                // 重要：只初始化一次！
+                // 之前的問題是我們在此處設置屬性後調用initialize()，
+                // 然後在initialize()中又重新調用event_inherited()，
+                // 這導致了多次添加技能
                 initialize();
+                
+                show_debug_message("玩家召唤物初始化完成: ref instance " + string(id));
             }
             
             // 添加到玩家單位列表

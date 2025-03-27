@@ -139,7 +139,7 @@ if (array_length(global.player_monsters) == 0) {
         attack: 15,
         defense: 8,
         spd: 12,
-        abilities: ["火焰噴射", "熱浪"]
+        skills: ds_list_create()
     };
 
     var initial_monster2 = {
@@ -151,7 +151,7 @@ if (array_length(global.player_monsters) == 0) {
         attack: 10,
         defense: 5,
         spd: 15,
-        abilities: ["水彈", "治癒之波"]
+        skills: ds_list_create()
     };
 
     var initial_monster3 = {
@@ -163,7 +163,7 @@ if (array_length(global.player_monsters) == 0) {
         attack: 10,
         defense: 4,
         spd: 6,
-        abilities: ["水彈", "基礎攻擊"]
+        skills: ds_list_create()
     };
 
     array_push(global.player_monsters, initial_monster1);

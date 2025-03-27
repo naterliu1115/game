@@ -3,41 +3,41 @@ event_inherited();
 
 // 覆盖初始化函数
 initialize = function() {
-    // show_debug_message("===== obj_test_summon 初始化開始 =====");
-    // show_debug_message("初始化前 team = " + string(team));
+    // 調用父類的初始化（這會設置 team=0 和基本攻擊）
+    // 注意：這裡調用父類的initialize，而不是event_inherited()
+    // event_inherited() 是在物件創建時調用，而initialize是手動調用
     
-    // 调用父类的初始化（这会设置team=0和基本攻擊）
-    event_inherited();
+    // 先檢查是否已初始化
+    var already_initialized = false;
+    if (ds_list_size(skill_ids) > 0) {
+        already_initialized = true;
+        show_debug_message("obj_test_summon 已初始化，跳過父類初始化");
+    } else {
+        // 繼承自父類別的初始化
+        script_execute(battle_unit_parent_initialize);
+    }
     
-    // show_debug_message("父類初始化後 team = " + string(team));
-    
-    // 设置测试召唤物的特定属性
+    // 設置測試召喚物的特定屬性
     max_hp = 60;
     hp = max_hp;
     attack = 10;
     defense = 4;
     spd = 6;
     
-    // 确保AI模式设置正确
-    ai_mode = AI_MODE.AGGRESSIVE;
-    
-    // 确保ATB系统正确初始化
+    // 確保ATB系統正確初始化
     atb_current = 0;
     atb_ready = false;
     atb_rate = 1 + (spd * 0.1);
     
     // 添加特殊技能（使用新的技能系統）
-    add_skill("water_blast");
-    
-    // show_debug_message("測試召喚物屬性設置完成：");
-    // show_debug_message("- team = " + string(team));
-    // show_debug_message("- AI模式 = " + string(ai_mode));
-    // show_debug_message("- HP = " + string(hp) + "/" + string(max_hp));
-    // show_debug_message("- 攻擊力 = " + string(attack));
-    // show_debug_message("- 防禦力 = " + string(defense));
-    // show_debug_message("- 速度 = " + string(spd));
-    // show_debug_message("===== obj_test_summon 初始化完成 =====");
+    // 但只有當技能列表為空或不包含此技能時才添加
+    if (!already_initialized) {
+        add_skill("water_blast");
+    }
 }
 
-// 重新调用初始化
+// 保存父類的初始化方法引用，避免重複調用event_inherited()
+battle_unit_parent_initialize = obj_battle_unit_parent.initialize;
+
+// 在創建時調用一次初始化
 initialize();
