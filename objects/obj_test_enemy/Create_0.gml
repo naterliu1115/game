@@ -35,9 +35,7 @@ initialize = function() {
     // 確保隊伍設置為敵方
     team = 1;
     
-    // 設置動畫速度
-    animation_speed = 0.8;
-    idle_animation_speed = 0.3;
+
     
     // 確保初始幀設置正確
     image_index = animation_frames.IDLE[0];

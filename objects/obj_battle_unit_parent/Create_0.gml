@@ -33,12 +33,13 @@ animation_frames = {
 // 動畫控制變數
 current_animation = UNIT_ANIMATION.IDLE;
 current_animation_name = "";
-animation_speed = 1;        // 一般動畫速度
-idle_animation_speed = 0.7;   // IDLE動畫速度
+animation_speed = 0.1;        // 一般動畫速度
+idle_animation_speed = 0.1;   // IDLE動畫速度
+animation_timer = 0;          // 手動動畫計時器
 
 // 初始化動畫
-image_index = animation_frames.IDLE[0];
-image_speed = idle_animation_speed;
+// image_index = animation_frames.IDLE[0]; // 由 Step 事件的動畫邏輯處理
+// image_speed = idle_; // 由 Step 事件的動畫邏輯處理
 
 // 位置追蹤
 last_x = x;
@@ -86,8 +87,6 @@ current_skill = noone;            // 當前準備釋放的技能
 skill_cooldowns = ds_map_create(); // 技能冷卻時間映射
 
 // 技能動畫與傷害控制
-skill_animation_frame = 0;        // 當前技能動畫幀
-skill_animation_total_frames = 0; // 技能動畫總幀數
 skill_damage_triggered = false;   // 是否已觸發傷害
 skill_animation_playing = false;  // 是否正在播放技能動畫
 
@@ -107,6 +106,7 @@ move_to_target_timeout = 3 * game_get_speed(gamespeed_fps); // 設置超時時�
 is_acting = false;  // 是否正在执行行動
 is_attacking = false; // 是否正在攻擊
 dead = false;       // 是否已死亡
+attack_cooldown_timer = 0; // 攻擊後短暫冷卻計時器
 
 // 計時器類型枚舉
 enum TIMER_TYPE {
@@ -534,6 +534,12 @@ set_ai_mode = function(new_mode) {
 
 // 積極模式狀態更新
 update_aggressive_state = function() {
+    // --- 狀態鎖定 (包含動畫播放和攻擊後冷卻) ---
+    if (skill_animation_playing || attack_cooldown_timer > 0) {
+        return; // 動畫播放中或剛攻擊完，不切換狀態
+    }
+    // --- 狀態鎖定結束 ---
+
     // 明確清除跟隨目標，確保不會跟隨玩家
     follow_target = noone;
     
@@ -600,11 +606,12 @@ update_aggressive_state = function() {
 
 // 跟隨模式狀態更新
 update_follow_state = function() {
-    // 如果正在攻擊或技能動畫播放中，保持攻擊狀態
-    if (is_attacking || skill_animation_playing || current_state == UNIT_STATE.ATTACK) {
-        return;
+    // --- 狀態鎖定 (包含動畫播放和攻擊後冷卻) ---
+    if (skill_animation_playing || attack_cooldown_timer > 0) {
+        return; // 動畫播放中或剛攻擊完，不切換狀態
     }
-    
+    // --- 狀態鎖定結束 ---
+
     // 確保跟隨目標設置正確
     if (follow_target == noone && instance_exists(global.player)) {
         follow_target = global.player;
@@ -633,6 +640,12 @@ update_follow_state = function() {
 }
 
 update_passive_state = function() {
+    // --- 狀態鎖定 (包含動畫播放和攻擊後冷卻) ---
+    if (skill_animation_playing || attack_cooldown_timer > 0) {
+        return; // 動畫播放中或剛攻擊完，不切換狀態
+    }
+    // --- 狀態鎖定結束 ---
+
     // 如果正在攻擊，立即停止攻擊
     if (is_attacking) {
         target = noone;
@@ -838,40 +851,19 @@ start_skill_animation = function() {
     is_attacking = true;
     skill_animation_playing = true;
     skill_damage_triggered = false;
-    
+
     // 設置動畫參數
     current_animation = UNIT_ANIMATION.ATTACK;
-    skill_animation_frame = 0;
-    
-    // 獲取動畫總幀數
-    skill_animation_total_frames = current_skill.anim_frames;
-    
-    show_debug_message(object_get_name(object_index) + " 開始使用技能: " + current_skill.name);
-}
 
-// 更新技能動畫並觸發傷害
-update_skill_animation = function() {
-    if (!skill_animation_playing) return;
-    
-    // 增加動畫幀
-    skill_animation_frame++;
-    
-    // 檢查是否需要觸發傷害
-    if (!skill_damage_triggered && is_array(current_skill.anim_damage_frames)) {
-        // 檢查當前幀是否是傷害觸發幀
-        for (var i = 0; i < array_length(current_skill.anim_damage_frames); i++) {
-            if (skill_animation_frame == current_skill.anim_damage_frames[i]) {
-                // 觸發傷害
-                apply_skill_damage();
-                break;
-            }
-        }
+    // --- 修改：直接使用 image_index ---
+    var _frame_data = animation_frames[$ current_animation];
+    if (is_array(_frame_data)) {
+         image_index = _frame_data[0]; // 將 image_index 設為攻擊動畫的起始幀
+         // animation_timer = 0; // 如果使用基於 timer 的手動更新，也重置 timer (如果 animation_timer 存在)
     }
-    
-    // 檢查動畫是否結束
-    if (skill_animation_frame >= skill_animation_total_frames) {
-        end_skill_animation();
-    }
+    // --- 修改結束 ---
+
+    show_debug_message(object_get_name(object_index) + " 開始使用技能: " + current_skill.name);
 }
 
 // 應用技能傷害
@@ -909,23 +901,35 @@ end_skill_animation = function() {
     skill_animation_playing = false;
     is_attacking = false;
     is_acting = false;
-    
+
+    // 設置攻擊後短暫冷卻
+    attack_cooldown_timer = 5; // 例如 5 幀
+
     // 設置技能冷卻
     if (current_skill != noone) {
         ds_map_set(skill_cooldowns, current_skill.id, current_skill.cooldown);
     }
-    
+
     // 重置ATB與暫停狀態
     atb_current = 0;
     atb_ready = false;
-    atb_paused = false; // <--- 明確加入這一行解除暫停
-    
-    // 恢復閒置動畫
+    atb_paused = false;
+
+    // 恢復閒置動畫和狀態
     current_animation = UNIT_ANIMATION.IDLE;
-    
-    show_debug_message(object_get_name(object_index) + " 完成技能: " + 
+    current_state = UNIT_STATE.IDLE; // <-- 直接設置狀態為 IDLE
+
+    // --- 確保 image_index 也被重置 ---
+    var _idle_frame_data = animation_frames[$ current_animation]; // 現在 current_animation 是 IDLE
+    if (is_array(_idle_frame_data)) {
+        image_index = _idle_frame_data[0];
+         // animation_timer = 0; // 如果使用 timer
+    }
+    // --- 修改結束 ---
+
+    show_debug_message(object_get_name(object_index) + " 完成技能: " +
                       (current_skill != noone ? current_skill.name : "未知"));
-    
+
     // 清除當前技能
     current_skill = noone;
 };
@@ -934,20 +938,33 @@ end_skill_animation = function() {
 // 受到傷害處理
 take_damage = function(damage_amount, source_id, skill_id) {
     hp -= damage_amount;
+    show_debug_message(object_get_name(object_index) + " 受到 " + string(damage_amount) + " 點傷害。");
+
+    // --- 創建跳血文字 --- 
+    if (object_exists(obj_floating_text)) { // <-- 修改：使用 object_exists 檢查物件資源是否存在
+        // show_debug_message("Attempting to create floating text at " + string(x) + "," + string(y-32) + " on layer 'Effects'"); // REMOVED LOG
+        var _text_instance = instance_create_layer(x, y - 32, "Effects", obj_floating_text);
+        if (instance_exists(_text_instance)) { // 這裡用 instance_exists 檢查創建是否成功是正確的
+            _text_instance.display_text = string(damage_amount);
+            _text_instance.text_color = c_red;
+            _text_instance.x += random_range(-5, 5);
+            // show_debug_message("Floating text instance ID: " + string(_text_instance.id) + ", Text: '" + _text_instance.display_text + "', Color: " + string(_text_instance.text_color) + ", Initial Alpha: " + string(_text_instance.image_alpha)); // REMOVED LOG
+        } else {
+            // show_debug_message("!!! Failed to create floating text instance on layer 'Effects'!"); // REMOVED LOG (或保留作為錯誤處理)
+        }
+    } else {
+        // show_debug_message("!!! obj_floating_text object resource not found in project!"); // REMOVED LOG (或保留作為錯誤處理)
+    }
+    // --- 跳血文字結束 ---
     
     // 檢查是否死亡
     if (hp <= 0) {
         hp = 0;
         die();
     } else {
-        // 播放受傷動畫
-        current_animation = UNIT_ANIMATION.HURT;
-        
-        // 創建受傷特效
+        // --- 受傷特效 (之前已添加) ---
         instance_create_layer(x, y, "Effects", obj_hurt_effect);
-        
-        // 在短時間後恢復正常動畫 (使用新的計時器系統)
-        set_timer(TIMER_TYPE.HURT_RECOVERY, 15);
+        // show_debug_message("Hurt effect instance created for " + object_get_name(object_index));
     }
 }
 
