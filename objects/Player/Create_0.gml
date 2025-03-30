@@ -81,4 +81,4 @@ last_x = x;
 last_y = y;
 
 // 移動相關變數
-move_speed = 4;
+move_speed = 3;

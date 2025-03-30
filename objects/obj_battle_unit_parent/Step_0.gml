@@ -19,16 +19,31 @@ if (dead) {
 }
 
 // 更新ATB (非暫停且非滿格狀態)
-if (!atb_ready && !is_acting && !atb_paused && ai_mode != AI_MODE.PASSIVE) {
-    atb_current += atb_rate;
-    
-    if (atb_current >= atb_max) {
-        atb_current = atb_max;
-        atb_ready = true;
-        // 准備行動
-        prepare_action();
+if (!atb_ready && !is_acting && !atb_paused) {
+    if (state_buffer_timer <= 0) {
+        atb_current += atb_rate;
+        if (atb_current >= atb_max) {
+            atb_current = atb_max;
+            atb_ready = true;
+            
+            choose_target_and_skill();
+            
+            if (target != noone && current_skill != noone) {
+                var dist_to_target = point_distance(x, y, target.x, target.y);
+                if (dist_to_target > current_skill.range) {
+                    current_state = UNIT_STATE.MOVE_TO_TARGET;
+                    atb_paused = true;
+                } else {
+                    current_state = UNIT_STATE.ATTACK;
+                    atb_paused = false;
+                }
+            } else {
+                current_state = UNIT_STATE.IDLE;
+            }
+        }
     }
 }
+
 
 // 更新技能冷卻
 update_skill_cooldowns();
