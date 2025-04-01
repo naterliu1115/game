@@ -33,7 +33,7 @@ animation_frames = {
 // 動畫控制變數
 current_animation = UNIT_ANIMATION.IDLE;
 current_animation_name = "";
-animation_speed = 0.1;        // 一般動畫速度
+animation_speed = 0.3;        // 一般動畫速度
 idle_animation_speed = 0.1;   // IDLE動畫速度
 animation_timer = 0;          // 手動動畫計時器
 

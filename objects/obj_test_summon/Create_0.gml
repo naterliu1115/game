@@ -1,6 +1,6 @@
 // 继承父类的创建事件
 event_inherited();
-
+can_wander = false; 
 // 覆盖初始化函数
 initialize = function() {
     // 先檢查是否已初始化
