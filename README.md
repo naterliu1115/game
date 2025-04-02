@@ -144,6 +144,12 @@ broadcast_event("player_damaged", { damage: 10 });
 - 單位數據統計
 - 更新：重構了 `obj_battle_unit_parent` 的動畫邏輯，採用手動控制 `image_index`，確保攻擊動畫完整播放，並修復了相關狀態機交互問題。
 - 更新：移除了受傷狀態 (`HURT`) 對攻擊動畫的干擾。
+- 新增與調整：為單位 (`obj_battle_unit_parent`) 增加了非戰鬥狀態下的「遊蕩」(`WANDER`) 行為：
+    - 單位在非戰鬥狀態 (`INACTIVE`) 時，會在初始生成點附近隨機移動和暫停。
+    - 遊蕩速度目前設定為 `move_speed` 的一半，可在 `Step_0.gml` 中調整。
+    - 單位會在戰鬥管理器狀態不再是 `INACTIVE` 時（即 `STARTING` 階段開始）立即停止遊蕩。
+    - 同步調整了單位 UI：生命條 (`Draw_0.gml`) 現在只在戰鬥管理器狀態不再是 `INACTIVE` 時顯示。
+    - 調整了 ATB 充能機制 (`Step_0.gml`)：所有單位的 ATB 現在只在戰鬥管理器狀態進入 `ACTIVE` 後才開始充能，確保敵我雙方起始條件更公平。
 
 **單位優化:**
 - 使用對象池系統優化單位創建和回收
