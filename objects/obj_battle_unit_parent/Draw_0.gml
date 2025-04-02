@@ -1,20 +1,22 @@
 // 绘制单位本身
 draw_self();
 
-// 绘制生命条
-var hp_width = 30;
-var hp_height = 4;
-var hp_x = x - hp_width/2;
-var hp_y = y - sprite_height/2 - 10;
-
-// 背景
-draw_set_color(c_black);
-draw_rectangle(hp_x, hp_y, hp_x + hp_width, hp_y + hp_height, false);
-
-// 生命值
-draw_set_color(c_green);
-var hp_fill = (hp / max_hp) * hp_width;
-draw_rectangle(hp_x, hp_y, hp_x + hp_fill, hp_y + hp_height, false);
+// 绘制生命条 (只在战斗开始后绘制)
+if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE) {
+    var hp_width = 30;
+    var hp_height = 4;
+    var hp_x = x - hp_width/2;
+    var hp_y = y - sprite_height/2 - 10;
+    
+    // 背景
+    draw_set_color(c_black);
+    draw_rectangle(hp_x, hp_y, hp_x + hp_width, hp_y + hp_height, false);
+    
+    // 生命值
+    draw_set_color(c_green);
+    var hp_fill = (hp / max_hp) * hp_width;
+    draw_rectangle(hp_x, hp_y, hp_x + hp_fill, hp_y + hp_height, false);
+}
 
 // 如果被标记，绘制标记指示器
 if (marked) {

@@ -454,7 +454,8 @@ enum UNIT_STATE {
     FOLLOW,         // 跟隨主人
     MOVE_TO_TARGET, // 移動至目標
     ATTACK,         // 攻擊目標
-    DEAD            // 死亡狀態
+    DEAD,           // 死亡狀態
+    WANDER          // <--- 新增：遊蕩狀態
 }
 
 // 當前狀態
@@ -1042,3 +1043,13 @@ update_skill_cooldowns();
 
 // 立即執行初始化
 initialize();
+
+// 遊蕩相關變數
+wander_timer = 0;             // 計時器，決定何時改變遊蕩目標或暫停
+wander_target_x = x;          // 當前遊蕩目標點 X
+wander_target_y = y;          // 當前遊蕩目標點 Y
+wander_state = 0;             // 遊蕩子狀態：0=選擇目標/移動, 1=暫停
+wander_radius = 64;           // 遊蕩範圍半徑 (以初始位置為中心)
+wander_pause_duration = 1 * game_get_speed(gamespeed_fps); // 每次遊蕩後暫停時間 (例如1秒)
+spawn_x = x;                  // 記錄初始位置 X
+spawn_y = y;                  // 記錄初始位置 Y

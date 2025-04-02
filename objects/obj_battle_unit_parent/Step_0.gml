@@ -1,11 +1,11 @@
 // 檢測移動狀態並更新動畫 (保持在最開頭)
 is_moving = (x != last_x || y != last_y);
 
-// --- 新增：判斷是否在活躍戰鬥狀態 ---
-var _in_active_battle = (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.ACTIVE);
+// --- 修改：判斷是否處於任何戰鬥相關階段 (非 INACTIVE) ---
+var _is_battle_initiated = (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE);
 
-// --- 根據是否在戰鬥執行不同邏輯 ---
-if (_in_active_battle) {
+// --- 根據是否處於戰鬥相關階段執行不同邏輯 ---
+if (_is_battle_initiated) {
     // ##################################
     // ### 開始：包裹原始戰鬥邏輯 ###
     // ##################################
@@ -21,7 +21,7 @@ if (_in_active_battle) {
         global.battle_timer++;
     }
 
-    // 移除原來的戰鬥狀態檢查 (已被 _in_active_battle 取代)
+    // 移除原來的戰鬥狀態檢查 (已被 _is_battle_initiated 取代)
     // if (!instance_exists(obj_battle_manager) || obj_battle_manager.battle_state != BATTLE_STATE.ACTIVE) {
     //     return;
     // }
@@ -36,14 +36,17 @@ if (_in_active_battle) {
     // 更新ATB等邏輯 (只在非死亡時執行) (移入)
     // 將 !dead 檢查移到外面，保護 ATB 和狀態機
     if (!dead) {
-        // 更新ATB (非暫停且非滿格狀態)
+        // 更新ATB (只在 ACTIVE 狀態且非暫停且非滿格狀態)
         if (!atb_ready && !is_acting && !atb_paused) {
-            if (state_buffer_timer <= 0) {
-                atb_current += atb_rate;
-                if (atb_current >= atb_max) {
-                    atb_current = atb_max;
-                    atb_ready = true; // 標記 ATB 已就緒
-                    choose_target_and_skill(); // 選擇目標和技能，供狀態機後續使用
+            // 新增條件：只在 ACTIVE 狀態下充能 ATB
+            if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.ACTIVE) {
+                if (state_buffer_timer <= 0) {
+                    atb_current += atb_rate;
+                    if (atb_current >= atb_max) {
+                        atb_current = atb_max;
+                        atb_ready = true; // 標記 ATB 已就緒
+                        choose_target_and_skill(); // 選擇目標和技能，供狀態機後續使用
+                    }
                 }
             }
             // 注意：原始碼在 state_buffer_timer > 0 時沒有 else 處理，保持原樣
@@ -106,19 +109,85 @@ if (_in_active_battle) {
         // 非戰鬥時死亡
         current_state = UNIT_STATE.DEAD;
         current_animation = UNIT_ANIMATION.DIE;
-        speed = 0; // 確保不動
+        // speed = 0; // 由下方 is_moving 控制動畫即可
         is_moving = false;
     } else {
-        // 非戰鬥時活著 -> 設為閒置
-        current_state = UNIT_STATE.IDLE;
-        current_animation = UNIT_ANIMATION.IDLE;
-        speed = 0; // 確保不動
-        is_moving = false;
+        // --- 開始：非戰鬥時的遊蕩邏輯 ---
+        
+        // 狀態機：控制 IDLE 和 WANDER 切換
+        if (current_state != UNIT_STATE.WANDER && current_state != UNIT_STATE.IDLE) {
+             // 如果從其他狀態(例如戰鬥剛結束)切換過來，先設為 IDLE
+             current_state = UNIT_STATE.IDLE;
+             wander_timer = wander_pause_duration; // 開始暫停計時
+             wander_state = 1; // 設為暫停子狀態
+             is_moving = false;
+             current_animation = UNIT_ANIMATION.IDLE;
+        }
 
-        // 重置戰鬥相關標誌 (可選但建議)
+        if (wander_timer > 0) { // 減少計時器
+            wander_timer--;
+        }
+
+        if (current_state == UNIT_STATE.IDLE) {
+            is_moving = false;
+            current_animation = UNIT_ANIMATION.IDLE;
+            if (wander_timer <= 0) {
+                // 暫停結束，切換到遊蕩狀態，找新目標
+                current_state = UNIT_STATE.WANDER;
+                wander_state = 0; // 設為移動子狀態
+                
+                // 在 spawn 點周圍隨機選擇一個目標點
+                var wander_angle = random(360);
+                var wander_dist = random(wander_radius);
+                wander_target_x = spawn_x + lengthdir_x(wander_dist, wander_angle);
+                wander_target_y = spawn_y + lengthdir_y(wander_dist, wander_angle);
+                
+                // (可選) 限制目標點在可行走區域內 (如果需要更複雜的遊蕩)
+            }
+        } 
+        else if (current_state == UNIT_STATE.WANDER) {
+            // 計算到目標點的距離
+            var dist_to_wander_target = point_distance(x, y, wander_target_x, wander_target_y);
+            
+            if (dist_to_wander_target > move_speed * 0.5) {
+                // 還沒到達目標點，繼續移動
+                var move_dir = point_direction(x, y, wander_target_x, wander_target_y);
+                // 使用 move_speed 的一半進行遊蕩移動
+                x += lengthdir_x(move_speed * 0.5, move_dir);
+                y += lengthdir_y(move_speed * 0.5, move_dir);
+                is_moving = true; // 正在移動
+
+                // --- 更新移動動畫 (複製戰鬥邏輯中的方向判斷) ---
+                 var angle_segment = (move_dir + 22.5) mod 360;
+                 var animation_index = floor(angle_segment / 45);
+                 switch(animation_index) {
+                    case 0: current_animation = UNIT_ANIMATION.WALK_RIGHT; break;
+                    case 1: current_animation = UNIT_ANIMATION.WALK_UP_RIGHT; break;
+                    case 2: current_animation = UNIT_ANIMATION.WALK_UP; break;
+                    case 3: current_animation = UNIT_ANIMATION.WALK_UP_LEFT; break;
+                    case 4: current_animation = UNIT_ANIMATION.WALK_LEFT; break;
+                    case 5: current_animation = UNIT_ANIMATION.WALK_DOWN_LEFT; break;
+                    case 6: current_animation = UNIT_ANIMATION.WALK_DOWN; break;
+                    case 7: current_animation = UNIT_ANIMATION.WALK_DOWN_RIGHT; break;
+                 }
+                 // --- 動畫更新結束 ---
+
+            } else {
+                // 到達目標點，切換回 IDLE 狀態並開始暫停
+                x = wander_target_x; // 校準位置
+                y = wander_target_y;
+                current_state = UNIT_STATE.IDLE;
+                wander_timer = wander_pause_duration + random_range(-0.2, 0.2) * wander_pause_duration; // 加入少量隨機暫停時間
+                wander_state = 1; // 設為暫停子狀態
+                is_moving = false;
+                current_animation = UNIT_ANIMATION.IDLE;
+            }
+        }
+
+        // 重置戰鬥相關標誌 (保留原本的重置邏輯)
         atb_current = 0;
         atb_ready = false;
-        atb_paused = false;
+        atb_paused = false; // 非戰鬥時不應暫停ATB，但也不充能
         target = noone;
         current_skill = noone;
         is_acting = false;
@@ -126,9 +195,11 @@ if (_in_active_battle) {
         skill_animation_playing = false;
         attack_cooldown_timer = 0;
         state_buffer_timer = 0;
-        // 清空技能冷卻？可以考慮，取決於是否希望保留CD到下次戰鬥
+        // 清空技能冷卻？(可選)
         // var _skill_keys = ds_map_keys_to_array(skill_cooldowns);
         // for (var i = 0; i < array_length(_skill_keys); i++) { ds_map_set(skill_cooldowns, _skill_keys[i], 0); }
+
+        // --- 結束：非戰鬥時的遊蕩邏輯 ---
     }
     // --- 非戰鬥邏輯結束 ---
 }
@@ -215,11 +286,11 @@ if (instance_exists(self)) // 移除 !dead 檢查，死亡動畫也需要更新
             }
         }
 
-        // --- 檢查傷害觸發和動畫結束 (修改：添加 _in_active_battle 條件) ---
+        // --- 檢查傷害觸發和動畫結束 (修改：添加 _is_battle_initiated 條件) ---
         // 這個檢查必須在 image_index 更新之後
         if (current_animation == UNIT_ANIMATION.ATTACK) {
             // 只有在戰鬥中才檢查傷害和結束
-            if (_in_active_battle && skill_animation_playing) {
+            if (_is_battle_initiated && skill_animation_playing) {
                  // 檢查傷害觸發幀 (保留原邏輯)
                  if (!skill_damage_triggered && current_skill != noone && variable_struct_exists(current_skill, "anim_damage_frames") && is_array(current_skill.anim_damage_frames))
                  {
