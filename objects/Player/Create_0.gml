@@ -2,6 +2,11 @@ debug_message_printed = false;
 battle_result_handled = false;
 battle_timer = 0;
 
+// 滑鼠方向追蹤
+mouse_direction = 0;        // 滑鼠方向角度
+facing_direction = 0;       // 角色面向方向
+is_moving = false;         // 是否正在移動
+
 // 初始化全局戰鬥計時器
 if (!variable_global_exists("battle_timer")) {
     global.battle_timer = 0;
@@ -50,7 +55,9 @@ enum PLAYER_ANIMATION {
     WALK_UP = 5,
     WALK_UP_LEFT = 6,
     WALK_LEFT = 7,
-    WALK_DOWN_LEFT = 8
+    WALK_DOWN_LEFT = 8,
+	MINING_LEFT = 9,
+	MINING_RIGHT = 10
 }
 
 // 動畫幀範圍
@@ -63,7 +70,9 @@ ANIMATION_FRAMES = {
     WALK_UP: [25, 29],      
     WALK_UP_LEFT: [30, 34],  
     WALK_LEFT: [35, 39],     
-    WALK_DOWN_LEFT: [40, 44]
+    WALK_DOWN_LEFT: [40, 44],
+    MINING_LEFT: [45, 49],
+    MINING_RIGHT: [50, 54]
 }
 
 // 動畫系統變數

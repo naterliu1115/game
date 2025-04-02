@@ -31,28 +31,30 @@ if (!can_move) {
     exit;
 }
 
-// **获取输入**
-var move_x = keyboard_check(vk_right) - keyboard_check(vk_left);
-var move_y = keyboard_check(vk_down) - keyboard_check(vk_up);
+// 更新滑鼠方向
+mouse_direction = point_direction(x, y, mouse_x, mouse_y);
+facing_direction = mouse_direction;
+
+// 獲取WASD輸入
+var move_x = keyboard_check(ord("D")) - keyboard_check(ord("A"));
+var move_y = keyboard_check(ord("S")) - keyboard_check(ord("W"));
 
 // 保存上一幀的位置
 last_x = x;
 last_y = y;
 
-// 更新動畫狀態 - 八方向實現
-if (move_x == 0 && move_y == 0) {
-    // 待機動畫
+// 判斷是否正在移動
+is_moving = (move_x != 0 || move_y != 0);
+
+// 更新動畫狀態
+if (!is_moving) {
+    // 待機動畫 - 使用IDLE
     current_animation = PLAYER_ANIMATION.IDLE;
 } else {
-    // 計算移動方向
-    var move_dir = point_direction(0, 0, move_x, move_y);
-
-    // 將360度分成8個區域，每個區域45度
-    var angle_segment = move_dir + 22.5;
-    if (angle_segment >= 360) angle_segment -= 360;
-
+    // 移動動畫 - 根據面向方向選擇
+    var angle_segment = (facing_direction + 22.5) mod 360;
     var animation_index = floor(angle_segment / 45);
-
+    
     switch(animation_index) {
         case 0: current_animation = PLAYER_ANIMATION.WALK_RIGHT; break;
         case 1: current_animation = PLAYER_ANIMATION.WALK_UP_RIGHT; break;
@@ -111,12 +113,10 @@ if (in_battle && battle_manager_exists) {
 }
 
 // **精确移动计算**
-var move_dir = 0;
-var move_len = 0;
-
 if (move_x != 0 || move_y != 0) {
-    move_dir = point_direction(0, 0, move_x, move_y);
-    move_len = move_speed;
+    // 計算移動方向
+    var move_dir = point_direction(0, 0, move_x, move_y);
+    var move_len = move_speed;
 
     var hsp = lengthdir_x(move_len, move_dir);
     var vsp = lengthdir_y(move_len, move_dir);
