@@ -35,36 +35,95 @@ if (!can_move) {
 mouse_direction = point_direction(x, y, mouse_x, mouse_y);
 facing_direction = mouse_direction;
 
-// 獲取WASD輸入
-var move_x = keyboard_check(ord("D")) - keyboard_check(ord("A"));
-var move_y = keyboard_check(ord("S")) - keyboard_check(ord("W"));
+// 處理挖礦邏輯
+var is_mouse_pressed = mouse_check_button(mb_left);
+var is_mouse_pressed_new = mouse_check_button_pressed(mb_left);
 
-// 保存上一幀的位置
-last_x = x;
-last_y = y;
+// 根據面向方向決定挖礦動畫
+mining_direction = (facing_direction > 90 && facing_direction < 270) ? 
+    PLAYER_ANIMATION.MINING_LEFT : PLAYER_ANIMATION.MINING_RIGHT;
 
-// 判斷是否正在移動
-is_moving = (move_x != 0 || move_y != 0);
+if (is_mouse_pressed_new || (is_mouse_pressed && mining_animation_complete)) {
+    // 開始新的挖礦動作
+    is_mining = true;
+    mining_animation_complete = false;
+    mining_animation_frame = 0;
+    current_animation = mining_direction;
+}
 
-// 更新動畫狀態
-if (!is_moving) {
-    // 待機動畫 - 使用IDLE
-    current_animation = PLAYER_ANIMATION.IDLE;
-} else {
-    // 移動動畫 - 根據面向方向選擇
-    var angle_segment = (facing_direction + 22.5) mod 360;
-    var animation_index = floor(angle_segment / 45);
+// 更新挖礦動畫
+if (is_mining) {
+    // 獲取當前動畫的幀範圍
+    var frame_range = (mining_direction == PLAYER_ANIMATION.MINING_LEFT) ? 
+        ANIMATION_FRAMES.MINING_LEFT : ANIMATION_FRAMES.MINING_RIGHT;
     
-    switch(animation_index) {
-        case 0: current_animation = PLAYER_ANIMATION.WALK_RIGHT; break;
-        case 1: current_animation = PLAYER_ANIMATION.WALK_UP_RIGHT; break;
-        case 2: current_animation = PLAYER_ANIMATION.WALK_UP; break;
-        case 3: current_animation = PLAYER_ANIMATION.WALK_UP_LEFT; break;
-        case 4: current_animation = PLAYER_ANIMATION.WALK_LEFT; break;
-        case 5: current_animation = PLAYER_ANIMATION.WALK_DOWN_LEFT; break;
-        case 6: current_animation = PLAYER_ANIMATION.WALK_DOWN; break;
-        case 7: current_animation = PLAYER_ANIMATION.WALK_DOWN_RIGHT; break;
+    // 檢查是否到達最後一幀
+    var is_last_frame = (floor(mining_animation_frame) >= (frame_range[1] - frame_range[0]));
+    
+    if (is_last_frame) {
+        // 在最後一幀停留
+        image_index = frame_range[1];
+        mining_last_frame_timer++;
+        
+        // 檢查是否完成停留時間
+        if (mining_last_frame_timer >= MINING_LAST_FRAME_DELAY) {
+            mining_animation_complete = true;
+            mining_last_frame_timer = 0;
+            
+            if (!is_mouse_pressed) {
+                // 如果沒有按住滑鼠，結束挖礦
+                is_mining = false;
+                current_animation = PLAYER_ANIMATION.IDLE;
+            } else {
+                // 重置動畫幀以繼續挖礦
+                mining_animation_frame = 0;
+            }
+        }
+    } else {
+        // 正常更新挖礦動畫幀
+        mining_animation_frame += MINING_ANIMATION_SPEED;
+        image_index = frame_range[0] + floor(mining_animation_frame);
     }
+}
+
+// 只有在不挖礦時才允許移動
+if (!is_mining) {
+    // 獲取WASD輸入
+    var move_x = keyboard_check(ord("D")) - keyboard_check(ord("A"));
+    var move_y = keyboard_check(ord("S")) - keyboard_check(ord("W"));
+
+    // 保存上一幀的位置
+    last_x = x;
+    last_y = y;
+
+    // 判斷是否正在移動
+    is_moving = (move_x != 0 || move_y != 0);
+
+    // 更新動畫狀態
+    if (!is_moving) {
+        // 待機動畫 - 使用IDLE
+        current_animation = PLAYER_ANIMATION.IDLE;
+    } else {
+        // 移動動畫 - 根據面向方向選擇
+        var angle_segment = (facing_direction + 22.5) mod 360;
+        var animation_index = floor(angle_segment / 45);
+        
+        switch(animation_index) {
+            case 0: current_animation = PLAYER_ANIMATION.WALK_RIGHT; break;
+            case 1: current_animation = PLAYER_ANIMATION.WALK_UP_RIGHT; break;
+            case 2: current_animation = PLAYER_ANIMATION.WALK_UP; break;
+            case 3: current_animation = PLAYER_ANIMATION.WALK_UP_LEFT; break;
+            case 4: current_animation = PLAYER_ANIMATION.WALK_LEFT; break;
+            case 5: current_animation = PLAYER_ANIMATION.WALK_DOWN_LEFT; break;
+            case 6: current_animation = PLAYER_ANIMATION.WALK_DOWN; break;
+            case 7: current_animation = PLAYER_ANIMATION.WALK_DOWN_RIGHT; break;
+        }
+    }
+} else {
+    // 在挖礦時禁止移動
+    move_x = 0;
+    move_y = 0;
+    is_moving = false;
 }
 
 // 根據當前動畫設置sprite範圍
@@ -79,6 +138,8 @@ switch(current_animation) {
     case PLAYER_ANIMATION.WALK_UP_LEFT: frame_range = ANIMATION_FRAMES.WALK_UP_LEFT; break;
     case PLAYER_ANIMATION.WALK_LEFT: frame_range = ANIMATION_FRAMES.WALK_LEFT; break;
     case PLAYER_ANIMATION.WALK_DOWN_LEFT: frame_range = ANIMATION_FRAMES.WALK_DOWN_LEFT; break;
+    case PLAYER_ANIMATION.MINING_LEFT: frame_range = ANIMATION_FRAMES.MINING_LEFT; break;
+    case PLAYER_ANIMATION.MINING_RIGHT: frame_range = ANIMATION_FRAMES.MINING_RIGHT; break;
 }
 
 // 動畫更新邏輯

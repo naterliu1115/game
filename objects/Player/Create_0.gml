@@ -7,6 +7,15 @@ mouse_direction = 0;        // 滑鼠方向角度
 facing_direction = 0;       // 角色面向方向
 is_moving = false;         // 是否正在移動
 
+// 挖礦相關變數
+is_mining = false;         // 是否正在挖礦
+mining_animation_frame = 0; // 挖礦動畫幀
+mining_animation_complete = true; // 單次挖礦動畫是否完成
+mining_direction = 0;      // 挖礦方向（左/右）
+MINING_ANIMATION_SPEED = 0.25; // 挖礦動畫速度
+MINING_LAST_FRAME_DELAY = room_speed * 0.2; // 最後一幀停留時間（0.2秒）
+mining_last_frame_timer = 0; // 最後一幀計時器
+
 // 初始化全局戰鬥計時器
 if (!variable_global_exists("battle_timer")) {
     global.battle_timer = 0;
@@ -71,8 +80,8 @@ ANIMATION_FRAMES = {
     WALK_UP_LEFT: [30, 34],  
     WALK_LEFT: [35, 39],     
     WALK_DOWN_LEFT: [40, 44],
-    MINING_LEFT: [45, 49],
-    MINING_RIGHT: [50, 54]
+    MINING_LEFT: [50, 54],
+    MINING_RIGHT: [45, 49]
 }
 
 // 動畫系統變數
