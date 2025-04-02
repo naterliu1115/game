@@ -1,16 +1,16 @@
 {
   "$GMTileSet":"v1",
-  "%Name":"TileSet1",
+  "%Name":"TileSet2",
   "autoTileSets":[],
   "macroPageTiles":{
     "SerialiseHeight":0,
     "SerialiseWidth":0,
     "TileSerialiseData":[],
   },
-  "name":"TileSet1",
-  "out_columns":4,
-  "out_tilehborder":2,
-  "out_tilevborder":2,
+  "name":"TileSet2",
+  "out_columns":8,
+  "out_tilehborder":0,
+  "out_tilevborder":0,
   "parent":{
     "name":"房间",
     "path":"folders/房间.yy",
@@ -18,8 +18,8 @@
   "resourceType":"GMTileSet",
   "resourceVersion":"2.0",
   "spriteId":{
-    "name":"tilemap_floor",
-    "path":"sprites/tilemap_floor/tilemap_floor.yy",
+    "name":"tilemap",
+    "path":"sprites/tilemap/tilemap.yy",
   },
   "spriteNoExport":false,
   "textureGroupId":{
@@ -28,11 +28,11 @@
   },
   "tileAnimationFrames":[],
   "tileAnimationSpeed":15.0,
-  "tileHeight":16,
+  "tileHeight":32,
   "tilehsep":0,
   "tilevsep":0,
-  "tileWidth":16,
+  "tileWidth":32,
   "tilexoff":0,
   "tileyoff":0,
-  "tile_count":16,
+  "tile_count":64,
 }
