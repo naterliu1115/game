@@ -82,12 +82,13 @@ inventory_start_x = ui_x + 20;
 inventory_start_y = ui_y + 60;
 
 // 分類標籤
-current_category = ITEM_TYPE.CONSUMABLE;
+current_category = 0;  // 默認顯示消耗品分類
 category_buttons = [
-    {name: "消耗品", type: ITEM_TYPE.CONSUMABLE},
-    {name: "裝備", type: ITEM_TYPE.EQUIPMENT},
-    {name: "捕捉道具", type: ITEM_TYPE.CAPTURE},
-    {name: "材料", type: ITEM_TYPE.MATERIAL}
+    {name: "消耗品", category: 0},
+    {name: "裝備", category: 1},
+    {name: "捕捉道具", category: 2},
+    {name: "材料", category: 3},
+    {name: "工具", category: 4}
 ];
 
 // 選中的物品
@@ -150,6 +151,9 @@ show = function() {
             // 材料
             add_item_to_inventory(4001, 20); // 銅礦石
             add_item_to_inventory(4002, 10); // 鐵礦石
+            
+            // 工具
+            add_item_to_inventory(5001, 1);  // 採礦稿
         }
     }
     

@@ -1,5 +1,29 @@
 /// @description 初始化道具管理器
 
+// <<<--- 詳細精靈測試 --->>>
+show_debug_message("=== 詳細精靈測試開始 ===");
+
+// 直接使用精靈名稱常量
+show_debug_message("spr_pickaxe 直接常量測試:");
+show_debug_message("- sprite_get_name(spr_pickaxe): " + sprite_get_name(spr_pickaxe));
+show_debug_message("- sprite_get_width(spr_pickaxe): " + string(sprite_get_width(spr_pickaxe)));
+
+// 使用 asset_get_index
+show_debug_message("asset_get_index 測試:");
+var _pickaxe_index = asset_get_index("spr_pickaxe");
+show_debug_message("- asset_get_index('spr_pickaxe'): " + string(_pickaxe_index));
+
+// 列出所有可用的精靈資源
+var i = 0;
+show_debug_message("專案中的精靈資源列表:");
+while (sprite_exists(i)) {
+    show_debug_message(string(i) + ": " + sprite_get_name(i));
+    i++;
+}
+
+show_debug_message("=== 詳細精靈測試結束 ===");
+// <<<---------------------->>>
+
 // 物品類型枚舉
 enum ITEM_TYPE {
     CONSUMABLE,
@@ -22,9 +46,9 @@ item_sprites = ds_map_create();
 
 // 數據驗證函數
 function validate_item_data(item_data) {
-    // 檢查必要欄位是否存在
+    // 檢查必要欄位
     var required_fields = ["ID", "Name", "Type", "Description", "Rarity", "IconSprite", "Sprite",
-                          "UseEffect", "EffectValue", "StackMax", "SellPrice", "Tags"];
+                          "UseEffect", "EffectValue", "StackMax", "SellPrice", "Tags", "Category"];
     
     for (var i = 0; i < array_length(required_fields); i++) {
         if (!variable_struct_exists(item_data, required_fields[i])) {
@@ -33,41 +57,23 @@ function validate_item_data(item_data) {
         }
     }
     
-    // 驗證ID格式（應為1000-9999的數字）
-    if (!is_real(item_data.ID) || item_data.ID < 1000 || item_data.ID > 9999) {
-        show_debug_message("錯誤：無效的道具ID " + string(item_data.ID));
-        return false;
-    }
-    
-    // 驗證類型是否符合ID範圍
-    var type_id = floor(item_data.ID / 1000);
-    var valid_type = false;
-    switch(type_id) {
-        case 1: valid_type = (item_data.Type == "CONSUMABLE"); break;
-        case 2: valid_type = (item_data.Type == "EQUIPMENT"); break;
-        case 3: valid_type = (item_data.Type == "CAPTURE"); break;
-        case 4: valid_type = (item_data.Type == "MATERIAL"); break;
-    }
-    if (!valid_type) {
-        show_debug_message("錯誤：道具ID與類型不匹配 ID:" + string(item_data.ID) + " Type:" + item_data.Type);
-        return false;
-    }
-    
-    // 驗證數值欄位
-    if (!is_real(item_data.EffectValue) || !is_real(item_data.StackMax) || !is_real(item_data.SellPrice)) {
-        show_debug_message("錯誤：數值欄位格式錯誤");
+    // 驗證Category
+    if (!is_real(item_data.Category) || item_data.Category < 0 || item_data.Category > 4) {
+        show_debug_message("錯誤：無效的物品分類 " + string(item_data.Category));
         return false;
     }
     
     // 驗證精靈資源是否存在
-    if (!sprite_exists(asset_get_index(item_data.IconSprite))) {
-        show_debug_message("警告：找不到道具圖示 " + item_data.IconSprite);
-        // 不返回false，因為這可能是開發中的正常情況
+    var icon_index = asset_get_index(item_data.IconSprite);
+    if (icon_index == -1 || !sprite_exists(icon_index)) {
+        show_debug_message("警告：找不到道具圖示 " + item_data.IconSprite + "，使用預設精靈spr_gold");
+        item_data.IconSprite = "spr_gold";
     }
     
     // 驗證Sprite資源是否存在
-    if (!sprite_exists(asset_get_index(item_data.Sprite))) {
-        show_debug_message("警告：找不到道具Sprite " + item_data.Sprite + "，使用預設spr_gold");
+    var spr_idx = asset_get_index(item_data.Sprite);
+    if (spr_idx == -1 || !sprite_exists(spr_idx)) {
+        show_debug_message("警告：找不到物品精靈 " + item_data.Sprite + "，使用預設精靈spr_gold");
         item_data.Sprite = "spr_gold";
     }
     
@@ -92,72 +98,71 @@ function custom_string_split(str, delimiter) {
     return result;
 }
 
+// 從CSV創建物品數據結構
+function create_item_from_csv_row(grid, row) {
+    var item = {
+        ID: real(grid[# 0, row]),
+        Name: grid[# 1, row],
+        Type: grid[# 2, row],
+        Description: grid[# 3, row],
+        Rarity: grid[# 4, row],
+        IconSprite: grid[# 5, row],
+        Sprite: grid[# 6, row],
+        UseEffect: grid[# 7, row],
+        EffectValue: real(grid[# 8, row]),
+        StackMax: real(grid[# 9, row]),
+        SellPrice: real(grid[# 10, row]),
+        Tags: custom_string_split(grid[# 11, row], ";"),
+        Category: real(grid[# 12, row])
+    };
+    
+    show_debug_message("創建物品數據：");
+    show_debug_message("- ID: " + string(item.ID));
+    show_debug_message("- Name: " + item.Name);
+    show_debug_message("- Type: " + item.Type);
+    show_debug_message("- Category: " + string(item.Category));
+    show_debug_message("- IconSprite: " + item.IconSprite);
+    show_debug_message("- Sprite: " + item.Sprite);
+    
+    return item;
+}
+
 // 載入物品數據
 function load_items_data() {
     show_debug_message("===== 開始載入物品數據 =====");
     
-    // 直接使用文件名載入CSV
-    var file_name = "items_data.csv";
-    show_debug_message("嘗試讀取文件: " + file_name);
+    var file = "items_data.csv";
+    show_debug_message("嘗試讀取文件: " + file);
     
-    // 使用 load_csv 讀取文件
-    var grid = load_csv(file_name);
+    var grid = load_csv(file);
     if (grid == -1) {
-        show_debug_message("錯誤：無法載入 " + file_name);
+        show_debug_message("錯誤：無法載入物品數據文件");
         return false;
     }
     
-    // 獲取網格大小
-    var grid_width = ds_grid_width(grid);
-    var grid_height = ds_grid_height(grid);
+    var width = ds_grid_width(grid);
+    var height = ds_grid_height(grid);
+    show_debug_message("CSV 網格大小: " + string(width) + "x" + string(height));
     
-    show_debug_message("CSV 網格大小: " + string(grid_width) + "x" + string(grid_height));
-    
-    // 讀取每一行數據（從索引1開始，跳過標題行）
+    // 從第二行開始讀取（跳過標題行）
     var items_loaded = 0;
-    for (var i = 1; i < grid_height; i++) {
-        // 檢查並設置精靈
-        var icon_sprite_name = grid[# 5, i];  // 使用 grid[# x, y] 語法替代 ds_grid_get
-        var sprite_name = grid[# 6, i];
-        
-        show_debug_message("檢查圖示精靈: " + icon_sprite_name);
-        show_debug_message("檢查物品精靈: " + sprite_name);
+    for (var i = 1; i < height; i++) {
+        // 創建物品數據結構
+        var item_data = create_item_from_csv_row(grid, i);
         
         // 檢查圖示精靈
-        if (!sprite_exists(asset_get_index(icon_sprite_name))) {
-            show_debug_message("警告：找不到圖示精靈 " + icon_sprite_name + "，使用預設精靈spr_gold");
-            icon_sprite_name = "spr_gold";
-        }
+        show_debug_message("檢查圖示精靈: " + item_data.IconSprite);
         
         // 檢查物品精靈
-        if (!sprite_exists(asset_get_index(sprite_name))) {
-            show_debug_message("警告：找不到物品精靈 " + sprite_name + "，使用預設精靈spr_gold");
-            sprite_name = "spr_gold";
-        }
-        
-        // 創建物品數據結構
-        var item = {
-            ID: real(grid[# 0, i]),
-            Name: grid[# 1, i],
-            Type: grid[# 2, i],
-            Description: grid[# 3, i],
-            Rarity: grid[# 4, i],
-            IconSprite: icon_sprite_name,
-            Sprite: sprite_name,
-            UseEffect: grid[# 7, i],
-            EffectValue: real(grid[# 8, i]),
-            StackMax: real(grid[# 9, i]),
-            SellPrice: real(grid[# 10, i]),
-            Tags: custom_string_split(grid[# 11, i], ";")
-        };
+        show_debug_message("檢查物品精靈: " + item_data.Sprite);
         
         // 驗證物品數據
-        if (validate_item_data(item)) {
-            ds_map_add(items_data, item.ID, item);
+        if (validate_item_data(item_data)) {
+            // 添加到數據庫
+            items_data[? item_data.ID] = item_data;
             items_loaded++;
-            show_debug_message("成功載入物品：" + item.Name + " (ID: " + string(item.ID) + ")");
         } else {
-            show_debug_message("警告：物品數據驗證失敗，跳過該物品：" + string(item.ID));
+            show_debug_message("警告：物品數據驗證失敗，跳過該物品：" + string(item_data.ID));
         }
     }
     
@@ -167,6 +172,7 @@ function load_items_data() {
     show_debug_message("物品數據載入完成，成功載入 " + string(items_loaded) + " 個物品");
     show_debug_message("物品數據庫大小：" + string(ds_map_size(items_data)));
     show_debug_message("===== 物品數據載入結束 =====");
+    
     return true;
 }
 

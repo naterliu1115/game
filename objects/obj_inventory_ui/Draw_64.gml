@@ -44,7 +44,7 @@ if (surface_needs_update) {
     
     for (var i = 0; i < array_length(category_buttons); i++) {
         var btn_x = start_x + i * (button_width + button_spacing);
-        var is_selected = (current_category == category_buttons[i].type);
+        var is_selected = (current_category == category_buttons[i].category);
         
         // 顯示調試信息
         if (global.game_debug_mode) {
@@ -87,7 +87,7 @@ if (surface_needs_update) {
             if (item_data == undefined) continue;
             
             // 檢查是否匹配當前分類
-            if (floor(item.id / 1000) != current_category) continue;
+            if (item_data.Category != current_category) continue;
             
             var slot_x = 20 + (items_drawn mod slots_per_row) * (slot_size + slot_padding);
             var slot_y = inventory_y + floor(items_drawn / slots_per_row) * (slot_size + slot_padding);

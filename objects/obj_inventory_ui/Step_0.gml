@@ -14,11 +14,11 @@ var mouse_rel_x = mouse_gui_x - ui_x;
 var mouse_rel_y = mouse_gui_y - ui_y;
 
 // 調試輸出使用 show_debug_message 而非直接繪製
-if (global.game_debug_mode) {
+/*if (global.game_debug_mode) {
     show_debug_message("道具UI狀態：活躍");
     show_debug_message("滑鼠GUI位置：" + string(mouse_gui_x) + ", " + string(mouse_gui_y));
     show_debug_message("滑鼠相對位置：" + string(mouse_rel_x) + ", " + string(mouse_rel_y));
-}
+}*/
 
 // 檢查ESC鍵關閉
 if (keyboard_check_pressed(vk_escape)) {
@@ -33,9 +33,8 @@ var current_index = -1;
 
 // 找到當前分類的索引
 for (var i = 0; i < array_length(category_buttons); i++) {
-    if (category_buttons[i].type == current_category) {
+    if (category_buttons[i].category == current_category) {
         current_index = i;
-        if (global.game_debug_mode) show_debug_message("當前分類索引: " + string(i) + " - " + category_buttons[i].name);
         break;
     }
 }
@@ -65,7 +64,7 @@ if (keyboard_check_pressed(vk_left)) {
 
 // 如果分類改變，更新UI
 if (category_changed && current_index >= 0 && current_index < array_length(category_buttons)) {
-    current_category = category_buttons[current_index].type;
+    current_category = category_buttons[current_index].category;
     surface_needs_update = true;
     selected_item = noone;
     scroll_offset = 0;
@@ -86,10 +85,10 @@ var total_buttons_width = array_length(category_buttons) * (button_width + butto
 var start_x = (ui_width - total_buttons_width) / 2; // 相對於表面的座標
 var buttons_y = 60; // 相對於表面的座標
 
-if (global.game_debug_mode) {
+/*if (global.game_debug_mode) {
     show_debug_message("關閉按鈕位置（相對）：" + string(close_btn_x) + ", " + string(close_btn_y));
     show_debug_message("分類按鈕起始位置（相對）：" + string(start_x) + ", " + string(buttons_y));
-}
+}*/
 
 if (mouse_check_button_pressed(mb_left)) {
     if (global.game_debug_mode) show_debug_message("檢測到點擊");
@@ -125,8 +124,8 @@ if (mouse_check_button_pressed(mb_left)) {
                 show_debug_message("點擊位置（相對）: " + string(mouse_rel_x) + ", " + string(mouse_rel_y));
             }
             
-            if (current_category != category_buttons[i].type) {
-                current_category = category_buttons[i].type;
+            if (current_category != category_buttons[i].category) {
+                current_category = category_buttons[i].category;
                 surface_needs_update = true;
                 selected_item = noone;
                 scroll_offset = 0;
@@ -150,7 +149,7 @@ if (mouse_check_button_pressed(mb_left)) {
                 if (item != undefined) {
                     var item_data = obj_item_manager.get_item(item.id);
                     if (item_data != undefined) {
-                        show_debug_message("道具UI - 選擇物品: " + item_data.name);
+                        show_debug_message("道具UI - 選擇物品: " + item_data.Name);
                     }
                 }
             }
@@ -169,7 +168,7 @@ if (mouse_check_button_pressed(mb_right)) {
             if (item != undefined) {
                 var item_data = obj_item_manager.get_item(item.id);
                 if (item_data != undefined) {
-                    show_debug_message("道具UI - 嘗試使用物品: " + item_data.name);
+                    show_debug_message("道具UI - 嘗試使用物品: " + item_data.Name);
                 }
             }
         }
