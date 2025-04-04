@@ -34,6 +34,7 @@ if (surface_needs_update) {
     var start_x = (ui_width - total_buttons_width) / 2;
     var buttons_y = 60;
     
+    /*
     // 顯示調試信息
     if (global.game_debug_mode) {
         show_debug_message("Draw - 按鈕區域：");
@@ -41,17 +42,20 @@ if (surface_needs_update) {
         show_debug_message("按鈕Y: " + string(buttons_y));
         show_debug_message("總寬度: " + string(total_buttons_width));
     }
+    */
     
     for (var i = 0; i < array_length(category_buttons); i++) {
         var btn_x = start_x + i * (button_width + button_spacing);
         var is_selected = (current_category == category_buttons[i].category);
         
+        /*
         // 顯示調試信息
         if (global.game_debug_mode) {
             show_debug_message("Draw - 按鈕 " + string(i) + " (" + category_buttons[i].name + "):");
             show_debug_message("X: " + string(btn_x));
             show_debug_message("Y: " + string(buttons_y));
         }
+        */
         
         draw_ui_button(
             btn_x, buttons_y,

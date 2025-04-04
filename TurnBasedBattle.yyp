@@ -63,6 +63,7 @@
     {"id":{"name":"obj_game_controller","path":"objects/obj_game_controller/obj_game_controller.yy",},},
     {"id":{"name":"obj_hurt_effect","path":"objects/obj_hurt_effect/obj_hurt_effect.yy",},},
     {"id":{"name":"obj_inventory_ui","path":"objects/obj_inventory_ui/obj_inventory_ui.yy",},},
+    {"id":{"name":"obj_item_info_popup","path":"objects/obj_item_info_popup/obj_item_info_popup.yy",},},
     {"id":{"name":"obj_item_manager","path":"objects/obj_item_manager/obj_item_manager.yy",},},
     {"id":{"name":"obj_monster_manager_ui","path":"objects/obj_monster_manager_ui/obj_monster_manager_ui.yy",},},
     {"id":{"name":"obj_npc_parent","path":"objects/obj_npc_parent/obj_npc_parent.yy",},},

@@ -22,6 +22,11 @@ var mouse_rel_y = mouse_gui_y - ui_y;
 
 // 檢查ESC鍵關閉
 if (keyboard_check_pressed(vk_escape)) {
+    // 檢查是否有物品資訊彈窗
+    if (instance_exists(obj_item_info_popup)) {
+        exit;
+    }
+    
     if (global.game_debug_mode) show_debug_message("道具UI - ESC按下，關閉UI");
     hide();
     exit;
@@ -91,70 +96,85 @@ var buttons_y = 60; // 相對於表面的座標
 }*/
 
 if (mouse_check_button_pressed(mb_left)) {
-    if (global.game_debug_mode) show_debug_message("檢測到點擊");
+    // 如果存在物品資訊彈窗，檢查點擊是否在彈窗範圍內
+    var handle_inventory_click = true;
     
-    // 檢查關閉按鈕 - 使用相對座標
-    if (point_in_rectangle(
-        mouse_rel_x, mouse_rel_y,
-        close_btn_x, close_btn_y,
-        close_btn_x + close_btn_size, close_btn_y + close_btn_size
-    )) {
-        if (global.game_debug_mode) show_debug_message("道具UI - 點擊關閉按鈕");
-        hide();
-        exit;
+    if (instance_exists(obj_item_info_popup)) {
+        var popup = instance_find(obj_item_info_popup, 0);
+        if (popup != noone) {
+            var mouse_gui_x = device_mouse_x_to_gui(0);
+            var mouse_gui_y = device_mouse_y_to_gui(0);
+            
+            // 如果點擊在彈窗範圍內，不處理物品欄的點擊
+            if (point_in_rectangle(mouse_gui_x, mouse_gui_y, 
+                popup.x, popup.y, popup.x + popup.width, popup.y + popup.height)) {
+                handle_inventory_click = false;
+            }
+        }
     }
     
-    // 檢查分類按鈕點擊 - 使用相對座標
-    var button_clicked = false;
-    for (var i = 0; i < array_length(category_buttons); i++) {
-        var btn_x = start_x + i * (button_width + button_spacing);
+    if (handle_inventory_click) {
+        if (global.game_debug_mode) show_debug_message("檢測到物品欄點擊");
         
-        if (global.game_debug_mode) {
-            show_debug_message("按鈕 " + string(i) + ": " + category_buttons[i].name + " 位置（相對）: " + string(btn_x) + ", " + string(buttons_y));
-        }
-        
+        // 檢查關閉按鈕 - 使用相對座標
         if (point_in_rectangle(
             mouse_rel_x, mouse_rel_y,
-            btn_x, buttons_y,
-            btn_x + button_width, buttons_y + button_height
+            close_btn_x, close_btn_y,
+            close_btn_x + close_btn_size, close_btn_y + close_btn_size
         )) {
+            if (global.game_debug_mode) show_debug_message("道具UI - 點擊關閉按鈕");
+            hide();
+            exit;
+        }
+        
+        // 檢查分類按鈕點擊 - 使用相對座標
+        var button_clicked = false;
+        for (var i = 0; i < array_length(category_buttons); i++) {
+            var btn_x = start_x + i * (button_width + button_spacing);
+            
             if (global.game_debug_mode) {
-                show_debug_message("檢測到按鈕點擊: " + category_buttons[i].name);
-                show_debug_message("當前分類: " + string(current_category));
-                show_debug_message("點擊位置（相對）: " + string(mouse_rel_x) + ", " + string(mouse_rel_y));
+                show_debug_message("按鈕 " + string(i) + ": " + category_buttons[i].name + 
+                                 " 位置（相對）: " + string(btn_x) + ", " + string(buttons_y));
             }
             
-            if (current_category != category_buttons[i].category) {
-                current_category = category_buttons[i].category;
-                surface_needs_update = true;
-                selected_item = noone;
-                scroll_offset = 0;
-                update_max_scroll();
-                if (global.game_debug_mode) {
-                    show_debug_message("分類已切換到: " + category_buttons[i].name);
+            if (point_in_rectangle(
+                mouse_rel_x, mouse_rel_y,
+                btn_x, buttons_y,
+                btn_x + button_width, buttons_y + button_height
+            )) {
+                if (current_category != category_buttons[i].category) {
+                    current_category = category_buttons[i].category;
+                    surface_needs_update = true;
+                    selected_item = noone;
+                    scroll_offset = 0;
+                    update_max_scroll();
+                    if (global.game_debug_mode) {
+                        show_debug_message("分類已切換到: " + category_buttons[i].name);
+                    }
                 }
+                button_clicked = true;
+                break;
             }
-            button_clicked = true;
-            break;
         }
-    }
 
-    // 只有在沒有點擊按鈕時才檢查物品槽
-    if (!button_clicked) {
-        // 處理物品槽選擇
-        var slot_index = get_slot_at_position(mouse_gui_x, mouse_gui_y);
-        if (slot_index != noone) {
-            if (global.game_debug_mode) {
+        // 只有在沒有點擊按鈕時才檢查物品槽
+        if (!button_clicked) {
+            // 處理物品槽選擇
+            var slot_index = get_slot_at_position(mouse_gui_x, mouse_gui_y);
+            if (slot_index != noone) {
                 var item = global.player_inventory[| slot_index];
                 if (item != undefined) {
                     var item_data = obj_item_manager.get_item(item.id);
                     if (item_data != undefined) {
-                        show_debug_message("道具UI - 選擇物品: " + item_data.Name);
+                        if (global.game_debug_mode) {
+                            show_debug_message("道具UI - 選擇物品: " + item_data.Name);
+                        }
+                        show_item_info(item_data, mouse_gui_x, mouse_gui_y);
                     }
                 }
+                selected_item = slot_index;
+                surface_needs_update = true;
             }
-            selected_item = slot_index;
-            surface_needs_update = true;
         }
     }
 }

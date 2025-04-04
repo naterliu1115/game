@@ -9,4 +9,4 @@ ID,Name,Type,Description,Rarity,IconSprite,Sprite,UseEffect,EffectValue,StackMax
 3002,高級球,CAPTURE,提高捕捉率的球,UNCOMMON,spr_ball_great,spr_gold,capture,1.5,99,100,capture;ball,2
 4001,銅礦石,MATERIAL,基礎鍛造材料,COMMON,spr_ore_copper,spr_gold,none,0,999,5,material;ore,3
 4002,鐵礦石,MATERIAL,中級鍛造材料,UNCOMMON,spr_ore_iron,spr_gold,none,0,999,15,material;ore,3
-5001,採礦稿,TOOL,用於採集礦物的工具,COMMON,spr_pickaxe,spr_pickaxe,mining,1,1,100,tool;mining,4
+5001,採礦鎬,TOOL,用於採集礦物的工具,COMMON,spr_pickaxe,spr_pickaxe,mining,1,1,100,tool;mining,4

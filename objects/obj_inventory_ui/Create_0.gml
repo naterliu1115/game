@@ -179,23 +179,72 @@ hide = function() {
 get_slot_at_position = function(mouse_x, mouse_y) {
     if (!active) return noone;
     
-    // 計算相對於物品欄起始位置的偏移
-    var rel_x = mouse_x - inventory_start_x;
-    var rel_y = mouse_y - inventory_start_y + scroll_offset;
+    // 計算相對於UI左上角的點擊位置 (表面座標系)
+    var cx = mouse_x - ui_x;
+    var cy = mouse_y - ui_y;
     
-    // 檢查是否在物品欄範圍內
-    if (rel_x < 0 || rel_x >= slots_per_row * (slot_size + slot_padding)) return noone;
-    if (rel_y < 0) return noone;
+    // 調試輸出點擊位置 (表面座標系)
+    if (global.game_debug_mode) {
+        show_debug_message("原始點擊位置：" + string(mouse_x) + ", " + string(mouse_y));
+        show_debug_message("UI起始位置：" + string(ui_x) + ", " + string(ui_y));
+        show_debug_message("點擊相對UI位置（表面座標）：" + string(cx) + ", " + string(cy));
+    }
     
-    // 計算槽位索引
-    var slot_x = floor(rel_x / (slot_size + slot_padding));
-    var slot_y = floor(rel_y / (slot_size + slot_padding));
-    var slot_index = slot_y * slots_per_row + slot_x;
+    // 計算物品槽區域的起始Y座標 (與Draw_64一致)
+    var buttons_y = 60;
+    var button_height = 40; // 從Draw_64參考，或應定義為變數
+    var slots_area_y = buttons_y + button_height + 10;
     
-    // 檢查是否是有效的槽位
-    if (slot_index >= ds_list_size(global.player_inventory)) return noone;
+    var items_drawn = 0;
+    for (var i = 0; i < ds_list_size(global.player_inventory); i++) {
+        var item = global.player_inventory[| i];
+        if (item != undefined) {
+            var item_data = obj_item_manager.get_item(item.id);
+            if (item_data != undefined) {
+                var item_category = -1;
+                if (variable_struct_exists(item_data, "Category")) {
+                    item_category = real(item_data.Category);
+                } else if (variable_struct_exists(item_data, "category")) {
+                    item_category = real(item_data.category);
+                }
+                
+                if (item_category == real(current_category)) {
+                    // 計算這個物品在UI表面上的實際繪製位置 (與Draw_64一致)
+                    var slot_draw_x = 20 + (items_drawn mod slots_per_row) * (slot_size + slot_padding);
+                    var slot_draw_y = slots_area_y - scroll_offset + floor(items_drawn / slots_per_row) * (slot_size + slot_padding);
+                    
+                    // 調試輸出每個槽位的計算位置
+                    if (global.game_debug_mode) {
+                        show_debug_message("檢查物品 " + string(i) + ": ID " + string(item.id) + " (" + item_data.Name + ")");
+                        show_debug_message("    預計繪製位置（表面座標）：" + string(slot_draw_x) + ", " + string(slot_draw_y));
+                        show_debug_message("    槽位大小：" + string(slot_size));
+                    }
+                    
+                    // 使用表面座標檢查點擊是否在這個槽位的繪製範圍內
+                    if (point_in_rectangle(cx, cy,
+                        slot_draw_x, slot_draw_y,
+                        slot_draw_x + slot_size, slot_draw_y + slot_size)) {
+                        
+                        if (global.game_debug_mode) {
+                            show_debug_message("--> 點擊命中物品 " + string(i));
+                        }
+                        // 移除過時的調試輸出
+                        //ds_list_destroy(valid_slots); // valid_slots 未被使用，可以移除
+                        return i;
+                    }
+                    
+                    items_drawn++;
+                }
+            }
+        }
+    }
     
-    return slot_index;
+    if (global.game_debug_mode) {
+        show_debug_message("點擊未命中任何物品");
+    }
+    
+    //ds_list_destroy(valid_slots); // valid_slots 未被使用，可以移除
+    return noone;
 };
 
 // 使用物品
@@ -227,10 +276,90 @@ use_selected_item = function() {
 
 // 更新最大滾動值
 update_max_scroll = function() {
-    var total_items = ds_list_size(global.player_inventory);
-    var rows = ceil(total_items / slots_per_row);
+    // 計算當前分類的物品數量
+    var items_in_category = 0;
+    for (var i = 0; i < ds_list_size(global.player_inventory); i++) {
+        var item = global.player_inventory[| i];
+        if (item != undefined) {
+            var item_data = obj_item_manager.get_item(item.id);
+            if (item_data != undefined) {
+                if (variable_struct_exists(item_data, "Category")) {
+                    if (item_data.Category == current_category) {
+                        items_in_category++;
+                    }
+                } else if (variable_struct_exists(item_data, "category")) {
+                    if (item_data.category == current_category) {
+                        items_in_category++;
+                    }
+                }
+            }
+        }
+    }
+    
+    var rows = ceil(items_in_category / slots_per_row);
     var visible_rows = floor((ui_height - 100) / (slot_size + slot_padding));
     max_scroll = max(0, (rows - visible_rows) * (slot_size + slot_padding));
     
-    show_debug_message("更新滾動值：" + string(max_scroll));
-}; 
+    if (global.game_debug_mode) {
+        show_debug_message("更新滾動值：");
+        show_debug_message("當前分類物品數: " + string(items_in_category));
+        show_debug_message("最大滾動值: " + string(max_scroll));
+    }
+};
+
+// 物品資訊彈窗函數
+function show_item_info(item_data, mouse_x, mouse_y) {
+    if (global.game_debug_mode) {
+        show_debug_message("嘗試顯示物品資訊：" + item_data.Name);
+    }
+    
+    // 先清理現有彈窗
+    with(obj_item_info_popup) {
+        close();
+    }
+    
+    // 創建新的彈窗實例
+    var popup = instance_create_layer(0, 0, "UI", obj_item_info_popup);
+    if (popup != noone) {
+        // 設置物品資訊
+        popup.setup_item_data(item_data);
+        
+        // 計算彈窗位置
+        // 預設在點擊位置右側20像素處
+        var preferred_x = mouse_x + 20;
+        var preferred_y = mouse_y;
+        
+        // 確保不會超出螢幕右側
+        if (preferred_x + popup.width > display_get_gui_width()) {
+            // 如果右側放不下，就放在左側
+            preferred_x = mouse_x - popup.width - 20;
+        }
+        
+        // 確保不會超出螢幕底部
+        if (preferred_y + popup.height > display_get_gui_height()) {
+            preferred_y = display_get_gui_height() - popup.height;
+        }
+        
+        // 確保不會超出螢幕頂部
+        preferred_y = max(0, preferred_y);
+        
+        // 設置彈窗位置
+        popup.x = preferred_x;
+        popup.y = preferred_y;
+        popup.ui_x = preferred_x;
+        popup.ui_y = preferred_y;
+        
+        // 註冊到UI管理器
+        if (instance_exists(obj_ui_manager)) {
+            obj_ui_manager.register_ui(popup, "popup");
+            obj_ui_manager.show_ui(popup, "popup");
+        }
+        
+        if (global.game_debug_mode) {
+            show_debug_message("物品資訊彈窗已創建：" + string(popup));
+            show_debug_message("位置：" + string(popup.x) + ", " + string(popup.y));
+        }
+    } else {
+        show_debug_message("錯誤：無法創建物品資訊彈窗");
+    }
+} 
