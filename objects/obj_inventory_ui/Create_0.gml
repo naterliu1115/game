@@ -308,9 +308,9 @@ update_max_scroll = function() {
 };
 
 // 物品資訊彈窗函數
-function show_item_info(item_data, mouse_x, mouse_y) {
+function show_item_info(item_data, inventory_index, mouse_x, mouse_y) {
     if (global.game_debug_mode) {
-        show_debug_message("嘗試顯示物品資訊：" + item_data.Name);
+        show_debug_message("嘗試顯示物品資訊：" + item_data.Name + " (索引: " + string(inventory_index) + ")");
     }
     
     // 先清理現有彈窗
@@ -321,8 +321,8 @@ function show_item_info(item_data, mouse_x, mouse_y) {
     // 創建新的彈窗實例
     var popup = instance_create_layer(0, 0, "UI", obj_item_info_popup);
     if (popup != noone) {
-        // 設置物品資訊
-        popup.setup_item_data(item_data);
+        // 設置物品資訊，包含索引
+        popup.setup_item_data(item_data, inventory_index);
         
         // 計算彈窗位置
         // 預設在點擊位置右側20像素處

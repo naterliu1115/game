@@ -17,7 +17,7 @@ draw_set_valign(fa_top);
 
 var current_y = y + padding;
 var content_x = x + padding;
-var icon_size = 64; // 使用與物品欄相同的尺寸
+var icon_size = 96; // 使用與物品欄相同的尺寸
 var icon_padding = 10; // 圖示和文字之間的間距
 var section_spacing = 20; // 段落之間的間距
 
@@ -29,9 +29,14 @@ if (icon_sprite != -1 && sprite_exists(icon_sprite)) {
     var scale_x = icon_size / spr_width;
     var scale_y = icon_size / spr_height;
     
-    // 繪製圖示（置中對齊）
+    // 計算繪製中心點座標
+    var draw_center_x = content_x + icon_size / 2;
+    var draw_center_y = current_y + icon_size / 2;
+    
+    // 繪製圖示，將精靈中心對準繪製中心點
     draw_sprite_ext(icon_sprite, 0, 
-                   content_x, current_y, 
+                   draw_center_x, 
+                   draw_center_y, 
                    scale_x, scale_y, 0, c_white, 1);
     
     // 根據稀有度繪製外框
@@ -117,4 +122,41 @@ if (array_length(tags) > 0) {
         
         tag_x += tag_width + 5;
     }
-} 
+    current_y += tag_height + 5; // 確保 Y 座標更新
+}
+
+// --- 新增：繪製指派快捷按鈕 ---
+assign_button_x = x + (width - assign_button_width) / 2; // 水平置中
+assign_button_y = y + height - padding - assign_button_height; // 底部對齊
+
+// 檢查是否可以指派 (例如，不是裝備)
+var can_assign = true;
+if (item_data != noone && item_data.Type == "EQUIPMENT") {
+    can_assign = false;
+}
+
+if (can_assign) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    
+    // 繪製按鈕背景
+    draw_set_color(c_gray); // 或其他顏色
+    draw_rectangle(assign_button_x, assign_button_y, 
+                  assign_button_x + assign_button_width, assign_button_y + assign_button_height, false);
+                  
+    // 繪製按鈕文字
+    draw_set_color(c_white);
+    draw_text(assign_button_x + assign_button_width / 2, 
+              assign_button_y + assign_button_height / 2, 
+              assign_button_text);
+
+    // 重設繪圖設定
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+} else {
+    // 如果不能指派，可以選擇不畫按鈕或顯示灰色不可用狀態
+}
+
+// --- 重設最終繪圖設定 (如果需要) ---
+draw_set_color(c_white);
+draw_set_alpha(1); 

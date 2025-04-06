@@ -22,6 +22,7 @@ ui_y = (display_get_gui_height() - height) / 2;
 
 // 物品資訊
 item_data = noone;
+inventory_index = -1; // 新增：儲存物品在背包中的索引
 title = "";
 description = "";
 rarity = "";
@@ -60,22 +61,39 @@ effect_descriptions[? "capture"] = "捕捉";
 effect_descriptions[? "mining"] = "採礦";
 effect_descriptions[? "none"] = "無";
 
+// 新增：按鈕相關變數
+assign_button_text = "指派快捷";
+assign_button_height = 30;
+assign_button_width = 100;
+assign_button_x = 0; // 會在 Draw 事件中計算
+assign_button_y = 0; // 會在 Draw 事件中計算
+
 // 設置物品數據
-function setup_item_data(_item_data) {
+function setup_item_data(_item_data, _inventory_index) {
     item_data = _item_data;
-    title = item_data.Name;
-    description = item_data.Description;
-    rarity = item_data.Rarity;
-    type = item_data.Type;
-    icon_sprite = asset_get_index(item_data.IconSprite);
-    use_effect = item_data.UseEffect;
-    effect_value = item_data.EffectValue;
-    stack_max = item_data.StackMax;
-    sell_price = item_data.SellPrice;
-    tags = item_data.Tags;
+    inventory_index = _inventory_index; // 儲存索引
+    
+    // 檢查 _item_data 是否有效
+    if (_item_data == noone || !is_struct(_item_data)) {
+        show_debug_message("錯誤：無效的 item_data 傳入 setup_item_data");
+        title = "錯誤";
+        description = "無法載入物品資訊";
+        return;
+    }
+    
+    title = _item_data.Name;
+    description = _item_data.Description;
+    rarity = _item_data.Rarity;
+    type = _item_data.Type;
+    icon_sprite = asset_get_index(_item_data.IconSprite);
+    use_effect = _item_data.UseEffect;
+    effect_value = _item_data.EffectValue;
+    stack_max = _item_data.StackMax;
+    sell_price = _item_data.SellPrice;
+    tags = _item_data.Tags;
     
     if (global.game_debug_mode) {
-        show_debug_message("物品資訊彈窗 - 設置物品數據：" + title);
+        show_debug_message("物品資訊彈窗 - 設置物品數據：" + title + " (索引: " + string(inventory_index) + ")");
     }
 }
 

@@ -242,17 +242,32 @@ camera_set_view_pos(view_camera[0], cam_x, cam_y);
 if (!is_dialogue_active()) {
     var interact_radius = 50;
     var nearest_npc = instance_nearest(x, y, obj_npc_parent);
+    var can_interact = false;
 
     if (nearest_npc != noone) {
         var dist = point_distance(x, y, nearest_npc.x, nearest_npc.y);
-        if (dist <= interact_radius && keyboard_check_pressed(ord("E"))) {
-            start_dialogue(nearest_npc.id);
+        if (dist <= interact_radius) {
+            // 更新 HUD 的互動提示
+            can_interact = true;
+            if (keyboard_check_pressed(ord("E"))) {
+                start_dialogue(nearest_npc.id);
+            }
         }
     }
-}
 
-if (is_dialogue_active() && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(ord("E")))) {
-    advance_dialogue();
+    // 更新 HUD 的互動提示
+    if (instance_exists(obj_main_hud)) {
+        obj_main_hud.show_interaction_prompt = can_interact;
+    }
+} else {
+    // 在對話狀態下，隱藏互動提示
+    if (instance_exists(obj_main_hud)) {
+        obj_main_hud.show_interaction_prompt = false;
+    }
+
+    if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(ord("E"))) {
+        advance_dialogue();
+    }
 }
 
 // **進入戰鬥檢查**

@@ -1,13 +1,16 @@
 {
   "$GMObject":"",
-  "%Name":"obj_boss",
-  "eventList":[],
+  "%Name":"obj_main_hud",
+  "eventList":[
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":64,"eventType":8,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+  ],
   "managed":true,
-  "name":"obj_boss",
+  "name":"obj_main_hud",
   "overriddenProperties":[],
   "parent":{
-    "name":"Monster",
-    "path":"folders/物体/Monster.yy",
+    "name":"MainUI",
+    "path":"folders/物体/MainUI.yy",
   },
   "parentObjectId":null,
   "persistent":false,
@@ -27,10 +30,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"sleepdragon",
-    "path":"sprites/sleepdragon/sleepdragon.yy",
-  },
+  "spriteId":null,
   "spriteMaskId":null,
   "visible":true,
 }

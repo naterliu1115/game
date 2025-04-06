@@ -31,6 +31,18 @@ if (!instance_exists(obj_item_manager)) {
     instance_create_layer(0, 0, "Instances", obj_item_manager);
 }
 
+// 創建並註冊主介面 HUD
+if (!instance_exists(obj_main_hud)) {
+    var hud_inst = instance_create_layer(0, 0, "Instances", obj_main_hud);
+    if (instance_exists(obj_ui_manager)) {
+        with (obj_ui_manager) {
+            register_ui(hud_inst, "main");
+            show_ui(hud_inst, "main");
+        }
+    }
+    show_debug_message("主介面 HUD 已創建並註冊");
+}
+
 // 初始化全局道具相關變量
 if (!variable_global_exists("player_inventory")) {
     global.player_inventory = ds_list_create();
@@ -386,42 +398,40 @@ toggle_capture_ui = function() {
 }
 
 toggle_inventory_ui = function() {
-    if (!ui_enabled || ui_cooldown > 0) return;
+    if (!ui_enabled || ui_cooldown > 0) {
+        show_debug_message("UI被禁用或在冷卻中");
+        return;
+    }
     
     show_debug_message("===== 開始切換道具UI =====");
     
-    // 檢查必要的系統依賴
-    var systems_ready = true;
-    var missing_systems = "";
-    
-    // 檢查UI管理器
+    // 檢查並創建必要的系統
     if (!instance_exists(obj_ui_manager)) {
-        systems_ready = false;
-        missing_systems += "UI管理器、";
+        show_debug_message("創建UI管理器");
+        instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
     
-    // 檢查事件管理器
     if (!instance_exists(obj_event_manager)) {
-        systems_ready = false;
-        missing_systems += "事件管理器、";
+        show_debug_message("創建事件管理器");
+        instance_create_layer(0, 0, "Instances", obj_event_manager);
     }
     
-    // 檢查物品管理器
     if (!instance_exists(obj_item_manager)) {
-        systems_ready = false;
-        missing_systems += "物品管理器、";
+        show_debug_message("創建物品管理器");
+        instance_create_layer(0, 0, "Instances", obj_item_manager);
     }
     
-    if (!systems_ready) {
-        missing_systems = string_delete(missing_systems, string_length(missing_systems), 1);
-        show_debug_message("錯誤：無法開啟道具UI，缺少必要系統：" + missing_systems);
-        return;
+    // 確保全局背包存在
+    if (!variable_global_exists("player_inventory")) {
+        show_debug_message("創建玩家背包");
+        global.player_inventory = ds_list_create();
     }
     
     // 獲取或創建物品欄UI實例
     var inventory_ui_inst;
     if (instance_exists(obj_inventory_ui)) {
         inventory_ui_inst = instance_find(obj_inventory_ui, 0);
+        show_debug_message("找到現有的道具UI實例");
         
         // 如果UI已經開啟，則關閉它
         if (inventory_ui_inst.active) {
@@ -440,9 +450,82 @@ toggle_inventory_ui = function() {
     // 使用UI管理器顯示UI
     show_debug_message("顯示道具UI");
     with (obj_ui_manager) {
+        register_ui(inventory_ui_inst, "main");
         show_ui(inventory_ui_inst, "main");
+        show_debug_message("UI已註冊並顯示");
+    }
+    
+    // 添加一些測試物品（如果背包為空）
+    if (ds_list_size(global.player_inventory) == 0) {
+        show_debug_message("添加測試物品到背包");
+        with (obj_item_manager) {
+            add_item_to_inventory(1001, 5);  // 小型回復藥水
+            add_item_to_inventory(2001, 1);  // 銅劍
+            add_item_to_inventory(3001, 3);  // 普通球
+        }
     }
     
     ui_cooldown = 5;
     show_debug_message("===== 道具UI切換完成 =====");
 };
+
+// 初始化全局快捷欄數據結構
+global.player_hotbar_slots = 10; // 與 obj_main_hud 的 hotbar_slots 保持一致
+global.player_hotbar = array_create(global.player_hotbar_slots, noone);
+show_debug_message("全局快捷欄數據已初始化，大小：" + string(global.player_hotbar_slots));
+
+// 指派物品到快捷欄的函數
+assign_item_to_hotbar = function(inventory_index) {
+    show_debug_message("嘗試將背包索引 " + string(inventory_index) + " 指派到快捷欄");
+    
+    // 檢查 inventory_index 是否有效
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+        show_debug_message("錯誤：玩家背包列表不存在。");
+        return false;
+    }
+    if (inventory_index < 0 || inventory_index >= ds_list_size(global.player_inventory)) {
+        show_debug_message("錯誤：無效的背包索引 " + string(inventory_index));
+        return false;
+    }
+    
+    // 檢查物品是否已經在快捷欄中 (可選)
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == inventory_index) {
+            show_debug_message("物品已在快捷欄位置 " + string(i));
+            // 可以選擇直接返回 true，或通知玩家
+            if (instance_exists(obj_main_hud)) {
+                 // 假設 obj_main_hud 有 show_info 方法
+                 // obj_main_hud.show_info("物品已在快捷欄"); 
+            }
+            return true; 
+        }
+    }
+
+    // 查找第一個空位
+    var assigned = false;
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == noone) {
+            global.player_hotbar[i] = inventory_index;
+            show_debug_message("物品成功指派到快捷欄位置 " + string(i));
+            assigned = true;
+            
+            // 通知 HUD 更新 (如果 HUD 存在)
+            if (instance_exists(obj_main_hud)) {
+                // 可以設置一個標誌，讓 HUD 在 Draw 事件中檢測並更新
+                // obj_main_hud.needs_redraw = true; 
+            }
+            break; // 找到空位就退出循環
+        }
+    }
+
+    if (!assigned) {
+        show_debug_message("快捷欄已滿，無法指派物品。");
+        // 通知玩家
+         if (instance_exists(obj_main_hud)) {
+             // obj_main_hud.show_info("快捷欄已滿"); 
+         }
+        return false;
+    }
+    
+    return true;
+}

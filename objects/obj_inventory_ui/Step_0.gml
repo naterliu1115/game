@@ -167,9 +167,9 @@ if (mouse_check_button_pressed(mb_left)) {
                     var item_data = obj_item_manager.get_item(item.id);
                     if (item_data != undefined) {
                         if (global.game_debug_mode) {
-                            show_debug_message("道具UI - 選擇物品: " + item_data.Name);
+                            show_debug_message("道具UI - 選擇物品: " + item_data.Name + " (索引: " + string(slot_index) + ")");
                         }
-                        show_item_info(item_data, mouse_gui_x, mouse_gui_y);
+                        show_item_info(item_data, slot_index, mouse_gui_x, mouse_gui_y);
                     }
                 }
                 selected_item = slot_index;

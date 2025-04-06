@@ -1,4 +1,3 @@
-
 ## 核心系統
 
 ### 1. 角色動畫系統 (Animation System)
@@ -193,6 +192,7 @@ if (instance_exists(obj_dialogue_manager) && obj_dialogue_manager.is_active) { /
 **主要組件:**
 - `obj_item_manager`: 管理物品數據和操作
 - `items_data.csv`: 物品數據配置文件
+- `global.player_inventory`: 全局玩家背包列表 (ds_list)
 
 **物品類型:**
 ```gml
@@ -217,15 +217,16 @@ enum ITEM_RARITY {
 ```
 
 **主要功能:**
-- 物品數據載入: `load_items_data()` (已重構，整合精靈ID查找)
-- 物品驗證: `validate_item_data(item_data)` (現在驗證包含精靈ID的結構)
+- 物品數據載入: `load_items_data()`
+- 物品驗證: `validate_item_data(item_data)`
 - 獲取物品: `get_item(item_id)`
-- 物品圖示獲取: `get_item_sprite(item_id)` (現在直接返回存儲的精靈ID)
-- 物品完整精靈獲取: `get_item_sprite_full(item_id)` (現在直接返回存儲的精靈ID)
-- 物品類型獲取: `get_item_type(item_id)` (現在基於物品的 Category 數值)
-- 背包操作: `add_item_to_inventory(item_id, quantity)` (改進了堆疊上限處理邏輯)
-- 物品使用: `use_item(item_id)`
-- 物品效果執行: `execute_item_effect(item_data)` (改進了對不同 UseEffect 的處理，例如非消耗品返回 false)
+- 物品圖示獲取: `get_item_sprite(item_id)`
+- 物品完整精靈獲取: `get_item_sprite_full(item_id)`
+- 物品類型獲取: `get_item_type(item_id)`
+- 背包操作: `add_item_to_inventory(item_id, quantity)`
+- **快捷欄指派**: `assign_item_to_hotbar(inventory_index)` (在 `obj_game_controller` 中定義，將指定背包索引的物品分配到第一個空的快捷欄位)
+- 物品使用: `use_item(item_id)` (注意：尚未與快捷欄選擇掛鉤)
+- 物品效果執行: `execute_item_effect(item_data)`
 
 **物品數據結構 (存儲在 `items_data` ds_map 中):**
 ```gml
@@ -267,9 +268,10 @@ UI 系統管理遊戲中的各種用戶界面元素。
 **主要組件:**
 - `obj_ui_manager`: 全局 UI 管理器
 - `parent_ui`: UI 元素的父類
+- `obj_main_hud`: **(新增)** 主界面 HUD，常駐顯示
 - `obj_battle_ui`: 戰鬥界面
-- `obj_inventory_ui`: 物品欄界面 (詳細描述見下)
-- `obj_item_info_popup`: 物品資訊彈出視窗 (詳細描述見下)
+- `obj_inventory_ui`: 物品欄界面
+- `obj_item_info_popup`: 物品資訊彈出視窗
 - `obj_monster_manager_ui`: 怪物管理界面
 - `obj_summon_ui`: 召喚界面
 - `obj_capture_ui`: 捕獲界面
@@ -278,18 +280,31 @@ UI 系統管理遊戲中的各種用戶界面元素。
 - UI 元素顯示與隱藏
 - UI 交互處理
 - UI 狀態同步
-- **物品欄管理 (`obj_inventory_ui`):**
+- **主界面 HUD (`obj_main_hud`)**:
+    - **常駐顯示**: 作為遊戲主要界面的一部分持續顯示。
+    - **快捷欄 (Hotbar)**:
+        - 在畫面底部顯示固定數量的快捷欄格子 (`hotbar_slots`)。
+        - **獨立數據**: 使用獨立的全局數組 `global.player_hotbar` 儲存快捷欄物品的背包索引 (不再直接映射背包前幾項)。
+        - **視覺顯示**: 根據 `global.player_hotbar` 繪製對應物品的圖示和數量，空位則顯示空格子。
+        - **圖示縮放與定位**: 正確處理不同尺寸的道具圖示精靈，將其縮放至目標尺寸 (如 80x80) 並在格子 (如 96x96) 內居中顯示。外框 (`spr_itemframe`) 也會被縮放以匹配格子尺寸。
+        - **選擇指示**: 使用高亮框 (黃色半透明矩形) 標示當前選中的快捷欄格子 (`selected_hotbar_slot`)。
+        - **選擇切換**: 支持數字鍵 1-0 和滑鼠滾輪切換 `selected_hotbar_slot`。
+    - **背包圖示**: 在右下角顯示背包圖示 (`spr_bag`)，點擊可觸發 `obj_game_controller.toggle_inventory_ui()` 打開/關閉物品欄。圖示位置會根據螢幕尺寸和邊距自動調整。
+    - **互動提示**: 在背包圖示旁顯示互動提示圖示 (`spr_touch`)，其可見性由 `Player` 物件根據是否靠近可互動目標來控制 (`show_interaction_prompt` 變數)。圖示位置會相對背包圖示自動調整。
+- **物品欄管理 (`obj_inventory_ui`)**:
     - **分類篩選**: 負責管理頂部的分類標籤頁 (Tabs)，並根據當前選中的分類（如消耗品、裝備、工具等）從 `global.player_inventory` 中嚴格篩選物品。
     - **物品展示**: 在網格佈局中繪製篩選後物品的圖示 (使用 `get_item_sprite` 返回的 ID) 和堆疊數量。
     - **滾動支持**: 實現物品列表的垂直滾動功能。
     - **交互處理**: 精確檢測滑鼠在物品圖標上的懸停和點擊事件（點擊範圍已校準）。
     - **信息彈窗觸發**: 滑鼠懸停時，創建或更新 `obj_item_info_popup` 實例以顯示物品詳情，並傳遞物品 ID。
     - **物品使用交互**: 可能處理雙擊或右鍵點擊事件，以啟動物品使用 (`use_item`) 或其他操作。
+    - **快捷欄指派入口**: 在點擊物品彈出的 `obj_item_info_popup` 中提供"指派快捷"按鈕。
 - **物品資訊彈窗 (`obj_item_info_popup`):**
     - **詳細信息展示**: 從 `obj_item_manager` 獲取指定物品 ID 的完整數據，並在彈窗中清晰地展示名稱、描述、類型、稀有度、效果、數值、標籤、售價等信息。
     - **智能定位與邊界檢測**: 根據觸發源（如滑鼠位置）智能定位，並確保彈窗始終完整顯示在屏幕範圍內。
     - **單例管理與清理**: 確保同一時間最多只有一個資訊彈窗可見，舊的彈窗會被自動清理。
     - **自動銷毀**: 當滑鼠移開對應物品或物品欄關閉時，彈窗會自動銷毀。
+    - **快捷欄指派**: 增加"指派快捷"按鈕。點擊後會調用 `obj_game_controller.assign_item_to_hotbar()`，將當前顯示的物品（通過其背包索引）指派到 `global.player_hotbar`。會檢查物品類型是否允許指派 (例如裝備不可指派)。
 - 拖放操作處理 (若有)
 - UI 動畫效果
 - 彈出提示管理
@@ -392,8 +407,6 @@ UI 系統管理遊戲中的各種用戶界面元素。
 
 ## 專案進度與未來展望
 
-(您可以在這裡添加專案的具體進度、已知問題和未來的開發計劃)
-
 - **已完成**:
     - 基礎八方向動畫系統
     - 事件驅動框架 (`obj_event_manager`)
@@ -401,21 +414,26 @@ UI 系統管理遊戲中的各種用戶界面元素。
     - 單位父類和基礎行為 (`obj_battle_unit_parent`)
     - 浮動文字和受傷特效
     - 非戰鬥狀態下的單位遊蕩行為
-    - **道具系統重構**:
-        - 使用 CSV 載入數據 (`obj_item_manager`)
-        - 支持消耗品、裝備、捕捉、材料、工具類型
-        - 在載入時直接查找並存儲精靈 ID
-        - 使用預設精靈處理未找到的資源
-        - 實現物品添加、使用和效果執行
+    - **道具系統重構**: (CSV 載入, 多類型支持, 精靈 ID 處理, 基礎操作)
     - **UI 系統**:
-        - 物品欄界面 (`obj_inventory_ui`) 支持分類篩選、滾動、精確交互
-        - 物品信息彈窗 (`obj_item_info_popup`) 支持智能定位和單例管理
+        - 物品欄界面 (`obj_inventory_ui`) 支持分類、滾動、交互
+        - 物品信息彈窗 (`obj_item_info_popup`) 支持智能定位、單例管理
+        - **主 HUD (`obj_main_hud`)**: 實現了帶有快捷欄、背包圖示和互動提示的基礎 HUD。
+        - **獨立快捷欄系統**: 實現了與主背包分離的快捷欄數據 (`global.player_hotbar`) 和通過彈窗按鈕指派物品的機制。
+        - **UI 視覺調整**: 完成了快捷欄、背包、互動提示的位置調整和圖示/外框的縮放與對齊。
 
 - **進行中/待辦**:
+    - **快捷欄功能完善**:
+        - 實現從快捷欄移除物品的功能。
+        - 實現快捷欄物品的拖放重排功能。
+        - **實現快捷欄物品的使用邏輯** (當前僅能選擇)。
+        - 提供更明確的視覺回饋（指派成功/失敗/已滿等）。
     - 完善具體的單位 AI
     - 實現裝備系統的效果
     - 實現捕捉系統的邏輯
     - 設計更多種類的敵人、物品和技能
+    - **快捷欄持久化**: 在實現存檔系統時，需要保存和加載 `global.player_hotbar`。
+    - **互動提示位置 (UX)**: 根據測試反饋，考慮是否將互動提示移到遊戲世界中的互動目標附近。
     - 優化性能
     - 添加音效和音樂
     - 設計遊戲關卡和流程
