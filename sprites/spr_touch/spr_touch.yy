@@ -23,7 +23,7 @@
   ],
   "name":"spr_touch",
   "nineSlice":null,
-  "origin":1,
+  "origin":4,
   "parent":{
     "name":"mainUI",
     "path":"folders/精灵/mainUI.yy",
@@ -76,7 +76,7 @@
     "visibleRange":null,
     "volume":1.0,
     "xorigin":64,
-    "yorigin":0,
+    "yorigin":64,
   },
   "swatchColours":null,
   "swfPrecision":0.5,

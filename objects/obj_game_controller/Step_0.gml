@@ -14,7 +14,7 @@ if (keyboard_check_pressed(ord("2"))) {
     toggle_capture_ui();
 }
 
-if (keyboard_check_pressed(ord("3"))) {
+if (keyboard_check_pressed(ord("O"))) {
     toggle_monster_manager_ui();
 }
 

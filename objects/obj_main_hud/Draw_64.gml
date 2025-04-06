@@ -128,12 +128,129 @@ for (var i = 0; i < hotbar_slots; i++) {
     current_visual_x += frame_visual_width + hotbar_spacing; // 使用視覺寬度 + 間距
 }
 
-// --- 繪製背包圖示 ---
-draw_sprite(bag_sprite, 0, bag_x, bag_y);
+// --- 繪製右下角圖示區域 ---
 
-// --- 繪製互動提示 (如果需要) ---
-if (show_interaction_prompt) {
+// 通用繪製設定
+var hint_font = fnt_dialogue; 
+var hint_color = c_white;
+var hint_bg_color = c_black; // 背景顏色
+var hint_bg_alpha = 0.5;    // 背景透明度
+var hint_bg_padding = 2;    // 背景比文字寬多少 (左右各加 padding)
+var hint_padding_x = 4; 
+var hint_padding_y = 4; 
+
+// 繪製背包圖示
+if (sprite_exists(bag_sprite)) {
+    draw_sprite(bag_sprite, 0, bag_x, bag_y);
+    
+    // --- 繪製背包快捷鍵提示 ('I') ---
+    var hint_char = "I";
+    draw_set_font(hint_font);
+    // 計算文字尺寸
+    var hint_w = string_width(hint_char);
+    var hint_h = string_height(hint_char);
+    // 計算視覺右下角絕對座標
+    var bag_visual_off_x = sprite_get_bbox_right(bag_sprite) - sprite_get_xoffset(bag_sprite);
+    var bag_visual_off_y = sprite_get_bbox_bottom(bag_sprite) - sprite_get_yoffset(bag_sprite);
+    var bag_visual_br_x = bag_x + bag_visual_off_x;
+    var bag_visual_br_y = bag_y + bag_visual_off_y;
+    // 計算文字定位點 (右下角)
+    var text_x = bag_visual_br_x - hint_padding_x;
+    var text_y = bag_visual_br_y - hint_padding_y;
+    
+    // 計算背景矩形範圍
+    var bg_x1 = text_x - hint_w - hint_bg_padding; 
+    var bg_y1 = text_y - hint_h - hint_bg_padding;
+    var bg_x2 = text_x + hint_bg_padding;
+    var bg_y2 = text_y + hint_bg_padding;
+    
+    // 繪製背景
+    draw_set_color(hint_bg_color);
+    draw_set_alpha(hint_bg_alpha);
+    draw_rectangle(bg_x1, bg_y1, bg_x2, bg_y2, false);
+    draw_set_alpha(1); // 恢復文字透明度
+
+    // 繪製文字
+    draw_set_color(hint_color);
+    draw_set_halign(fa_right);
+    draw_set_valign(fa_bottom);
+    draw_text(text_x, text_y, hint_char);
+}
+
+// 繪製怪物管理按鈕
+if (sprite_exists(monster_button_sprite)) {
+    draw_sprite(monster_button_sprite, 0, monster_button_x, monster_button_y);
+    
+    // --- 繪製怪物管理快捷鍵提示 ('O') --- 
+    var hint_char = "O"; // <-- 將 "3" 修改為 "O"
+    draw_set_font(hint_font);
+    // 計算文字尺寸
+    var hint_w = string_width(hint_char);
+    var hint_h = string_height(hint_char);
+    // 計算視覺右下角絕對座標
+    var mb_visual_off_x = sprite_get_bbox_right(monster_button_sprite) - sprite_get_xoffset(monster_button_sprite);
+    var mb_visual_off_y = sprite_get_bbox_bottom(monster_button_sprite) - sprite_get_yoffset(monster_button_sprite);
+    var mb_visual_br_x = monster_button_x + mb_visual_off_x;
+    var mb_visual_br_y = monster_button_y + mb_visual_off_y;
+    // 計算文字定位點 (右下角)
+    var text_x = mb_visual_br_x - hint_padding_x;
+    var text_y = mb_visual_br_y - hint_padding_y;
+    
+    // 計算背景矩形範圍
+    var bg_x1 = text_x - hint_w - hint_bg_padding; 
+    var bg_y1 = text_y - hint_h - hint_bg_padding;
+    var bg_x2 = text_x + hint_bg_padding;
+    var bg_y2 = text_y + hint_bg_padding;
+    
+    // 繪製背景
+    draw_set_color(hint_bg_color);
+    draw_set_alpha(hint_bg_alpha);
+    draw_rectangle(bg_x1, bg_y1, bg_x2, bg_y2, false);
+    draw_set_alpha(1); // 恢復文字透明度
+    
+    // 繪製文字
+    draw_set_color(hint_color);
+    draw_set_halign(fa_right);
+    draw_set_valign(fa_bottom);
+    draw_text(text_x, text_y, hint_char); 
+}
+
+// 繪製互動提示 (如果需要)
+if (show_interaction_prompt && sprite_exists(touch_sprite)) {
     draw_sprite(touch_sprite, 0, touch_x, touch_y);
+    
+    // --- 繪製互動快捷鍵提示 ('E') --- 
+    var hint_char = "E";
+    draw_set_font(hint_font);
+    // 計算文字尺寸
+    var hint_w = string_width(hint_char);
+    var hint_h = string_height(hint_char);
+    // 計算視覺右下角絕對座標
+    var touch_visual_off_x = sprite_get_bbox_right(touch_sprite) - sprite_get_xoffset(touch_sprite);
+    var touch_visual_off_y = sprite_get_bbox_bottom(touch_sprite) - sprite_get_yoffset(touch_sprite);
+    var touch_visual_br_x = touch_x + touch_visual_off_x;
+    var touch_visual_br_y = touch_y + touch_visual_off_y;
+    // 計算文字定位點 (右下角)
+    var text_x = touch_visual_br_x - hint_padding_x;
+    var text_y = touch_visual_br_y - hint_padding_y;
+    
+    // 計算背景矩形範圍
+    var bg_x1 = text_x - hint_w - hint_bg_padding; 
+    var bg_y1 = text_y - hint_h - hint_bg_padding;
+    var bg_x2 = text_x + hint_bg_padding;
+    var bg_y2 = text_y + hint_bg_padding;
+    
+    // 繪製背景
+    draw_set_color(hint_bg_color);
+    draw_set_alpha(hint_bg_alpha);
+    draw_rectangle(bg_x1, bg_y1, bg_x2, bg_y2, false);
+    draw_set_alpha(1); // 恢復文字透明度
+    
+    // 繪製文字
+    draw_set_color(hint_color);
+    draw_set_halign(fa_right);
+    draw_set_valign(fa_bottom);
+    draw_text(text_x, text_y, hint_char);
 }
 
 // --- 重設繪圖設定 ---

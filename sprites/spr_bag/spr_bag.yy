@@ -3,7 +3,7 @@
   "%Name":"spr_bag",
   "bboxMode":0,
   "bbox_bottom":103,
-  "bbox_left":25,
+  "bbox_left":26,
   "bbox_right":101,
   "bbox_top":22,
   "collisionKind":1,

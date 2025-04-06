@@ -258,10 +258,16 @@ toggle_summon_ui = function() {
 }
 
 toggle_monster_manager_ui = function() {
-    if (!ui_enabled || ui_cooldown > 0) return;
+    if (!ui_enabled || ui_cooldown > 0) {
+        show_debug_message("UI被禁用或在冷卻中 (怪物管理)");
+        return;
+    }
     
-    // 確保UI管理器存在
+    show_debug_message("===== 開始切換怪物管理UI =====");
+    
+    // 檢查並創建UI管理器
     if (!instance_exists(obj_ui_manager)) {
+        show_debug_message("創建UI管理器");
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
     
@@ -269,16 +275,32 @@ toggle_monster_manager_ui = function() {
     var monster_ui_inst;
     if (instance_exists(obj_monster_manager_ui)) {
         monster_ui_inst = instance_find(obj_monster_manager_ui, 0);
+        show_debug_message("找到現有的怪物管理UI實例");
+        
+        // 如果UI已經開啟，則關閉它
+        if (monster_ui_inst.active) {
+            show_debug_message("關閉已開啟的怪物管理UI");
+            with (obj_ui_manager) {
+                hide_ui(monster_ui_inst);
+            }
+            ui_cooldown = 5;
+            return;
+        }
     } else {
+        show_debug_message("創建新的怪物管理UI實例");
         monster_ui_inst = instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
     }
     
     // 使用UI管理器顯示UI
+    show_debug_message("顯示怪物管理UI");
     with (obj_ui_manager) {
+        register_ui(monster_ui_inst, "main");
         show_ui(monster_ui_inst, "main");
+        show_debug_message("怪物管理UI已註冊並顯示");
     }
     
     ui_cooldown = 5;
+    show_debug_message("===== 怪物管理UI切換完成 =====");
 }
 
 // obj_game_controller.gml 中的 toggle_capture_ui 函數
