@@ -125,7 +125,7 @@ if (array_length(tags) > 0) {
     current_y += tag_height + 5; // 確保 Y 座標更新
 }
 
-// --- 新增：繪製指派快捷按鈕 ---
+// --- 修改：繪製指派/取消快捷按鈕 ---
 assign_button_x = x + (width - assign_button_width) / 2; // 水平置中
 assign_button_y = y + height - padding - assign_button_height; // 底部對齊
 
@@ -136,19 +136,24 @@ if (item_data != noone && item_data.Type == "EQUIPMENT") {
 }
 
 if (can_assign) {
+    // <-- 修改：根據狀態決定文字和顏色 -->
+    var button_text = is_assigned_to_hotbar ? unassign_button_text : assign_button_text;
+    var button_color = is_assigned_to_hotbar ? unassign_color : assign_color;
+    // <-- 結束修改 -->
+
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     
-    // 繪製按鈕背景
-    draw_set_color(c_gray); // 或其他顏色
+    // 繪製按鈕背景 (使用 button_color)
+    draw_set_color(button_color); 
     draw_rectangle(assign_button_x, assign_button_y, 
                   assign_button_x + assign_button_width, assign_button_y + assign_button_height, false);
                   
-    // 繪製按鈕文字
-    draw_set_color(c_white);
+    // 繪製按鈕文字 (使用 button_text)
+    draw_set_color(c_white); // 文字顏色保持白色
     draw_text(assign_button_x + assign_button_width / 2, 
               assign_button_y + assign_button_height / 2, 
-              assign_button_text);
+              button_text);
 
     // 重設繪圖設定
     draw_set_halign(fa_left);

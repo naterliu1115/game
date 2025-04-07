@@ -438,11 +438,6 @@ toggle_inventory_ui = function() {
         instance_create_layer(0, 0, "Instances", obj_event_manager);
     }
     
-    if (!instance_exists(obj_item_manager)) {
-        show_debug_message("創建物品管理器");
-        instance_create_layer(0, 0, "Instances", obj_item_manager);
-    }
-    
     // 確保全局背包存在
     if (!variable_global_exists("player_inventory")) {
         show_debug_message("創建玩家背包");
@@ -490,64 +485,3 @@ toggle_inventory_ui = function() {
     ui_cooldown = 5;
     show_debug_message("===== 道具UI切換完成 =====");
 };
-
-// 初始化全局快捷欄數據結構
-global.player_hotbar_slots = 10; // 與 obj_main_hud 的 hotbar_slots 保持一致
-global.player_hotbar = array_create(global.player_hotbar_slots, noone);
-show_debug_message("全局快捷欄數據已初始化，大小：" + string(global.player_hotbar_slots));
-
-// 指派物品到快捷欄的函數
-assign_item_to_hotbar = function(inventory_index) {
-    show_debug_message("嘗試將背包索引 " + string(inventory_index) + " 指派到快捷欄");
-    
-    // 檢查 inventory_index 是否有效
-    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
-        show_debug_message("錯誤：玩家背包列表不存在。");
-        return false;
-    }
-    if (inventory_index < 0 || inventory_index >= ds_list_size(global.player_inventory)) {
-        show_debug_message("錯誤：無效的背包索引 " + string(inventory_index));
-        return false;
-    }
-    
-    // 檢查物品是否已經在快捷欄中 (可選)
-    for (var i = 0; i < global.player_hotbar_slots; i++) {
-        if (global.player_hotbar[i] == inventory_index) {
-            show_debug_message("物品已在快捷欄位置 " + string(i));
-            // 可以選擇直接返回 true，或通知玩家
-            if (instance_exists(obj_main_hud)) {
-                 // 假設 obj_main_hud 有 show_info 方法
-                 // obj_main_hud.show_info("物品已在快捷欄"); 
-            }
-            return true; 
-        }
-    }
-
-    // 查找第一個空位
-    var assigned = false;
-    for (var i = 0; i < global.player_hotbar_slots; i++) {
-        if (global.player_hotbar[i] == noone) {
-            global.player_hotbar[i] = inventory_index;
-            show_debug_message("物品成功指派到快捷欄位置 " + string(i));
-            assigned = true;
-            
-            // 通知 HUD 更新 (如果 HUD 存在)
-            if (instance_exists(obj_main_hud)) {
-                // 可以設置一個標誌，讓 HUD 在 Draw 事件中檢測並更新
-                // obj_main_hud.needs_redraw = true; 
-            }
-            break; // 找到空位就退出循環
-        }
-    }
-
-    if (!assigned) {
-        show_debug_message("快捷欄已滿，無法指派物品。");
-        // 通知玩家
-         if (instance_exists(obj_main_hud)) {
-             // obj_main_hud.show_info("快捷欄已滿"); 
-         }
-        return false;
-    }
-    
-    return true;
-}

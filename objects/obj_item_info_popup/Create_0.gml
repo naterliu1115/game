@@ -23,6 +23,7 @@ ui_y = (display_get_gui_height() - height) / 2;
 // 物品資訊
 item_data = noone;
 inventory_index = -1; // 新增：儲存物品在背包中的索引
+is_assigned_to_hotbar = false; // <-- 新增: 追蹤是否已指派
 title = "";
 description = "";
 rarity = "";
@@ -63,6 +64,9 @@ effect_descriptions[? "none"] = "無";
 
 // 新增：按鈕相關變數
 assign_button_text = "指派快捷";
+unassign_button_text = "取消指派"; // <-- 新增
+assign_color = make_color_rgb(60, 180, 75); // <-- 新增 (綠色)
+unassign_color = make_color_rgb(230, 25, 75); // <-- 新增 (紅色)
 assign_button_height = 30;
 assign_button_width = 100;
 assign_button_x = 0; // 會在 Draw 事件中計算
@@ -92,8 +96,35 @@ function setup_item_data(_item_data, _inventory_index) {
     sell_price = _item_data.SellPrice;
     tags = _item_data.Tags;
     
+    // <-- 修改: 加入更詳細的檢查 -->
+    show_debug_message("setup_item_data: 檢查物品管理器和快捷欄狀態...");
+    is_assigned_to_hotbar = false; // 先預設為 false
+
+    if (instance_exists(obj_item_manager)) {
+        show_debug_message("  - obj_item_manager 實例存在。");
+
+        // 獲取實例 ID，避免直接使用對象索引
+        var item_manager_inst = instance_find(obj_item_manager, 0);
+
+        // 檢查函數是否存在於該實例上
+        if (variable_instance_exists(item_manager_inst, "get_hotbar_slot_for_item")) {
+             show_debug_message("  - get_hotbar_slot_for_item 函數存在。");
+             var assigned_slot = item_manager_inst.get_hotbar_slot_for_item(_inventory_index);
+             is_assigned_to_hotbar = (assigned_slot != -1);
+             if (global.game_debug_mode) {
+                 show_debug_message("  - 物品索引 " + string(_inventory_index) + " 指派狀態: " + string(is_assigned_to_hotbar) + (is_assigned_to_hotbar ? " (欄位 " + string(assigned_slot) + ")" : ""));
+             }
+        } else {
+            show_debug_message("  - 錯誤：obj_item_manager 實例上找不到 get_hotbar_slot_for_item 函數！");
+        }
+
+    } else {
+        show_debug_message("  - 錯誤：obj_item_manager 實例不存在！無法檢查快捷欄指派狀態。");
+    }
+    // <-- 結束修改 -->
+
     if (global.game_debug_mode) {
-        show_debug_message("物品資訊彈窗 - 設置物品數據：" + title + " (索引: " + string(inventory_index) + ")");
+        show_debug_message("物品資訊彈窗 - 設置物品數據完成：" + title + " (索引: " + string(inventory_index) + ")");
     }
 }
 

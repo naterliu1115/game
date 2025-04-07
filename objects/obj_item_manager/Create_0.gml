@@ -370,10 +370,109 @@ function get_item_sprite_full(item_id) {
     return asset_get_index("spr_gold");
 }
 
+show_debug_message("obj_item_manager Create: 即將調用 load_items_data()...");
+
 // 初始化時載入數據
 if (!load_items_data()) {
-    show_debug_message("錯誤：物品數據載入失敗");
+    show_debug_message("錯誤：物品數據載入失敗 (load_items_data 返回 false)");
+    // 在這裡考慮是否要 instance_destroy() 或設置一個錯誤狀態？
+} else {
+     show_debug_message("obj_item_manager Create: load_items_data() 調用成功完成。");
 }
+
+// --- 新增/遷移：快捷欄管理 ---
+global.player_hotbar_slots = 10;
+global.player_hotbar = array_create(global.player_hotbar_slots, noone);
+show_debug_message("  - 全局快捷欄數據已初始化");
+
+// 指派物品到快捷欄的函數
+assign_item_to_hotbar = function(inventory_index) {
+    show_debug_message("物品管理器：嘗試將背包索引 " + string(inventory_index) + " 指派到快捷欄");
+
+    // 檢查 inventory_index 是否有效
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+        show_debug_message("錯誤：玩家背包列表不存在。");
+        return false;
+    }
+    if (inventory_index < 0 || inventory_index >= ds_list_size(global.player_inventory)) {
+        show_debug_message("錯誤：無效的背包索引 " + string(inventory_index));
+        return false;
+    }
+
+    // 檢查物品是否已經在快捷欄中
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == inventory_index) {
+            show_debug_message("物品已在快捷欄位置 " + string(i));
+            // TODO: 通知玩家物品已指派
+            return true;
+        }
+    }
+
+    // 查找第一個空位
+    var assigned_slot = -1;
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == noone) {
+            global.player_hotbar[i] = inventory_index;
+            show_debug_message("物品成功指派到快捷欄位置 " + string(i));
+            assigned_slot = i;
+            break; // 找到空位就退出循環
+        }
+    }
+
+    if (assigned_slot == -1) {
+        show_debug_message("快捷欄已滿，無法指派物品。");
+        // TODO: 通知玩家快捷欄已滿
+        return false;
+    }
+
+    // 觸發更新事件 (可選，通知 HUD 等)
+    // trigger_event("hotbar_updated", {slot: assigned_slot, index: inventory_index});
+    show_debug_message("  - assign_item_to_hotbar 函數已定義");
+    return true;
+}
+
+// 取消物品的快捷欄指派
+unassign_item_from_hotbar = function(inventory_index) {
+    var unassigned = false;
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == inventory_index) {
+            global.player_hotbar[i] = noone; // 使用 noone 表示空位
+            show_debug_message("物品索引 " + string(inventory_index) + " 已從快捷欄位 " + string(i) + " 取消指派");
+            unassigned = true;
+            // 觸發更新事件 (可選)
+            // trigger_event("hotbar_updated", {slot: i, index: noone});
+            break; // 找到並取消後就退出
+        }
+    }
+    if (!unassigned) {
+         show_debug_message("嘗試取消指派失敗：物品索引 " + string(inventory_index) + " 未在快捷欄找到");
+    }
+    show_debug_message("  - unassign_item_from_hotbar 函數已定義");
+    return unassigned;
+}
+
+// 新增：查詢物品被指派到哪個快捷欄
+get_hotbar_slot_for_item = function(inventory_index) {
+    if (inventory_index == -1) return -1; // 無效索引直接返回
+    for (var i = 0; i < global.player_hotbar_slots; i++) {
+        if (global.player_hotbar[i] == inventory_index) {
+            return i; // 返回快捷欄位索引 (0-9)
+        }
+    }
+    return -1; // 未找到
+}
+
+// 新增：獲取指定快捷欄位的物品背包索引
+get_item_in_hotbar_slot = function(hotbar_slot) {
+    if (hotbar_slot < 0 || hotbar_slot >= global.player_hotbar_slots) {
+        return noone; // 無效欄位
+    }
+    return global.player_hotbar[hotbar_slot]; // 返回背包索引或 noone
+}
+show_debug_message("  - get_item_in_hotbar_slot 函數已定義");
+show_debug_message("obj_item_manager Create: 快捷欄管理函數定義完成。");
+
+// --- 結束 快捷欄管理 ---
 
 // 清理函數
 function cleanup_item_manager() {
@@ -455,8 +554,13 @@ function test_item_manager() {
         }
     }
     
+    // 可以添加快捷欄相關測試
+    
     show_debug_message("===== 道具管理器測試完成 =====");
 }
 
-// 執行測試
-test_item_manager();
+// 調用測試 (如果需要)
+// test_item_manager();
+
+show_debug_message("obj_item_manager Create: Create 事件執行完畢。");
+

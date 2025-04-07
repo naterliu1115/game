@@ -1,6 +1,8 @@
 // obj_main_hud - Create_0.gml
 
 // --- 狀態變數 ---
+active = true; // <-- 新增：初始化 active 狀態
+visible = true; // <-- 新增：同時初始化 visible 狀態 (通常 HUD 也是可見的)
 show_interaction_prompt = false; // 是否顯示互動提示圖示 (由 Player 物件控制)
 allow_player_movement = true;    // HUD 預設不阻止玩家移動
 
@@ -68,9 +70,60 @@ var touch_bbox_right = sprite_get_bbox_right(touch_sprite);
 var touch_visual_width = touch_bbox_right - touch_bbox_left + 1;
 // 計算中心點 X (基於怪物按鈕中心、兩者視覺半寬、間距)
 touch_x = monster_button_x - (mb_visual_width / 2) - icon_spacing - (touch_visual_width / 2);
-touch_y = bag_y; // 垂直對齊
+touch_y = bag_y - 10; // 垂直對齊<-- 控制互動提示的 Y 軸
+
+// --- 拖放狀態變數 (新增) ---
+is_dragging_hotbar_item = false;
+dragged_item_inventory_index = noone;
+dragged_from_hotbar_slot = -1;
+dragged_item_sprite = -1;
+drag_item_x = 0;
+drag_item_y = 0;
 
 // --- 其他設定 (未來可能用到) ---
-selected_hotbar_slot = 0; 
+selected_hotbar_slot = -1; // <-- 修改：初始設為 -1，表示沒有選中
+
+// --- 輔助函數 (新增) ---
+// 根據 GUI 座標獲取對應的快捷欄索引 (0-8)，如果不在任何格子內則返回 -1
+function get_hotbar_slot_at_position(mx, my) {
+    // --- 同步 Draw 事件邏輯：獲取外框的視覺尺寸 --- 
+    var current_frame_visual_width = 96; // 後備值
+    var current_frame_visual_height = 96; // 後備值
+    if (sprite_exists(spr_itemframe)) {
+        var frame_target_size_ref = 96; 
+        var frame_original_width = sprite_get_width(spr_itemframe);
+        var _frame_original_height = sprite_get_height(spr_itemframe); // 使用不同名稱
+        var frame_scale = (frame_original_width > 0) ? frame_target_size_ref / frame_original_width : 1;
+        var _bbox_left = sprite_get_bbox_left(spr_itemframe);
+        var _bbox_right = sprite_get_bbox_right(spr_itemframe);
+        var _bbox_top = sprite_get_bbox_top(spr_itemframe);
+        var _bbox_bottom = sprite_get_bbox_bottom(spr_itemframe);
+        var bbox_width = _bbox_right - _bbox_left + 1;
+        var bbox_height = _bbox_bottom - _bbox_top + 1;
+        current_frame_visual_width = bbox_width * frame_scale;
+        current_frame_visual_height = bbox_height * frame_scale;
+    }
+    // --- 結束獲取視覺尺寸 ---
+
+    // --- 同步 Draw 事件邏輯：追蹤視覺內容的起始 X ---
+    var current_visual_content_x = hotbar_start_x;
+
+    for (var i = 0; i < hotbar_slots; i++) {
+        // --- 計算第 i 個格子實際繪製的矩形範圍 ---
+        var slot_visual_x1 = current_visual_content_x;
+        var slot_visual_y1 = hotbar_y; // Y 座標相對簡單，直接使用 hotbar_y
+        var slot_visual_x2 = slot_visual_x1 + current_frame_visual_width;
+        var slot_visual_y2 = slot_visual_y1 + current_frame_visual_height;
+
+        // 使用滑鼠座標檢查是否在「實際繪製」的矩形範圍內
+        if (point_in_rectangle(mx, my, slot_visual_x1, slot_visual_y1, slot_visual_x2, slot_visual_y2)) {
+            return i; // 返回格子索引
+        }
+
+        // --- 同步 Draw 事件邏輯：更新下一個視覺內容的起始 X ---
+        current_visual_content_x += current_frame_visual_width + hotbar_spacing;
+    }
+    return -1; // 不在任何格子內
+}
 
 show_debug_message("obj_main_hud Created");

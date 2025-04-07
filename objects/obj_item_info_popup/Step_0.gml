@@ -61,9 +61,9 @@ if (keyboard_check_pressed(vk_escape) ||
     }
 }
 
-// --- 新增：檢查指派快捷按鈕點擊 ---
+// --- 修改：檢查指派/取消快捷按鈕點擊 ---
 if (mouse_check_button_pressed(mb_left)) {
-    // 再次檢查點擊位置是否在按鈕內
+    // (注意：這裡依賴 Draw 事件計算的 assign_button_x/y，理想情況下應在 Create 或 Step 計算)
     if (point_in_rectangle(mouse_gui_x, mouse_gui_y, 
                          assign_button_x, assign_button_y, 
                          assign_button_x + assign_button_width, assign_button_y + assign_button_height)) {
@@ -74,14 +74,42 @@ if (mouse_check_button_pressed(mb_left)) {
             can_assign = false;
         }
         
-        if (can_assign && inventory_index != -1 && instance_exists(obj_game_controller)) {
+        if (can_assign && inventory_index != -1) { // 移除 instance_exists 檢查，下面會獲取實例
+
+            // <-- 新增：獲取 Item Manager 實例 -->
+            var item_manager_inst = instance_find(obj_item_manager, 0);
+            if (item_manager_inst == noone) {
+                 show_debug_message("錯誤：點擊按鈕時找不到 obj_item_manager 實例！");
+                 close();
+                 exit;
+            }
+            // <-- 結束獲取實例 -->
+
             if (global.game_debug_mode) {
-                show_debug_message("點擊指派快捷按鈕，物品索引：" + string(inventory_index));
+                 show_debug_message("點擊指派/取消按鈕，物品索引：" + string(inventory_index) + "，當前狀態：" + (is_assigned_to_hotbar ? "已指派" : "未指派"));
             }
-            // 呼叫控制器的指派函數
-            with (obj_game_controller) {
-                assign_item_to_hotbar(other.inventory_index);
+            
+            // <-- 修改：根據狀態呼叫不同函數 (使用實例 ID) -->
+            var success = false;
+            if (is_assigned_to_hotbar) {
+                // 如果已指派，則取消指派
+                if (variable_instance_exists(item_manager_inst, "unassign_item_from_hotbar")) { // 檢查函數是否存在
+                    success = item_manager_inst.unassign_item_from_hotbar(inventory_index);
+                    if (success && global.game_debug_mode) show_debug_message("取消指派成功");
+                } else {
+                     show_debug_message("錯誤：實例 " + string(item_manager_inst) + " 上找不到 unassign_item_from_hotbar 函數！");
+                }
+            } else {
+                // 如果未指派，則指派 (到第一個空位)
+                if (variable_instance_exists(item_manager_inst, "assign_item_to_hotbar")) { // 檢查函數是否存在
+                    success = item_manager_inst.assign_item_to_hotbar(inventory_index);
+                    if (success && global.game_debug_mode) show_debug_message("指派成功");
+                 } else {
+                      show_debug_message("錯誤：實例 " + string(item_manager_inst) + " 上找不到 assign_item_to_hotbar 函數！");
+                 }
             }
+            // <-- 結束修改 -->
+            
             // 點擊後關閉彈窗
             close();
             exit; 
@@ -89,7 +117,7 @@ if (mouse_check_button_pressed(mb_left)) {
             if (global.game_debug_mode) {
                 if (!can_assign) show_debug_message("此物品類型不可指派快捷");
                 if (inventory_index == -1) show_debug_message("錯誤：物品索引無效");
-                if (!instance_exists(obj_game_controller)) show_debug_message("錯誤：找不到遊戲控制器");
+                 // 不再檢查管理器是否存在，因為上面已經獲取了
             }
         }
     }

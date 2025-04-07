@@ -45,9 +45,7 @@ if (sprite_exists(spr_itemframe)) {
 var current_visual_x = hotbar_start_x;
 
 for (var i = 0; i < hotbar_slots; i++) {
-    // 當前格子的邏輯 Y 座標
-    var _y = hotbar_y; 
-    // 當前格子的視覺內容起始 Y 座標 (與 _y 對齊)
+    var _y = hotbar_y;
     var visual_content_start_y = _y;
 
     // --- 繪製外框 --- 
@@ -66,7 +64,9 @@ for (var i = 0; i < hotbar_slots; i++) {
     }
 
     // --- 繪製快捷欄物品 --- 
-    if (hotbar_ready && inventory_ready && item_manager_exists) {
+    var skip_drawing_item = (is_dragging_hotbar_item && i == dragged_from_hotbar_slot);
+    
+    if (!skip_drawing_item && hotbar_ready && inventory_ready && item_manager_exists) {
         var inventory_index = global.player_hotbar[i];
         if (inventory_index != noone && inventory_index >= 0 && inventory_index < ds_list_size(global.player_inventory)) {
             var item = global.player_inventory[| inventory_index];
@@ -127,6 +127,26 @@ for (var i = 0; i < hotbar_slots; i++) {
     // 更新下一個視覺元件的起始 X 座標
     current_visual_x += frame_visual_width + hotbar_spacing; // 使用視覺寬度 + 間距
 }
+
+// --- 新增：繪製正在拖曳的物品 --- 
+if (is_dragging_hotbar_item && sprite_exists(dragged_item_sprite)) {
+    // 使用與快捷欄內繪製相同的目標尺寸和縮放邏輯
+    var target_size = 80; 
+    var spr_w = sprite_get_width(dragged_item_sprite);
+    var spr_h = sprite_get_height(dragged_item_sprite);
+    var scale_x = (spr_w > 0) ? target_size / spr_w : 1;
+    var scale_y = (spr_h > 0) ? target_size / spr_h : 1;
+    
+    // 繪製中心點就是跟隨滑鼠的 drag_item_x, drag_item_y (可以稍微偏移)
+    var draw_drag_x = drag_item_x; 
+    var draw_drag_y = drag_item_y;
+    
+    // 設置半透明效果，表示正在拖曳
+    draw_set_alpha(0.7);
+    draw_sprite_ext(dragged_item_sprite, 0, draw_drag_x, draw_drag_y, scale_x, scale_y, 0, c_white, 1);
+    draw_set_alpha(1); // 恢復透明度
+}
+// --- 結束繪製拖曳物品 --- 
 
 // --- 繪製右下角圖示區域 ---
 
