@@ -74,34 +74,64 @@ for (var i = 0; i < hotbar_slots; i++) {
                 var current_item_id = item.id;
                 var current_item_quantity = item.quantity;
                 with (obj_item_manager) {
-                    var item_sprite = get_item_sprite(current_item_id); 
+                    var item_sprite = get_item_sprite(current_item_id);
                     if (sprite_exists(item_sprite)) {
-                        // 圖示目標尺寸 (保持內縮)
-                        var target_size = 80; 
+                        // --- 修改開始 ---
+                        // 預設圖示目標繪製尺寸 (在 96x96 的框內)
+                        var default_target_size = 80;
+                        var current_target_size = default_target_size; // 初始化為預設值
+
+                        // [特殊規則] 如果是藥水 (ID 1001-1003)，則稍微縮小一點，避免滿版看起來過大
+                        if (current_item_id >= 1001 && current_item_id <= 1003) {
+                            current_target_size = default_target_size * 0.7; // <-- 將藥水目標尺寸縮小為 80%
+                        }
+                        // --- 修改結束 ---
+
                         var spr_w = sprite_get_width(item_sprite);
                         var spr_h = sprite_get_height(item_sprite);
-                        var scale_x = (spr_w > 0) ? target_size / spr_w : 1;
-                        var scale_y = (spr_h > 0) ? target_size / spr_h : 1;
-                        
-                        // 計算繪製中心點 (基於視覺外框的中心，直接使用外層的區域變數)
+                        // --- 修改開始 ---
+                        // 使用 current_target_size 計算縮放比例
+                        var scale_x = (spr_w > 0) ? current_target_size / spr_w : 1;
+                        var scale_y = (spr_h > 0) ? current_target_size / spr_h : 1;
+                        // --- 修改結束 ---
+
+                        // --- DEBUGGING: 印出藥水繪製資訊 ---
+                        // [移除] 這段偵錯訊息不再需要
+                        // if (current_item_id >= 1001 && current_item_id <= 1003) {
+                        //     show_debug_message("繪製藥水 ID: " + string(current_item_id) +
+                        //                        ", 原始尺寸: " + string(spr_w) + "x" + string(spr_h) +
+                        //                        ", 目標尺寸: " + string(current_target_size) +
+                        //                        ", 縮放比例: " + string(scale_x) + "x" + string(scale_y));
+                        // }
+                        // --- END DEBUGGING ---
+
+                        // 計算繪製中心點 (基於視覺外框的中心)
                         var draw_center_x = current_visual_x + frame_visual_width / 2;
                         var draw_center_y = visual_content_start_y + frame_visual_height / 2;
-                        
-                        // 繪製圖示
+
+                        // 繪製圖示 (使用計算好的縮放比例)
                         draw_sprite_ext(item_sprite, 0, draw_center_x, draw_center_y, scale_x, scale_y, 0, c_white, 1);
-                        
-                        // 繪製數量 (基於圖示右下角)
+
+                        // 繪製數量 (統一基於格子右下角)
                         if (current_item_quantity > 1) {
-                            draw_set_halign(fa_right);  
-                            draw_set_valign(fa_bottom); 
+                            draw_set_halign(fa_right);
+                            draw_set_valign(fa_bottom);
                             draw_set_color(c_white);
-                            var icon_br_x = draw_center_x + target_size / 2;
-                            var icon_br_y = draw_center_y + target_size / 2;
-                            var text_offset_x = -2;
-                            var text_offset_y = -2;
-                            draw_text(icon_br_x + text_offset_x, icon_br_y + text_offset_y, string(current_item_quantity));
-                            draw_set_halign(fa_left);
-                            draw_set_valign(fa_top);
+                            // --- 修改開始 ---
+                            // 將數量定位點改為基於快捷欄「格子」的視覺右下角，以保持一致性
+                            var slot_visual_right = current_visual_x + frame_visual_width;
+                            var slot_visual_bottom = visual_content_start_y + frame_visual_height;
+                            var quantity_padding_x = 5; // 離格子右邊界的 X 距離 (可調整)
+                            var quantity_padding_y = 5; // 離格子下邊界的 Y 距離 (可調整)
+
+                            // 計算最終繪製位置 (由於對齊是 right, bottom，這就是繪製點)
+                            var text_draw_x = slot_visual_right - quantity_padding_x;
+                            var text_draw_y = slot_visual_bottom - quantity_padding_y;
+                            // --- 修改結束 ---
+
+                            draw_text(text_draw_x, text_draw_y, string(current_item_quantity)); // 使用新的座標
+                            draw_set_halign(fa_left); // 恢復預設對齊
+                            draw_set_valign(fa_top);  // 恢復預設對齊
                         }
                     }
                 }
