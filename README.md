@@ -257,6 +257,8 @@ enum ITEM_RARITY {
     - 移除了 `preload_item_sprites` 和 `item_sprites`。
     - `load_items_data` 現在負責讀取 CSV、清理精靈名稱字符串 (`string_trim`)、查找精靈資源 (`asset_get_index`, `sprite_exists`)，並將獲取到的**精靈 ID** 直接存儲在物品數據結構中。
     - 如果 CSV 中指定的精靈找不到，則使用全局變數 `global.DEFAULT_SPRITE_ID` (預設為 `spr_gold` 的 ID) 作為後備。
+    - **圖示處理優化**: 移除了佔位符繪製代碼，所有無效的道具圖示都統一使用 `spr_gold` 作為預設圖示。
+    - **移除 `scr_sprite_diagnostics` 腳本**: 由於精靈處理邏輯簡化，不再需要複雜的診斷和修復機制，已移除此腳本。
 - 物品載入失敗處理。
 - 無效物品ID處理。
 - 物品驗證失敗處理 (基於更新後的數據結構)。
@@ -497,6 +499,7 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
     - **道具系統**:
       - CSV 載入, 多類型支持, 精靈 ID 處理, 基礎背包操作
       - **重構快捷欄管理邏輯至 `obj_item_manager`**
+      - **圖示處理優化**: 簡化精靈加載邏輯，統一使用 `spr_gold` 作為預設圖示，移除了佔位符繪製代碼和複雜的診斷機制
     - **UI 系統**:
       - 物品欄界面 (`obj_inventory_ui`) 支持分類、滾動、交互
       - 物品信息彈窗 (`obj_item_info_popup`) 支持智能定位、單例管理

@@ -1,12 +1,12 @@
 ID,Name,Type,Description,Rarity,IconSprite,UseEffect,EffectValue,StackMax,SellPrice,Tags,Category
-1001,小型回復藥水,CONSUMABLE,回復少量HP,COMMON,spr_potion_small,heal,20,99,10,healing;consumable,0
-1002,中型回復藥水,CONSUMABLE,回復中量HP,UNCOMMON,spr_potion_medium,heal,50,99,25,healing;consumable,0
-1003,大型回復藥水,CONSUMABLE,回復大量HP,RARE,spr_potion_large,heal,100,99,50,healing;consumable,0
+1001,小型回復藥水,CONSUMABLE,回復少量HP,COMMON,spr_potion_red,heal,20,99,10,healing;consumable,0
+1002,中型回復藥水,CONSUMABLE,回復中量HP,UNCOMMON,spr_potion_red,heal,50,99,25,healing;consumable,0
+1003,大型回復藥水,CONSUMABLE,回復大量HP,RARE,spr_potion_red,heal,100,99,50,healing;consumable,0
 2001,銅劍,EQUIPMENT,基礎武器,COMMON,spr_sword_copper,atk_boost,5,1,100,weapon;sword,1
 2002,鐵劍,EQUIPMENT,中級武器,UNCOMMON,spr_sword_iron,atk_boost,10,1,250,weapon;sword,1
 2003,鋼劍,EQUIPMENT,高級武器,RARE,spr_sword_steel,atk_boost,15,1,500,weapon;sword,1
 3001,普通球,CAPTURE,基礎捕捉道具,COMMON,spr_ball_normal,capture,1,99,50,capture;ball,2
 3002,高級球,CAPTURE,提高捕捉率的球,UNCOMMON,spr_ball_great,capture,1.5,99,100,capture;ball,2
-4001,銅礦石,MATERIAL,基礎鍛造材料,COMMON,spr_ore,none,0,999,5,material;ore,3
-4002,鐵礦石,MATERIAL,中級鍛造材料,UNCOMMON,spr_ore_iron,none,0,999,15,material;ore,3
+4001,銅礦石,MATERIAL,基礎鍛造材料,COMMON,spr_copper,none,0,999,5,material;ore,3
+4002,鐵礦石,MATERIAL,中級鍛造材料,UNCOMMON,spr_mineral,none,0,999,15,material;ore,3
 5001,採礦鎬,TOOL,用於採集礦物的工具,COMMON,spr_pickaxe,mining,1,1,100,tool;mining,4

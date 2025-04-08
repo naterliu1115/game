@@ -27,23 +27,23 @@ function draw_text_safe(x, y, text, color = c_white, halign = TEXT_ALIGN_LEFT, v
     var original_color = draw_get_color();
     var original_halign = draw_get_halign();
     var original_valign = draw_get_valign();
-    
+
     draw_set_color(color);
-    
+
     // 將自定義的對齊常量映射到 GameMaker 的內建常量
     var gm_halign = fa_left;
     if (halign == TEXT_ALIGN_CENTER) gm_halign = fa_center;
     else if (halign == TEXT_ALIGN_RIGHT) gm_halign = fa_right;
-    
+
     var gm_valign = fa_top;
     if (valign == TEXT_VALIGN_MIDDLE) gm_valign = fa_middle;
     else if (valign == TEXT_VALIGN_BOTTOM) gm_valign = fa_bottom;
-    
+
     draw_set_halign(gm_halign);
     draw_set_valign(gm_valign);
-    
+
     draw_text(x, y, string(text));
-    
+
     draw_set_color(original_color);
     draw_set_halign(original_halign);
     draw_set_valign(original_valign);
@@ -63,30 +63,30 @@ function draw_text_outlined(x, y, text, text_color = c_white, outline_color = c_
     var original_color = draw_get_color();
     var original_halign = draw_get_halign();
     var original_valign = draw_get_valign();
-    
+
     // 將自定義的對齊常量映射到 GameMaker 的內建常量
     var gm_halign = fa_left;
     if (halign == TEXT_ALIGN_CENTER) gm_halign = fa_center;
     else if (halign == TEXT_ALIGN_RIGHT) gm_halign = fa_right;
-    
+
     var gm_valign = fa_top;
     if (valign == TEXT_VALIGN_MIDDLE) gm_valign = fa_middle;
     else if (valign == TEXT_VALIGN_BOTTOM) gm_valign = fa_bottom;
-    
+
     draw_set_halign(gm_halign);
     draw_set_valign(gm_valign);
-    
+
     // 繪製輪廓
     draw_set_color(outline_color);
     draw_text_transformed(x+1, y+1, string(text), scale, scale, 0);
     draw_text_transformed(x-1, y-1, string(text), scale, scale, 0);
     draw_text_transformed(x+1, y-1, string(text), scale, scale, 0);
     draw_text_transformed(x-1, y+1, string(text), scale, scale, 0);
-    
+
     // 繪製主要文字
     draw_set_color(text_color);
     draw_text_transformed(x, y, string(text), scale, scale, 0);
-    
+
     // 恢復原始設置
     draw_set_color(original_color);
     draw_set_halign(original_halign);
@@ -118,26 +118,26 @@ function draw_sprite_safe(sprite_id, subimg, x, y, xscale = 1, yscale = 1, rot =
         // 繪製替代圖形
         var original_color = draw_get_color();
         var original_alpha = draw_get_alpha();
-        
+
         draw_set_color(col);
         draw_set_alpha(alpha);
-        
+
         // 繪製簡單的替代形狀
         var size = 5 * max(xscale, yscale);
         draw_rectangle(x - size, y - size, x + size, y + size, false);
         draw_set_color(c_black);
         draw_line(x - size, y - size, x + size, y + size);
         draw_line(x - size, y + size, x + size, y - size);
-        
+
         // 恢復原始繪圖設置
         draw_set_color(original_color);
         draw_set_alpha(original_alpha);
-        
+
         // 如果是調試模式，顯示缺失資源警告
         if (variable_global_exists("game_debug_mode") && global.game_debug_mode) {
             draw_text(x, y + 15, "缺: " + string(sprite_id));
         }
-        
+
         return false;
     }
 }
@@ -159,23 +159,23 @@ function draw_ui_panel(x, y, width, height, title, show_title) {
     var bg_color = make_color_rgb(40, 40, 40);
     var frame_color = make_color_rgb(60, 60, 60);
     var text_color = c_white;
-    
+
     // 繪製背景
     draw_set_alpha(0.9);
     draw_rectangle_color(x, y, x + width, y + height,
         bg_color, bg_color, bg_color, bg_color, false);
-    
+
     // 繪製邊框
     draw_set_alpha(1);
     draw_rectangle_color(x, y, x + width, y + height,
         frame_color, frame_color, frame_color, frame_color, true);
-    
+
     // 繪製標題欄
     if (show_title) {
         var title_height = 40;
         draw_rectangle_color(x, y, x + width, y + title_height,
             frame_color, frame_color, frame_color, frame_color, false);
-        
+
         draw_text_safe(x + 20, y + title_height/2, title, text_color,
             TEXT_ALIGN_LEFT, TEXT_VALIGN_MIDDLE);
     }
@@ -193,15 +193,15 @@ function draw_ui_button(x, y, width, height, text, is_selected = false) {
     var bg_color = is_selected ? make_color_rgb(80, 80, 80) : make_color_rgb(60, 60, 60);
     var frame_color = is_selected ? c_white : make_color_rgb(60, 60, 60);
     var text_color = c_white;
-    
+
     // 繪製按鈕背景
     draw_rectangle_color(x, y, x + width, y + height,
         bg_color, bg_color, bg_color, bg_color, false);
-    
+
     // 繪製按鈕邊框
     draw_rectangle_color(x, y, x + width, y + height,
         frame_color, frame_color, frame_color, frame_color, true);
-    
+
     // 繪製按鈕文字
     draw_text_safe(x + width/2, y + height/2, text, text_color,
         TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
@@ -220,26 +220,37 @@ function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected
     var slot_color = make_color_rgb(60, 60, 60);
     var frame_color = is_selected ? c_white : make_color_rgb(60, 60, 60);
     var text_color = c_white;
-    
+
     // 繪製槽位背景
     draw_rectangle_color(x, y, x + width, y + height,
         slot_color, slot_color, slot_color, slot_color, false);
-    
+
     // 繪製物品圖示
     var sprite = asset_get_index(item_data.IconSprite);
-    if (sprite_exists(sprite)) {
-        draw_sprite_stretched(sprite, 0,
-            x + 4, y + 4,
-            width - 8, height - 8);
+    if (sprite != -1 && sprite_exists(sprite)) {
+        // 使用安全的繪製函數
+        draw_sprite_safe(sprite, 0, x + width/2, y + height/2,
+            (width - 8) / sprite_get_width(sprite),
+            (height - 8) / sprite_get_height(sprite),
+            0, c_white, 1);
+    } else {
+        // 如果精靈無效，使用 spr_gold
+        var default_sprite = asset_get_index("spr_gold");
+        if (default_sprite != -1 && sprite_exists(default_sprite)) {
+            draw_sprite_safe(default_sprite, 0, x + width/2, y + height/2,
+                (width - 8) / sprite_get_width(default_sprite),
+                (height - 8) / sprite_get_height(default_sprite),
+                0, c_white, 1);
+        }
     }
-    
+
     // 繪製數量
     if (quantity > 1) {
         draw_text_safe(x + width - 4, y + height - 4,
             string(quantity), text_color,
             TEXT_ALIGN_RIGHT, TEXT_VALIGN_BOTTOM);
     }
-    
+
     // 繪製選中框
     if (is_selected) {
         draw_rectangle_color(x, y, x + width, y + height,
@@ -255,10 +266,18 @@ function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected
 /// @param {struct} item_data 物品數據
 function draw_ui_dragged_item(x, y, size, item_data) {
     var sprite = asset_get_index(item_data.IconSprite);
-    if (sprite_exists(sprite)) {
+    if (sprite != -1 && sprite_exists(sprite)) {
         draw_sprite_ext(sprite, 0,
             x, y, size/sprite_get_width(sprite), size/sprite_get_height(sprite),
             0, c_white, 0.7);
+    } else {
+        // 如果精靈無效，使用 spr_gold
+        var default_sprite = asset_get_index("spr_gold");
+        if (default_sprite != -1 && sprite_exists(default_sprite)) {
+            draw_sprite_ext(default_sprite, 0,
+                x, y, size/sprite_get_width(default_sprite), size/sprite_get_height(default_sprite),
+                0, c_white, 0.7);
+        }
     }
 }
 
@@ -278,24 +297,24 @@ function draw_progress_bar(x, y, width, height, value, max_value, colors = [c_dk
     var fill_color = colors[1];
     var border_color = colors[2];
     var text_color = colors[3];
-    
+
     var progress = clamp(value / max_value, 0, 1);
     var fill_width = width * progress;
-    
+
     // 繪製背景
     draw_set_color(bg_color);
     draw_rectangle(x, y, x + width, y + height, false);
-    
+
     // 繪製填充部分
     draw_set_color(fill_color);
     if (fill_width > 0) {
         draw_rectangle(x, y, x + fill_width, y + height, false);
     }
-    
+
     // 繪製邊框
     draw_set_color(border_color);
     draw_rectangle(x, y, x + width, y + height, true);
-    
+
     // 顯示進度文字
     if (show_text) {
         var percent_text = string(round(progress * 100)) + "%";
@@ -320,7 +339,7 @@ function draw_progress_bar(x, y, width, height, value, max_value, colors = [c_dk
 function check_button_pressed(x, y, width, height) {
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
-    
+
     return point_in_rectangle(mx, my, x, y, x + width, y + height) && mouse_check_button_pressed(mb_left);
 }
 
