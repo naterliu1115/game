@@ -344,7 +344,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
 **主要組件:**
 - `obj_stone`: 可挖掘的礦石物件，玩家可以使用礦鎬挖掘獲取礦石資源
 - `obj_flying_item`: 顯示獲得物品的飛行動畫效果
-- `obj_screen_marker`: 用於世界座標到螢幕座標的轉換
+- `scr_coordinate_utils`: 座標轉換工具函數，用於世界座標和 GUI 座標的轉換
 
 **礦石物件 (`obj_stone`) 特性:**
 - **耐久度系統**: 每個礦石有 `durability` 屬性，每次挖掘進度完成會減少1點，歸零時礦石被破壞並產生獎勵
@@ -363,18 +363,29 @@ UI 系統管理遊戲中的各種用戶界面元素。
   - 創建 `obj_flying_item` 顯示獲得物品的視覺效果
 
 **飛行物品 (`obj_flying_item`) 特性:**
-- **狀態機設計**: 具有三個狀態：向上飛行 (`FLYING_UP`)、停頓 (`PAUSING`)、淡出 (`FADING_OUT`)
+- **狀態機設計**: 具有四個狀態：向上飛行 (`FLYING_UP`)、停頓 (`PAUSING`)、飛向玩家 (`FLYING_TO_PLAYER`)、淡出 (`FADING_OUT`)
+- **飛行參數**:
+  - `fly_up_distance`: 向上飛行的距離，預設為 100 像素
+  - `move_speed`: 向上飛行的速度，預設為 5 像素/幀
+  - `to_player_speed`: 飛向玩家的速度，預設為 8 像素/幀
+  - `pause_duration`: 停頓時間，預設為 0.5 秒
+  - `fade_duration`: 淡出時間，預設為 0.5 秒
 - **視覺效果**:
   - 使用 `bm_add` 混合模式創建外框發光效果
   - 在飛行過程中會縮小，淡出過程中會進一步縮小並降低透明度
 - **座標轉換**:
-  - 使用 `obj_screen_marker` 將世界座標轉換為螢幕座標
-  - 確保飛行物品在正確的GUI位置顯示
+  - 使用 `world_to_gui_coords` 函數將世界座標轉換為 GUI 座標
+  - 確保飛行物品在正確的 GUI 位置顯示
 
 **粒子系統:**
 - 使用 GameMaker 的粒子系統創建挖掘效果
 - 在 `Create_0` 事件中初始化粒子系統和粒子類型
 - 在 `CleanUp_0` 事件中清理粒子系統資源
+
+**座標轉換工具 (`scr_coordinate_utils`):**
+- `world_to_gui_coords`: 將世界座標轉換為 GUI 座標
+- `gui_to_world_coords`: 將 GUI 座標轉換為世界座標
+- 確保座標在螢幕範圍內，避免物品在螢幕外創建
 
 **使用示例:**
 ```gml
@@ -384,6 +395,18 @@ with (stone) {
     ore_item_id = 4001;  // 設置產出的礦石ID (銅礦石)
     durability = 3;      // 設置需要挖掘的次數
     max_durability = 3;  // 設置最大耐久度
+}
+
+// 座標轉換示例
+var world_pos = { x: obj_stone.x, y: obj_stone.y };
+var gui_coords = world_to_gui_coords(world_pos.x, world_pos.y);
+
+// 手動創建飛行物品
+with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item)) {
+    sprite_index = spr_item;       // 設置物品精靈
+    fly_up_distance = 150;        // 自訂飛行高度
+    to_player_speed = 10;         // 自訂飛向玩家的速度
+    pause_duration = room_speed * 0.3; // 自訂停頓時間
 }
 ```
 
