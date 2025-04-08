@@ -71,14 +71,14 @@ enum PLAYER_ANIMATION {
 
 // 動畫幀範圍
 ANIMATION_FRAMES = {
-    IDLE: [0, 4],           
-    WALK_DOWN: [5, 9],      
+    IDLE: [0, 4],
+    WALK_DOWN: [5, 9],
     WALK_DOWN_RIGHT: [10, 14],
-    WALK_RIGHT: [15, 19],    
+    WALK_RIGHT: [15, 19],
     WALK_UP_RIGHT: [20, 24],
-    WALK_UP: [25, 29],      
-    WALK_UP_LEFT: [30, 34],  
-    WALK_LEFT: [35, 39],     
+    WALK_UP: [25, 29],
+    WALK_UP_LEFT: [30, 34],
+    WALK_LEFT: [35, 39],
     WALK_DOWN_LEFT: [40, 44],
     MINING_LEFT: [50, 54],
     MINING_RIGHT: [45, 49]
@@ -100,3 +100,32 @@ last_y = y;
 
 // 移動相關變數
 move_speed = 3;
+
+// 工具裝備相關變數
+equipped_tool = noone;       // 當前裝備的工具
+equipped_tool_id = -1;      // 當前裝備的工具ID
+equipped_tool_sprite = -1;  // 當前裝備的工具精靈
+equipped_tool_name = "";    // 當前裝備的工具名稱
+equipped_tool_value = 0;    // 當前裝備的工具效果值
+
+// 玩家手部在不同挖礦動畫幀中的位置 (已修正為相對於中心原點[16,16])
+// 右側挖礦動作的手部座標
+tool_attach_points_right = [
+    [5, 7],    // 第0幀 (原 [21, 23])
+    [-8, -2],  // 第1幀 (原 [8, 14])
+    [7, 4],    // 第2幀 (原 [23, 20])
+    [7, 5],    // 第3幀 (原 [23, 21])
+    [6, 9]     // 第4幀 (原 [22, 25])
+];
+
+// 左側挖礦動作的手部座標
+tool_attach_points_left = [
+    [-6, 6],   // 第0幀 (原 [10, 22])
+    [7, -2],   // 第1幀 (原 [23, 14])
+    [-7, 4],   // 第2幀 (原 [9, 20])
+    [-7, 5],   // 第3幀 (原 [9, 21])
+    [-8, 5]    // 第4幀 (原 [8, 21])
+];
+
+// 礦鎬手把在精靈中的位置
+pickaxe_handle_offset = [6, 24]; // 手把在這裡

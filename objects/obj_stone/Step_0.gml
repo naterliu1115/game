@@ -30,21 +30,7 @@ if (is_destroyed) {
 }
 
 var dist = point_distance(x, y, Player.x, Player.y);
-var has_pickaxe = false;
-
-// 檢查玩家是否裝備了礦鎬
-with (obj_item_manager) {
-    for (var i = 0; i < global.player_hotbar_slots; i++) {
-        var inv_index = global.player_hotbar[i];
-        if (inv_index != noone) {
-            var item = global.player_inventory[| inv_index];
-            if (item.id == 5001) { // 礦鎬ID
-                has_pickaxe = true;
-                break;
-            }
-        }
-    }
-}
+var has_pickaxe = (Player.equipped_tool_id == 5001); // 直接檢查玩家是否裝備了礦鎬（ID 5001）
 
 // --- 修改後的挖掘條件判斷 ---
 var can_start_mining = false;

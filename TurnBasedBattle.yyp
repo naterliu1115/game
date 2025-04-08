@@ -113,6 +113,7 @@
     {"id":{"name":"spr_mineral","path":"sprites/spr_mineral/spr_mineral.yy",},},
     {"id":{"name":"spr_mining_particle","path":"sprites/spr_mining_particle/spr_mining_particle.yy",},},
     {"id":{"name":"spr_ore","path":"sprites/spr_ore/spr_ore.yy",},},
+    {"id":{"name":"spr_pickaxe_mining","path":"sprites/spr_pickaxe_mining/spr_pickaxe_mining.yy",},},
     {"id":{"name":"spr_pickaxe","path":"sprites/spr_pickaxe/spr_pickaxe.yy",},},
     {"id":{"name":"spr_potion_blue","path":"sprites/spr_potion_blue/spr_potion_blue.yy",},},
     {"id":{"name":"spr_potion_red","path":"sprites/spr_potion_red/spr_potion_red.yy",},},

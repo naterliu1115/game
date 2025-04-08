@@ -1,7 +1,7 @@
 // obj_main_hud - Step_0.gml
 
 // 調試：檢查 Step 事件是否執行
-//show_debug_message("HUD Step: Active = " + string(active)); 
+//show_debug_message("HUD Step: Active = " + string(active));
 // 暫時註解掉，避免刷屏，如果完全沒反應再打開
 
 if (!active) exit; // 如果物件非活動，不處理輸入
@@ -24,7 +24,7 @@ if (mouse_check_button_pressed(mb_left)) {
                 is_dragging_hotbar_item = true;
                 dragged_from_hotbar_slot = clicked_slot;
                 dragged_item_inventory_index = inventory_index;
-                
+
                 // 獲取物品 ID 和 圖示
                 var item_instance = global.player_inventory[| inventory_index];
                 if (item_instance != undefined) {
@@ -33,13 +33,13 @@ if (mouse_check_button_pressed(mb_left)) {
                 } else {
                     dragged_item_sprite = -1; // 找不到物品實例？
                 }
-                
+
                 // 初始繪製位置
                 drag_item_x = mouse_gui_x;
                 drag_item_y = mouse_gui_y;
-                
+
                 show_debug_message("開始拖曳快捷欄位 " + string(clicked_slot) + " 中的物品 (背包索引: " + string(inventory_index) + ")");
-                
+
                 // 可選：拖曳時取消當前選擇框
                 selected_hotbar_slot = -1;
             }
@@ -59,27 +59,27 @@ if (mouse_check_button(mb_left)) {
 if (mouse_check_button_released(mb_left)) {
     if (is_dragging_hotbar_item) {
         var target_slot = get_hotbar_slot_at_position(mouse_gui_x, mouse_gui_y);
-        
+
         if (target_slot != -1 && target_slot != dragged_from_hotbar_slot) {
             // 釋放在不同的有效欄位上，執行交換
             show_debug_message("嘗試將物品從欄位 " + string(dragged_from_hotbar_slot) + " 交換到欄位 " + string(target_slot));
-            
+
             var item_in_target_slot = obj_item_manager.get_item_in_hotbar_slot(target_slot);
-            
+
             // 執行交換 (直接修改全局數組)
             global.player_hotbar[target_slot] = dragged_item_inventory_index;
             global.player_hotbar[dragged_from_hotbar_slot] = item_in_target_slot;
-            
+
             show_debug_message("快捷欄物品交換完成。");
-            
+
             // 觸發更新事件 (可選)
             // if(instance_exists(obj_event_manager)) obj_event_manager.trigger_event("hotbar_updated");
-            
+
         } else {
             // 釋放在無效位置或原位，取消拖放
             show_debug_message("釋放在無效位置或原位，取消拖放。");
         }
-        
+
         // 重置拖曳狀態
         is_dragging_hotbar_item = false;
         dragged_item_inventory_index = noone;
@@ -91,24 +91,24 @@ if (mouse_check_button_released(mb_left)) {
 // --- 結束拖放邏輯 ---
 
 
-// --- 處理其他滑鼠點擊 (背包、怪物按鈕) --- 
+// --- 處理其他滑鼠點擊 (背包、怪物按鈕) ---
 // 將原有的點擊檢查移到這裡，並確保 *不在拖曳時* 才觸發
-if (mouse_check_button_pressed(mb_left) && !is_dragging_hotbar_item) { 
+if (mouse_check_button_pressed(mb_left) && !is_dragging_hotbar_item) {
     // 檢查是否點擊背包圖示
-    if (point_in_rectangle(mouse_gui_x, mouse_gui_y, 
-        bag_bbox[0], bag_bbox[1], 
+    if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+        bag_bbox[0], bag_bbox[1],
         bag_bbox[2], bag_bbox[3])) {
-        
+
         if (instance_exists(obj_game_controller)) {
             with (obj_game_controller) {
                 toggle_inventory_ui();
             }
         }
     // 新增：檢查是否點擊怪物管理按鈕
-    } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y, 
+    } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
                monster_button_bbox[0], monster_button_bbox[1],
                monster_button_bbox[2], monster_button_bbox[3])) {
-        
+
         if (instance_exists(obj_game_controller)) {
             with (obj_game_controller) {
                 // 假設控制器中有 toggle_monster_manager_ui 函數
@@ -124,7 +124,7 @@ if (mouse_check_button_pressed(mb_left) && !is_dragging_hotbar_item) {
 
 // --- 處理快捷欄選擇 (數字鍵、滾輪) ---
 // 確保 *不在拖曳時* 才處理選擇
-if (!is_dragging_hotbar_item) { 
+if (!is_dragging_hotbar_item) {
     var selection_changed = false;
     var current_selection = selected_hotbar_slot;
 
@@ -179,7 +179,7 @@ if (!is_dragging_hotbar_item) {
                 } else if (selected_hotbar_slot < 0 && wheel > 0) { // 處理從 0 向上滾變 -1 後再向上滾的情況
                      selected_hotbar_slot = hotbar_slots - 1;
                 }
-                
+
                 // 只有在實際改變選擇時才標記
                 if (selected_hotbar_slot != current_slot) {
                     selection_changed = true;
@@ -190,10 +190,27 @@ if (!is_dragging_hotbar_item) {
 
     // 如果選擇改變，輸出新的選擇狀態 (可以保留此調試信息)
     if (selection_changed) {
-         if (selected_hotbar_slot == -1) {
-             show_debug_message("快捷欄取消選擇");
-         } else {
-             show_debug_message("快捷欄新選擇: " + string(selected_hotbar_slot));
-         }
+        if (selected_hotbar_slot == -1) {
+            show_debug_message("快捷欄取消選擇");
+        } else {
+            show_debug_message("快捷欄新選擇: " + string(selected_hotbar_slot));
+
+            // 檢查選中欄位是否有工具類物品
+            if (instance_exists(obj_item_manager)) {
+                var inventory_index = obj_item_manager.get_item_in_hotbar_slot(selected_hotbar_slot);
+                if (inventory_index != noone) {
+                    var item_instance = global.player_inventory[| inventory_index];
+                    if (item_instance != undefined) {
+                        var item_id = item_instance.id;
+                        var item_data = obj_item_manager.get_item(item_id);
+
+                        // 如果是工具類型，使用工具
+                        if (item_data != undefined && item_data.Category == ITEM_TYPE.TOOL) {
+                            obj_item_manager.use_tool(item_id);
+                        }
+                    }
+                }
+            }
+        }
     }
-} 
+}

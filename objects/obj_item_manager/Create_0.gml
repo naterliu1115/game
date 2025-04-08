@@ -7,7 +7,8 @@ enum ITEM_TYPE {
     CONSUMABLE,
     EQUIPMENT,
     CAPTURE,
-    MATERIAL
+    MATERIAL,
+    TOOL         // 工具
 }
 
 enum ITEM_RARITY {
@@ -98,6 +99,14 @@ function custom_string_split(str, delimiter) {
 
 // 從CSV創建物品數據結構
 function create_item_from_csv_row(grid, row) {
+    // --- 新增：讀取 ActionSpriteName 字串 ---
+    var action_sprite_name = "";
+    // 假設 ActionSpriteName 在第 13 欄 (索引 12)
+    if (ds_grid_width(grid) > 12) { // 檢查欄位是否存在
+         action_sprite_name = grid[# 12, row];
+    }
+    // --- 結束新增 ---
+
     var item = {
         ID: real(grid[# 0, row]),
         Name: grid[# 1, row],
@@ -110,11 +119,28 @@ function create_item_from_csv_row(grid, row) {
         StackMax: real(grid[# 8, row]),
         SellPrice: real(grid[# 9, row]),
         Tags: custom_string_split(grid[# 10, row], ";"),
-        Category: real(grid[# 11, row])
+        Category: real(grid[# 11, row]),
+        // --- 新增：儲存 Action Sprite 索引 ---
+        action_sprite_index: -1 // 預設為 -1 (無)
+        // --- 結束新增 ---
     };
 
-    // 物品創建完成
+    // --- 新增：轉換 ActionSpriteName 為索引 ---
+    if (action_sprite_name != "" && action_sprite_name != "none") { // 檢查是否為空或標記
+        var action_sprite = asset_get_index(action_sprite_name);
+        if (action_sprite != -1 && sprite_exists(action_sprite)) {
+            item.action_sprite_index = action_sprite;
+             // 可以選擇性地也快取這個 sprite 到 item_sprites
+             if (!ds_map_exists(item_sprites, action_sprite_name)) {
+                 item_sprites[? action_sprite_name] = action_sprite;
+             }
+        } else {
+            show_debug_message("警告：找不到物品 " + item.Name + " 的 ActionSprite '" + action_sprite_name + "'");
+        }
+    }
+    // --- 結束新增 ---
 
+    // 物品創建完成
     return item;
 }
 
@@ -485,6 +511,72 @@ get_item_in_hotbar_slot = function(hotbar_slot) {
 show_debug_message("  - get_item_in_hotbar_slot 函數已定義");
 show_debug_message("obj_item_manager Create: 快捷欄管理函數定義完成。");
 
+// --- 工具使用相關函數 ---
+
+// 獲取當前選中的工具物品
+get_selected_tool = function() {
+    if (!instance_exists(obj_main_hud)) return noone;
+
+    var selected_slot = obj_main_hud.selected_hotbar_slot;
+    if (selected_slot == -1) return noone; // 沒有選中欄位
+
+    var inventory_index = get_item_in_hotbar_slot(selected_slot);
+    if (inventory_index == noone) return noone; // 欄位為空
+
+    // 確保背包存在且索引有效
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+        return noone;
+    }
+
+    if (inventory_index < 0 || inventory_index >= ds_list_size(global.player_inventory)) {
+        return noone;
+    }
+
+    var item_instance = global.player_inventory[| inventory_index];
+    if (item_instance == undefined) return noone;
+
+    var item_id = item_instance.id;
+    var item_data = get_item(item_id);
+
+    // 檢查是否為工具類型
+    if (item_data != undefined && item_data.Category == ITEM_TYPE.TOOL) {
+        return {
+            id: item_id,
+            data: item_data,
+            inventory_index: inventory_index
+        };
+    }
+
+    return noone; // 不是工具類型
+};
+
+// 使用工具的函數
+use_tool = function(tool_id) {
+    var item_data = get_item(tool_id);
+    if (item_data == undefined || item_data.Category != ITEM_TYPE.TOOL) {
+        show_debug_message("錯誤：嘗試使用非工具物品：" + string(tool_id));
+        return false;
+    }
+
+    // 根據工具的使用效果執行不同的操作
+    var effect = item_data.UseEffect;
+    var effect_value = item_data.EffectValue;
+
+    show_debug_message("使用工具：" + item_data.Name + " (效果：" + effect + ", 數值：" + string(effect_value) + ")");
+
+    // 觸發事件
+    if (instance_exists(obj_event_manager)) {
+        var event_manager = instance_find(obj_event_manager, 0);
+        if (variable_instance_exists(event_manager, "trigger_event")) {
+            event_manager.trigger_event("tool_used", {tool_id: tool_id, effect: effect, value: effect_value});
+        }
+    }
+
+    return true;
+};
+
+show_debug_message("  - 工具使用相關函數已定義");
+
 // --- 結束 快捷欄管理 ---
 
 // 清理函數
@@ -568,6 +660,46 @@ function test_item_manager() {
 
     show_debug_message("===== 道具管理器測試完成 =====");
 }
+
+// 新增：獲取物品的持有/動作 Sprite
+function get_item_action_sprite(item_id) {
+    var item_data = get_item(item_id); // 使用現有的 get_item 函數
+
+    if (item_data != undefined) {
+        // 檢查類型是否為 EQUIPMENT 或 TOOL
+        if (item_data.Type == "EQUIPMENT" || item_data.Type == "TOOL") {
+            // 檢查是否有有效的 action_sprite_index
+            if (variable_struct_exists(item_data, "action_sprite_index") && item_data.action_sprite_index > -1) {
+                 // 確保 sprite 存在 (以防萬一)
+                 if (sprite_exists(item_data.action_sprite_index)) {
+                      return item_data.action_sprite_index;
+                 } else {
+                      show_debug_message("警告: 物品 " + string(item_id) + " 的 action_sprite_index 無效，索引為 " + string(item_data.action_sprite_index));
+                      // 回退到預設? 或者返回主sprite? 這裡按要求回退到 spr_pickaxe_mining
+                 }
+            }
+            // 如果沒有有效的 action_sprite_index，返回預設的 spr_pickaxe_mining (選項 B)
+            var default_action_sprite = asset_get_index("spr_pickaxe_mining"); // Make sure spr_pickaxe_mining exists!
+            if (default_action_sprite != -1 && sprite_exists(default_action_sprite)) {
+                 // 可以選擇性地快取預設動作sprite
+                 if (!ds_map_exists(item_sprites, "spr_pickaxe_mining")) {
+                      item_sprites[? "spr_pickaxe_mining"] = default_action_sprite;
+                 }
+                 return default_action_sprite;
+            } else {
+                 show_debug_message("嚴重錯誤：預設動作精靈 spr_pickaxe_mining 無法找到！");
+                 // 如果連預設都找不到，返回主要sprite作為最終備選？
+                 var main_sprite = get_item_sprite(item_id); // Use existing function
+                 if (main_sprite != -1) return main_sprite;
+                 return -1;
+            }
+        }
+    }
+    // 如果物品不存在或類型不對，返回 -1
+    return -1;
+}
+
+show_debug_message("Item Manager Initialized");
 
 
 

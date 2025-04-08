@@ -1,12 +1,17 @@
 // obj_game_controller - Create_0.gml
 
+// 初始化全局調試模式變數
+if (!variable_global_exists("game_debug_mode")) {
+    global.game_debug_mode = false; // 預設關閉調試模式
+}
+
 show_debug_message("目前玩家金錢：" + string(global.player_gold));
 
 
 // UI控制變量
 ui_enabled = true;  // 控制UI是否可用
 ui_cooldown = 0;    // UI操作冷卻時間
-active = false; // 或根據需要設定其他初始值	
+active = false; // 或根據需要設定其他初始值
 info_alpha = 1.0; // 初始化信息透明度
 info_text = ""; // 初始化為空字串
 global.info_timer = 0;  // UI 信息顯示相關變數
@@ -59,10 +64,10 @@ ui_functions_initialized = false;
 // 捕获系统相关变量
 capture_chance = 0;
 capture_methods = []; // 改为数组
-capture_state = 0; 
+capture_state = 0;
 selected_method = 0;
 target_enemy = noone;
-ui_width = 300; 
+ui_width = 300;
 ui_height = 200;
 
 // 初始化全局字體
@@ -75,12 +80,12 @@ function init_fonts() {
         global.font_dialogue = -1; // 使用默認字體
         show_debug_message("警告: 找不到對話字體資源 fnt_dialogue，使用默認字體");
     }
-    
+
     // 您可以在這裡添加更多字體
     // global.font_title = fnt_title;
     // global.font_button = fnt_button;
     // 等等...
-    
+
     // 設置默認字體
     draw_set_font(global.font_dialogue);
 }
@@ -96,7 +101,7 @@ global.game_debug_mode = true; // 開發時為 true，發布時設為 false
 function init_resources() {
     // 創建資源映射表
     global.resource_map = ds_map_create();
-    
+
     // 檢查關鍵精靈是否存在
     var resource_list = [
         "spr_star",
@@ -104,11 +109,11 @@ function init_resources() {
         "spr_enemy",
         // 添加更多精靈...
     ];
-    
+
     for (var i = 0; i < array_length(resource_list); i++) {
         var res_name = resource_list[i];
         var res_index = asset_get_index(res_name);
-        
+
         if (res_index != -1 && sprite_exists(res_index)) {
             ds_map_add(global.resource_map, res_name, res_index);
         } else {
@@ -194,17 +199,17 @@ if (!instance_exists(obj_battle_manager)) {
 // UI控制函數
 toggle_summon_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
-    
+
     // 檢查是否在準備階段，如果不是則不打開UI
     var in_preparing_phase = false;
     if (!instance_exists(obj_battle_manager)) {
         instance_create_layer(0, 0, "Controllers", obj_battle_manager);
     }
-    
+
     with (obj_battle_manager) {
         ensure_managers_exist(); // 確保所有管理器存在
         in_preparing_phase = (battle_state == BATTLE_STATE.PREPARING);
-        
+
         if (!in_preparing_phase) {
             if (instance_exists(obj_battle_ui)) {
                 obj_battle_ui.show_info("只能在戰鬥準備階段召喚怪物！");
@@ -212,7 +217,7 @@ toggle_summon_ui = function() {
             return;
         }
     }
-    
+
     // 檢查是否有可用怪物
     var has_usable_monsters = false;
     if (variable_global_exists("player_monsters")) {
@@ -223,19 +228,19 @@ toggle_summon_ui = function() {
             }
         }
     }
-    
+
     if (!has_usable_monsters) {
         if (instance_exists(obj_battle_ui)) {
             obj_battle_ui.show_info("沒有可用的怪物！");
         }
         return;
     }
-    
+
     // 確保UI管理器存在
     if (!instance_exists(obj_ui_manager)) {
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
-    
+
     // 獲取或創建召喚UI實例
     var summon_ui_inst;
     if (instance_exists(obj_summon_ui)) {
@@ -243,17 +248,17 @@ toggle_summon_ui = function() {
     } else {
         summon_ui_inst = instance_create_layer(0, 0, "Instances", obj_summon_ui);
     }
-    
+
     // 使用UI管理器顯示UI
     with (obj_ui_manager) {
         show_ui(summon_ui_inst, "main");
     }
-    
+
     // 標記從準備階段打開
     with (summon_ui_inst) {
         from_preparing_phase = true;
     }
-    
+
     ui_cooldown = 5;
 }
 
@@ -262,21 +267,21 @@ toggle_monster_manager_ui = function() {
         show_debug_message("UI被禁用或在冷卻中 (怪物管理)");
         return;
     }
-    
+
     show_debug_message("===== 開始切換怪物管理UI =====");
-    
+
     // 檢查並創建UI管理器
     if (!instance_exists(obj_ui_manager)) {
         show_debug_message("創建UI管理器");
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
-    
+
     // 獲取或創建怪物管理UI實例
     var monster_ui_inst;
     if (instance_exists(obj_monster_manager_ui)) {
         monster_ui_inst = instance_find(obj_monster_manager_ui, 0);
         show_debug_message("找到現有的怪物管理UI實例");
-        
+
         // 如果UI已經開啟，則關閉它
         if (monster_ui_inst.active) {
             show_debug_message("關閉已開啟的怪物管理UI");
@@ -290,7 +295,7 @@ toggle_monster_manager_ui = function() {
         show_debug_message("創建新的怪物管理UI實例");
         monster_ui_inst = instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
     }
-    
+
     // 使用UI管理器顯示UI
     show_debug_message("顯示怪物管理UI");
     with (obj_ui_manager) {
@@ -298,7 +303,7 @@ toggle_monster_manager_ui = function() {
         show_ui(monster_ui_inst, "main");
         show_debug_message("怪物管理UI已註冊並顯示");
     }
-    
+
     ui_cooldown = 5;
     show_debug_message("===== 怪物管理UI切換完成 =====");
 }
@@ -307,9 +312,9 @@ toggle_monster_manager_ui = function() {
 
 toggle_capture_ui = function() {
     if (!ui_enabled || ui_cooldown > 0) return;
-    
+
     show_debug_message("===== 開始檢查捕獲條件 =====");
-    
+
     // 檢查戰鬥狀態，只允許在ACTIVE狀態使用
     if (!instance_exists(obj_battle_manager)) {
         show_debug_message("錯誤：找不到戰鬥管理器");
@@ -318,7 +323,7 @@ toggle_capture_ui = function() {
         }
         return;
     }
-    
+
     if (obj_battle_manager.battle_state != BATTLE_STATE.ACTIVE) {
         show_debug_message("錯誤：戰鬥狀態不是ACTIVE，當前狀態：" + string(obj_battle_manager.battle_state));
         if (instance_exists(obj_battle_ui)) {
@@ -326,7 +331,7 @@ toggle_capture_ui = function() {
         }
         return;
     }
-    
+
     // 檢查是否已經打開，如果是則關閉
     if (instance_exists(obj_capture_ui) && obj_capture_ui.active) {
         show_debug_message("關閉已開啟的捕獲UI");
@@ -336,35 +341,35 @@ toggle_capture_ui = function() {
         ui_cooldown = 5;
         return;
     }
-    
+
     // 設定捕獲目標
     var target = noone;
-    
+
     // 檢查enemy_units列表
     if (!instance_exists(obj_unit_manager)) {
         show_debug_message("錯誤：找不到單位管理器");
         return;
     }
-    
+
     with (obj_unit_manager) {
         show_debug_message("檢查敵人列表：");
         show_debug_message("- enemy_units 是否存在: " + string(ds_exists(enemy_units, ds_type_list)));
-        
+
         if (!ds_exists(enemy_units, ds_type_list)) {
             show_debug_message("錯誤：enemy_units不是有效的列表");
             return;
         }
-        
+
         var enemy_count = ds_list_size(enemy_units);
         show_debug_message("- 敵人數量: " + string(enemy_count));
-        
+
         if (enemy_count > 0) {
             // 遍歷所有敵人，找到第一個活著的
             for (var i = 0; i < enemy_count; i++) {
                 var enemy_obj = enemy_units[| i];
                 show_debug_message("檢查敵人 #" + string(i) + ":");
                 show_debug_message("- 實例是否存在: " + string(instance_exists(enemy_obj)));
-                
+
                 if (instance_exists(enemy_obj)) {
                     show_debug_message("- HP: " + string(enemy_obj.hp) + "/" + string(enemy_obj.max_hp));
                     if (enemy_obj.hp > 0) {
@@ -376,19 +381,19 @@ toggle_capture_ui = function() {
             }
         }
     }
-    
+
     if (target != noone) {
         show_debug_message("準備開啟捕獲UI");
         // 確保UI管理器存在
         if (!instance_exists(obj_ui_manager)) {
             instance_create_layer(0, 0, "Instances", obj_ui_manager);
         }
-        
+
         // 獲取或創建捕獲UI實例
         var capture_ui_inst;
         if (instance_exists(obj_capture_ui)) {
             capture_ui_inst = instance_find(obj_capture_ui, 0);
-            
+
             // 重置UI狀態
             with (capture_ui_inst) {
                 active = false;
@@ -401,12 +406,12 @@ toggle_capture_ui = function() {
         } else {
             capture_ui_inst = instance_create_layer(0, 0, "UI", obj_capture_ui);
         }
-        
+
         // 開啟捕獲UI
         with (capture_ui_inst) {
             open_capture_ui(target);
         }
-        
+
         ui_cooldown = 5;
         show_debug_message("已開啟捕獲UI，目標: " + string(object_get_name(target.object_index)));
     } else {
@@ -415,7 +420,7 @@ toggle_capture_ui = function() {
             obj_battle_ui.show_info("沒有可捕獲的敵人！");
         }
     }
-    
+
     show_debug_message("===== 捕獲檢查結束 =====");
 }
 
@@ -424,32 +429,32 @@ toggle_inventory_ui = function() {
         show_debug_message("UI被禁用或在冷卻中");
         return;
     }
-    
+
     show_debug_message("===== 開始切換道具UI =====");
-    
+
     // 檢查並創建必要的系統
     if (!instance_exists(obj_ui_manager)) {
         show_debug_message("創建UI管理器");
         instance_create_layer(0, 0, "Instances", obj_ui_manager);
     }
-    
+
     if (!instance_exists(obj_event_manager)) {
         show_debug_message("創建事件管理器");
         instance_create_layer(0, 0, "Instances", obj_event_manager);
     }
-    
+
     // 確保全局背包存在
     if (!variable_global_exists("player_inventory")) {
         show_debug_message("創建玩家背包");
         global.player_inventory = ds_list_create();
     }
-    
+
     // 獲取或創建物品欄UI實例
     var inventory_ui_inst;
     if (instance_exists(obj_inventory_ui)) {
         inventory_ui_inst = instance_find(obj_inventory_ui, 0);
         show_debug_message("找到現有的道具UI實例");
-        
+
         // 如果UI已經開啟，則關閉它
         if (inventory_ui_inst.active) {
             show_debug_message("關閉已開啟的道具UI");
@@ -463,7 +468,7 @@ toggle_inventory_ui = function() {
         show_debug_message("創建新的道具UI實例");
         inventory_ui_inst = instance_create_layer(0, 0, "Instances", obj_inventory_ui);
     }
-    
+
     // 使用UI管理器顯示UI
     show_debug_message("顯示道具UI");
     with (obj_ui_manager) {
@@ -471,7 +476,7 @@ toggle_inventory_ui = function() {
         show_ui(inventory_ui_inst, "main");
         show_debug_message("UI已註冊並顯示");
     }
-    
+
     // 添加一些測試物品（如果背包為空）
     if (ds_list_size(global.player_inventory) == 0) {
         show_debug_message("添加測試物品到背包");
@@ -481,7 +486,7 @@ toggle_inventory_ui = function() {
             add_item_to_inventory(3001, 3);  // 普通球
         }
     }
-    
+
     ui_cooldown = 5;
     show_debug_message("===== 道具UI切換完成 =====");
 };

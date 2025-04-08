@@ -35,15 +35,46 @@ if (!can_move) {
 mouse_direction = point_direction(x, y, mouse_x, mouse_y);
 facing_direction = mouse_direction;
 
+// 更新裝備的工具
+if (instance_exists(obj_item_manager)) {
+    var tool = obj_item_manager.get_selected_tool();
+
+    // 如果選中了新的工具，更新裝備狀態
+    if (tool != noone) {
+        if (equipped_tool_id != tool.id) {
+            equipped_tool = tool;
+            equipped_tool_id = tool.id;
+            equipped_tool_sprite = obj_item_manager.get_item_sprite(tool.id);
+            equipped_tool_name = tool.data.Name;
+            equipped_tool_value = tool.data.EffectValue;
+
+            show_debug_message("玩家裝備了工具：" + equipped_tool_name);
+        }
+    } else {
+        // 如果沒有選中工具，清除裝備狀態
+        if (equipped_tool_id != -1) {
+            equipped_tool = noone;
+            equipped_tool_id = -1;
+            equipped_tool_sprite = -1;
+            equipped_tool_name = "";
+            equipped_tool_value = 0;
+
+            show_debug_message("玩家取消裝備工具");
+        }
+    }
+}
+
 // 處理挖礦邏輯
 var is_mouse_pressed = mouse_check_button(mb_left);
 var is_mouse_pressed_new = mouse_check_button_pressed(mb_left);
+var has_pickaxe = (equipped_tool_id == 5001); // 檢查是否裝備了礦錘（ID 5001）
 
 // 根據面向方向決定挖礦動畫
-mining_direction = (facing_direction > 90 && facing_direction < 270) ? 
+mining_direction = (facing_direction > 90 && facing_direction < 270) ?
     PLAYER_ANIMATION.MINING_LEFT : PLAYER_ANIMATION.MINING_RIGHT;
 
-if (is_mouse_pressed_new || (is_mouse_pressed && mining_animation_complete)) {
+// 只有在裝備礦錘的情況下才允許挖礦
+if (has_pickaxe && (is_mouse_pressed_new || (is_mouse_pressed && mining_animation_complete))) {
     // 開始新的挖礦動作
     is_mining = true;
     mining_animation_complete = false;
@@ -54,22 +85,22 @@ if (is_mouse_pressed_new || (is_mouse_pressed && mining_animation_complete)) {
 // 更新挖礦動畫
 if (is_mining) {
     // 獲取當前動畫的幀範圍
-    var frame_range = (mining_direction == PLAYER_ANIMATION.MINING_LEFT) ? 
+    var frame_range = (mining_direction == PLAYER_ANIMATION.MINING_LEFT) ?
         ANIMATION_FRAMES.MINING_LEFT : ANIMATION_FRAMES.MINING_RIGHT;
-    
+
     // 檢查是否到達最後一幀
     var is_last_frame = (floor(mining_animation_frame) >= (frame_range[1] - frame_range[0]));
-    
+
     if (is_last_frame) {
         // 在最後一幀停留
         image_index = frame_range[1];
         mining_last_frame_timer++;
-        
+
         // 檢查是否完成停留時間
         if (mining_last_frame_timer >= MINING_LAST_FRAME_DELAY) {
             mining_animation_complete = true;
             mining_last_frame_timer = 0;
-            
+
             if (!is_mouse_pressed) {
                 // 如果沒有按住滑鼠，結束挖礦
                 is_mining = false;
@@ -107,7 +138,7 @@ if (!is_mining) {
         // 移動動畫 - 根據面向方向選擇
         var angle_segment = (facing_direction + 22.5) mod 360;
         var animation_index = floor(angle_segment / 45);
-        
+
         switch(animation_index) {
             case 0: current_animation = PLAYER_ANIMATION.WALK_RIGHT; break;
             case 1: current_animation = PLAYER_ANIMATION.WALK_UP_RIGHT; break;
@@ -149,10 +180,10 @@ if (is_array(frame_range)) {
     if (animation_name != current_animation_name) {
         current_animation_name = animation_name;
         image_index = frame_range[0];
-        image_speed = (current_animation == PLAYER_ANIMATION.IDLE) ? 
+        image_speed = (current_animation == PLAYER_ANIMATION.IDLE) ?
             idle_animation_speed : animation_speed;
     }
-    
+
     // 確保幀在正確範圍內
     if (image_index < frame_range[0] || image_index > frame_range[1]) {
         image_index = frame_range[0];
