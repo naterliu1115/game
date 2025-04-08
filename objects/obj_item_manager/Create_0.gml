@@ -47,7 +47,7 @@ item_sprites = ds_map_create();
 // 數據驗證函數
 function validate_item_data(item_data) {
     // 檢查必要欄位
-    var required_fields = ["ID", "Name", "Type", "Description", "Rarity", "IconSprite", "Sprite",
+    var required_fields = ["ID", "Name", "Type", "Description", "Rarity", "IconSprite",
                           "UseEffect", "EffectValue", "StackMax", "SellPrice", "Tags", "Category"];
     
     for (var i = 0; i < array_length(required_fields); i++) {
@@ -68,13 +68,6 @@ function validate_item_data(item_data) {
     if (icon_index == -1 || !sprite_exists(icon_index)) {
         show_debug_message("警告：找不到道具圖示 " + item_data.IconSprite + "，使用預設精靈spr_gold");
         item_data.IconSprite = "spr_gold";
-    }
-    
-    // 驗證Sprite資源是否存在
-    var spr_idx = asset_get_index(item_data.Sprite);
-    if (spr_idx == -1 || !sprite_exists(spr_idx)) {
-        show_debug_message("警告：找不到物品精靈 " + item_data.Sprite + "，使用預設精靈spr_gold");
-        item_data.Sprite = "spr_gold";
     }
     
     return true;
@@ -107,13 +100,12 @@ function create_item_from_csv_row(grid, row) {
         Description: grid[# 3, row],
         Rarity: grid[# 4, row],
         IconSprite: grid[# 5, row],
-        Sprite: grid[# 6, row],
-        UseEffect: grid[# 7, row],
-        EffectValue: real(grid[# 8, row]),
-        StackMax: real(grid[# 9, row]),
-        SellPrice: real(grid[# 10, row]),
-        Tags: custom_string_split(grid[# 11, row], ";"),
-        Category: real(grid[# 12, row])
+        UseEffect: grid[# 6, row],
+        EffectValue: real(grid[# 7, row]),
+        StackMax: real(grid[# 8, row]),
+        SellPrice: real(grid[# 9, row]),
+        Tags: custom_string_split(grid[# 10, row], ";"),
+        Category: real(grid[# 11, row])
     };
     
     show_debug_message("創建物品數據：");
@@ -122,7 +114,6 @@ function create_item_from_csv_row(grid, row) {
     show_debug_message("- Type: " + item.Type);
     show_debug_message("- Category: " + string(item.Category));
     show_debug_message("- IconSprite: " + item.IconSprite);
-    show_debug_message("- Sprite: " + item.Sprite);
     
     return item;
 }
@@ -152,9 +143,6 @@ function load_items_data() {
         
         // 檢查圖示精靈
         show_debug_message("檢查圖示精靈: " + item_data.IconSprite);
-        
-        // 檢查物品精靈
-        show_debug_message("檢查物品精靈: " + item_data.Sprite);
         
         // 驗證物品數據
         if (validate_item_data(item_data)) {
@@ -355,19 +343,10 @@ function execute_item_effect(item_data) {
     return false;
 }
 
-// 新增：獲取物品Sprite
+// 移除 get_item_sprite_full 函數，因為不再需要
+// 如果其他地方有使用，可以讓它直接返回與 get_item_sprite 相同的結果
 function get_item_sprite_full(item_id) {
-    var item = get_item(item_id);
-    if (item != undefined) {
-        var sprite = asset_get_index(item.Sprite);
-        if (sprite != -1 && sprite_exists(sprite)) {
-            return sprite;
-        }
-        show_debug_message("警告：物品 " + string(item_id) + " 的完整精靈無效，使用預設精靈");
-    } else {
-        show_debug_message("警告：找不到物品 " + string(item_id) + "，使用預設精靈");
-    }
-    return asset_get_index("spr_gold");
+    return get_item_sprite(item_id);
 }
 
 show_debug_message("obj_item_manager Create: 即將調用 load_items_data()...");
@@ -538,17 +517,14 @@ function test_item_manager() {
         if (item != undefined) {
             show_debug_message("測試物品 " + item.Name + ":");
             show_debug_message("- 圖示(IconSprite): " + string(item.IconSprite));
-            show_debug_message("- 完整精靈(Sprite): " + string(item.Sprite));
             
-            // 測試get_item_sprite和get_item_sprite_full函數
+            // 測試get_item_sprite函數
             var icon = get_item_sprite(test_items[i]);
-            var full_sprite = get_item_sprite_full(test_items[i]);
             
             show_debug_message("- get_item_sprite結果: " + string(icon));
-            show_debug_message("- get_item_sprite_full結果: " + string(full_sprite));
             
             // 檢查是否使用預設精靈
-            if (item.Sprite == asset_get_index("spr_gold")) {
+            if (item.IconSprite == asset_get_index("spr_gold")) {
                 show_debug_message("- 使用預設精靈(spr_gold)");
             }
         }
