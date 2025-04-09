@@ -1,5 +1,5 @@
 {
-  "$GMProject":"",
+  "$GMProject":"v1",
   "%Name":"TurnBasedBattle",
   "AudioGroups":[
     {"$GMAudioGroup":"","%Name":"audiogroup_default","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
@@ -41,6 +41,7 @@
     {"$GMFolder":"","%Name":"脚本","folderPath":"folders/脚本.yy","name":"脚本","resourceType":"GMFolder","resourceVersion":"2.0",},
     {"$GMFolder":"","%Name":"路径","folderPath":"folders/路径.yy","name":"路径","resourceType":"GMFolder","resourceVersion":"2.0",},
   ],
+  "ForcedPrefabProjectReferences":[],
   "IncludedFiles":[
     {"$GMIncludedFile":"","%Name":"items_data.csv","CopyToMask":3035426170322551022,"filePath":"datafiles","name":"items_data.csv","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
     {"$GMIncludedFile":"","%Name":"skills.csv","CopyToMask":-1,"filePath":"datafiles/skills","name":"skills.csv","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
@@ -48,7 +49,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.11.0.179",
+    "IDEVersion":"2024.13.0.190",
   },
   "name":"TurnBasedBattle",
   "resources":[

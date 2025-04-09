@@ -179,7 +179,7 @@ set_battle_area = function(center_x, center_y, radius) {
     battle_center_y = center_y;
     battle_boundary_radius = radius;
     
-    broadcast_event("battle_area_updated", {
+    _event_broadcaster("battle_area_updated", {
         center_x: center_x,
         center_y: center_y,
         radius: radius
@@ -199,7 +199,7 @@ summon_monster = function(monster_type, position_x, position_y) {
     // 檢查是否達到最大單位數量
     if (ds_list_size(player_units) >= max_player_units) {
         show_debug_message("無法召喚：已達最大召喚數量 " + string(ds_list_size(player_units)) + "/" + string(max_player_units));
-        broadcast_event("ui_message", {message: "已達最大召喚數量!"});
+        _event_broadcaster("ui_message", {message: "已達最大召喚數量!"});
         return false;
     }
     
@@ -207,7 +207,7 @@ summon_monster = function(monster_type, position_x, position_y) {
     if (global_summon_cooldown > 0) {
         var cooldown_seconds = global_summon_cooldown / game_get_speed(gamespeed_fps);
         show_debug_message("無法召喚：冷卻中，剩餘 " + string_format(cooldown_seconds, 1, 1) + " 秒");
-        broadcast_event("ui_message", {message: "召喚冷卻中! 剩餘: " + string_format(cooldown_seconds, 1, 1) + "秒"});
+        _event_broadcaster("ui_message", {message: "召喚冷卻中! 剩餘: " + string_format(cooldown_seconds, 1, 1) + "秒"});
         return false;
     }
     
@@ -252,14 +252,14 @@ summon_monster = function(monster_type, position_x, position_y) {
     instance_create_layer(position_x, position_y, "Effects", obj_summon_effect);
     
     // 發送召喚完成事件
-    broadcast_event("monster_summoned", {
+    _event_broadcaster("monster_summoned", {
         monster: monster_inst,
         type: monster_type,
         position: {x: position_x, y: position_y}
     });
     
     // 顯示提示訊息
-    broadcast_event("ui_message", {message: object_get_name(monster_type) + " 已召喚!"});
+    _event_broadcaster("ui_message", {message: object_get_name(monster_type) + " 已召喚!"});
     
     show_debug_message("===== 召喚完成 =====");
     return true;
@@ -319,7 +319,7 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
     }
     
     // 發送敵人生成事件
-    broadcast_event("enemy_spawned", {
+    _event_broadcaster("enemy_spawned", {
         enemy: enemy_inst,
         type: enemy_type,
         position: {x: position_x, y: position_y}
@@ -343,7 +343,7 @@ handle_unit_death = function(data) {
             
             // 檢查是否所有玩家單位都被擊敗
             if (ds_list_size(player_units) <= 0) {
-                broadcast_event("all_player_units_defeated", {});
+                _event_broadcaster("all_player_units_defeated", {});
             }
         }
     } else { // 敵方單位
@@ -354,13 +354,13 @@ handle_unit_death = function(data) {
             
             // 檢查是否所有敵人都被擊敗
             if (ds_list_size(enemy_units) <= 0) {
-                broadcast_event("all_enemies_defeated", {});
+                _event_broadcaster("all_enemies_defeated", {});
             }
         }
     }
     
     // 發送單位統計更新事件
-    broadcast_event("unit_stats_updated", {
+    _event_broadcaster("unit_stats_updated", {
         player_units: ds_list_size(player_units),
         enemy_units: ds_list_size(enemy_units),
         player_defeated: total_player_units_defeated,
@@ -585,7 +585,7 @@ save_player_units_state = function() {
 // 嘗試捕捉敵人
 try_capture_enemy = function(target) {
     if (!instance_exists(target) || ds_list_find_index(enemy_units, target) == -1) {
-        broadcast_event("ui_message", {message: "無效的捕捉目標!"});
+        _event_broadcaster("ui_message", {message: "無效的捕捉目標!"});
         return false;
     }
     
@@ -598,7 +598,7 @@ try_capture_enemy = function(target) {
     final_chance = clamp(final_chance, 0.1, 0.95); // 限制在 10% - 95% 之間
     
     // 這裡可以添加捕捉相關事件，讓UI系統處理顯示捕捉動畫等
-    broadcast_event("capture_attempt", {
+    _event_broadcaster("capture_attempt", {
         target: target,
         chance: final_chance,
         hp_percent: hp_percent
@@ -640,7 +640,7 @@ handle_capture_result = function(target, success) {
         array_push(global.player_monsters, monster_data);
         
         // 顯示成功訊息
-        broadcast_event("ui_message", {message: monster_name + " 被成功捕獲!"});
+        _event_broadcaster("ui_message", {message: monster_name + " 被成功捕獲!"});
         
         // 從敵人列表中移除
         var index = ds_list_find_index(enemy_units, target);
@@ -653,11 +653,11 @@ handle_capture_result = function(target, success) {
         
         // 檢查戰鬥結束條件
         if (ds_list_size(enemy_units) <= 0) {
-            broadcast_event("all_enemies_defeated", {});
+            _event_broadcaster("all_enemies_defeated", {});
         }
         
         // 發送捕獲成功事件
-        broadcast_event("capture_success", {
+        _event_broadcaster("capture_success", {
             target_type: target.object_index,
             monster_name: monster_name
         });
@@ -665,7 +665,7 @@ handle_capture_result = function(target, success) {
         return true;
     } else {
         // 捕捉失敗
-        broadcast_event("ui_message", {message: object_get_name(target.object_index) + " 掙脫了!"});
+        _event_broadcaster("ui_message", {message: object_get_name(target.object_index) + " 掙脫了!"});
         
         // 敵人可能有反應（例如憤怒狀態）
         with (target) {
@@ -675,7 +675,7 @@ handle_capture_result = function(target, success) {
         }
         
         // 發送捕獲失敗事件
-        broadcast_event("capture_fail", {target: target});
+        _event_broadcaster("capture_fail", {target: target});
         
         return false;
     }
@@ -720,7 +720,7 @@ find_nearest_player_unit = function(source_x, source_y, max_distance = -1) {
 }
 
 // 輔助函數：發送事件消息
-broadcast_event = function(event_name, data = {}) {
+_local_broadcast_event = function(event_name, data = {}) {
     if (instance_exists(obj_event_manager)) {
         with (obj_event_manager) {
             handle_event(event_name, data);
@@ -729,6 +729,13 @@ broadcast_event = function(event_name, data = {}) {
         show_debug_message("警告: 事件管理器不存在，無法廣播事件: " + event_name);
     }
 }
+
+// 將事件廣播方法綁定到實例變數
+#region BIND_METHODS
+// ... 其他綁定 ...
+_event_broadcaster = method(self, _local_broadcast_event); // <-- 修改賦值
+// ... 其他綁定 ...
+#endregion
 
 // 初始化
 initialize();

@@ -160,7 +160,7 @@ on_unit_died = function(data) {
             show_debug_message("單位死亡後檢查 - 敵人數量: " + string(enemy_count) + ", 玩家單位數量: " + string(player_count));
             
             // 更新單位統計
-            broadcast_event("unit_stats_updated", {
+            _event_broadcaster("unit_stats_updated", {
                 enemy_units: enemy_count,
                 player_units: player_count
             });
@@ -168,7 +168,7 @@ on_unit_died = function(data) {
             // 檢查是否所有敵人都被擊敗
             if (enemy_count <= 0) {
                 show_debug_message("檢測到所有敵人被擊敗");
-                broadcast_event("all_enemies_defeated", {
+                _event_broadcaster("all_enemies_defeated", {
                     reason: "unit_died_check",
                     source: "unit_died_event"
                 });
@@ -178,7 +178,7 @@ on_unit_died = function(data) {
             // 檢查是否所有玩家單位都被擊敗
             if (player_count <= 0) {
                 show_debug_message("檢測到所有玩家單位被擊敗");
-                broadcast_event("all_player_units_defeated", {
+                _event_broadcaster("all_player_units_defeated", {
                     reason: "unit_died_check",
                     source: "unit_died_event"
                 });
@@ -216,7 +216,7 @@ on_battle_ending = function(data) {
         }
         
         // 顯示戰鬥結果
-        broadcast_event("show_battle_result", {
+        _event_broadcaster("show_battle_result", {
             victory: data.victory,
             battle_duration: battle_timer / game_get_speed(gamespeed_fps),
             exp_gained: rewards.exp,
@@ -358,7 +358,7 @@ start_battle = function(initial_enemy) {
     
     show_debug_message("準備發送戰鬥開始事件...");
     // 發送戰鬥開始事件
-    broadcast_event("battle_start", {
+    _event_broadcaster("battle_start", {
         initial_enemy: initial_enemy,
         center_x: initial_enemy.x,
         center_y: initial_enemy.y,
@@ -394,7 +394,7 @@ end_battle = function() {
     global.in_battle = false;
     
     // 發送戰鬥結束事件
-    broadcast_event("battle_end", {
+    _event_broadcaster("battle_end", {
         duration: battle_timer / game_get_speed(gamespeed_fps)
     });
     
@@ -443,7 +443,7 @@ on_all_enemies_defeated = function(data) {
             add_battle_log("所有敵人被擊敗，戰鬥勝利!");
             
             // 發送戰鬥即將結束事件
-            broadcast_event("battle_ending", {
+            _event_broadcaster("battle_ending", {
                 victory: true,
                 reason: "all_enemies_defeated",
                 source: data.source
@@ -477,7 +477,7 @@ on_all_player_units_defeated = function(data) {
         add_battle_log("所有玩家單位被擊敗，戰鬥失敗!");
         
         // 發送戰鬥即將結束事件
-        broadcast_event("battle_ending", {
+        _event_broadcaster("battle_ending", {
             victory: false,
             reason: "all_player_units_defeated"
         });
@@ -511,7 +511,7 @@ add_battle_log = function(message) {
 };
 
 // 輔助函數：發送事件消息
-broadcast_event = function(event_name, data = {}) {
+_local_broadcast_event = function(event_name, data = {}) {
     if (instance_exists(obj_event_manager)) {
         with (obj_event_manager) {
             handle_event(event_name, data);
@@ -552,6 +552,13 @@ on_battle_defeat_handled = function(data) {
         obj_battle_ui.update_rewards_display();
     }
 };
+
+// 將事件廣播方法綁定到實例變數
+#region BIND_METHODS
+// ... 其他綁定 ...
+_event_broadcaster = method(self, _local_broadcast_event); // <-- 修改賦值
+// ... 其他綁定 ...
+#endregion
 
 // 初始化
 initialize_battle_manager();

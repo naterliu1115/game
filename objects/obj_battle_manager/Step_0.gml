@@ -46,7 +46,7 @@ switch (battle_state) {
                 }
                 
                 // 發送進入準備階段事件
-                broadcast_event("battle_preparing", {});
+                _event_broadcaster("battle_preparing", {});
             }
         }
         break;
@@ -63,7 +63,7 @@ switch (battle_state) {
         
         if (has_units || battle_timer > game_get_speed(gamespeed_fps) * 10) {
             // 關閉所有可能開啟的UI
-            broadcast_event("close_all_ui", {});
+            _event_broadcaster("close_all_ui", {});
             
             // 如果10秒內沒有召喚單位，自動召喚一個
             if (!has_units && instance_exists(obj_unit_manager)) {
@@ -112,7 +112,7 @@ switch (battle_state) {
             }
             
             // 發送戰鬥開始事件
-            broadcast_event("battle_active", {});
+            _event_broadcaster("battle_active", {});
         }
         break;
         
@@ -133,14 +133,14 @@ switch (battle_state) {
                     // 如果敵人數量為0但沒有觸發結束事件
                     if (enemy_count <= 0) {
                         show_debug_message("警告：安全網檢測到敵人數量為0但戰鬥仍在進行，觸發all_enemies_defeated事件");
-                        broadcast_event("all_enemies_defeated", {
+                        _event_broadcaster("all_enemies_defeated", {
                             reason: "safety_check_delayed"
                         });
                     }
                     // 如果玩家單位數量為0但沒有觸發結束事件
                     else if (player_count <= 0) {
                         show_debug_message("警告：安全網檢測到玩家單位數量為0但戰鬥仍在進行，觸發all_player_units_defeated事件");
-                        broadcast_event("all_player_units_defeated", {
+                        _event_broadcaster("all_player_units_defeated", {
                             reason: "safety_check_delayed"
                         });
                     }
@@ -177,7 +177,7 @@ switch (battle_state) {
                 add_battle_log("顯示戰鬥結果!");
                 
                 // 發送顯示結果事件
-                broadcast_event("show_battle_result", {});
+                _event_broadcaster("show_battle_result", {});
             }
         } else {
             show_debug_message("警告：單位管理器不存在，直接轉換到 RESULT 狀態");

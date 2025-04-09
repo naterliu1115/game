@@ -226,21 +226,39 @@ function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected
         slot_color, slot_color, slot_color, slot_color, false);
 
     // 繪製物品圖示
-    var sprite = asset_get_index(item_data.IconSprite);
-    if (sprite != -1 && sprite_exists(sprite)) {
-        // 使用安全的繪製函數
-        draw_sprite_safe(sprite, 0, x + width/2, y + height/2,
-            (width - 8) / sprite_get_width(sprite),
-            (height - 8) / sprite_get_height(sprite),
-            0, c_white, 1);
-    } else {
-        // 如果精靈無效，使用 spr_gold
-        var default_sprite = asset_get_index("spr_gold");
-        if (default_sprite != -1 && sprite_exists(default_sprite)) {
-            draw_sprite_safe(default_sprite, 0, x + width/2, y + height/2,
-                (width - 8) / sprite_get_width(default_sprite),
-                (height - 8) / sprite_get_height(default_sprite),
+    var sprite_asset = asset_get_index(item_data.IconSprite);
+    var sprite_drawn = false;
+
+    // 檢查類型
+    if (sprite_asset != -1 && asset_get_type(sprite_asset) == asset_sprite) {
+        // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+        var spr_w = sprite_get_width(sprite_asset);
+        var spr_h = sprite_get_height(sprite_asset);
+        if (spr_w > 0 && spr_h > 0) {
+            // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+            draw_sprite_safe(sprite_asset, 0, x + width/2, y + height/2,
+                (width - 8) / spr_w,
+                (height - 8) / spr_h,
                 0, c_white, 1);
+            sprite_drawn = true;
+        }
+    }
+
+    // 如果主要精靈無效或繪製失敗，嘗試使用預設精靈
+    if (!sprite_drawn) {
+        var default_sprite_asset = asset_get_index("spr_gold");
+        // 檢查類型
+        if (default_sprite_asset != -1 && asset_get_type(default_sprite_asset) == asset_sprite) {
+            // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+            var def_spr_w = sprite_get_width(default_sprite_asset);
+            var def_spr_h = sprite_get_height(default_sprite_asset);
+            if (def_spr_w > 0 && def_spr_h > 0) {
+                // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+                draw_sprite_safe(default_sprite_asset, 0, x + width/2, y + height/2,
+                    (width - 8) / def_spr_w,
+                    (height - 8) / def_spr_h,
+                    0, c_white, 1);
+            }
         }
     }
 
@@ -265,18 +283,37 @@ function draw_ui_item_slot(x, y, width, height, item_data, quantity, is_selected
 /// @param {real} size 物品大小
 /// @param {struct} item_data 物品數據
 function draw_ui_dragged_item(x, y, size, item_data) {
-    var sprite = asset_get_index(item_data.IconSprite);
-    if (sprite != -1 && sprite_exists(sprite)) {
-        draw_sprite_ext(sprite, 0,
-            x, y, size/sprite_get_width(sprite), size/sprite_get_height(sprite),
-            0, c_white, 0.7);
-    } else {
-        // 如果精靈無效，使用 spr_gold
-        var default_sprite = asset_get_index("spr_gold");
-        if (default_sprite != -1 && sprite_exists(default_sprite)) {
-            draw_sprite_ext(default_sprite, 0,
-                x, y, size/sprite_get_width(default_sprite), size/sprite_get_height(default_sprite),
+    var sprite_asset = asset_get_index(item_data.IconSprite);
+    var sprite_drawn = false;
+
+    // 檢查類型
+    if (sprite_asset != -1 && asset_get_type(sprite_asset) == asset_sprite) {
+        // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+        var spr_w = sprite_get_width(sprite_asset);
+        var spr_h = sprite_get_height(sprite_asset);
+        if (spr_w > 0 && spr_h > 0) {
+            // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+            draw_sprite_ext(sprite_asset, 0,
+                x, y, size / spr_w, size / spr_h,
                 0, c_white, 0.7);
+            sprite_drawn = true;
+        }
+    }
+
+    // 如果主要精靈無效或繪製失敗，嘗試使用預設精靈
+    if (!sprite_drawn) {
+        var default_sprite_asset = asset_get_index("spr_gold");
+        // 檢查類型
+        if (default_sprite_asset != -1 && asset_get_type(default_sprite_asset) == asset_sprite) {
+            // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+            var def_spr_w = sprite_get_width(default_sprite_asset);
+            var def_spr_h = sprite_get_height(default_sprite_asset);
+            if (def_spr_w > 0 && def_spr_h > 0) {
+                // GM1041 警告可能會在此處觸發，但邏輯上是安全的
+                draw_sprite_ext(default_sprite_asset, 0,
+                    x, y, size / def_spr_w, size / def_spr_h,
+                    0, c_white, 0.7);
+            }
         }
     }
 }

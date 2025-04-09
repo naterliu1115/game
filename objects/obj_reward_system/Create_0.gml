@@ -68,7 +68,7 @@ on_battle_end = function(data) {
     }
     
     // 發送獎勵已計算事件
-    broadcast_event("rewards_calculated", battle_result);
+    _event_broadcaster("rewards_calculated", battle_result);
 };
 
 // 處理所有敵人被擊敗事件
@@ -210,7 +210,7 @@ grant_rewards = function() {
     }
     
     // 發送獎勵已分發事件
-    broadcast_event("rewards_granted", battle_result);
+    _event_broadcaster("rewards_granted", battle_result);
     
     // 通知UI顯示獎勵
     if (instance_exists(obj_battle_ui)) {
@@ -276,7 +276,7 @@ handle_defeat_effects = function() {
     }
     
     // 發送失敗事件
-    broadcast_event("battle_defeat_handled", {gold_loss: abs(battle_result.gold_gained)});
+    _event_broadcaster("battle_defeat_handled", {gold_loss: abs(battle_result.gold_gained)});
 };
 
 // 分配經驗值給參戰單位
@@ -353,7 +353,7 @@ level_up_monster = function(monster_data, unit) {
     }
     
     // 發送升級事件
-    broadcast_event("monster_level_up", {
+    _event_broadcaster("monster_level_up", {
         monster: monster_data,
         new_level: monster_data.level,
         hp_increase: hp_increase,
@@ -371,7 +371,7 @@ level_up_monster = function(monster_data, unit) {
 };
 
 // 輔助函數：發送事件消息
-broadcast_event = function(event_name, data = {}) {
+_local_broadcast_event = function(event_name, data = {}) {
     if (instance_exists(obj_event_manager)) {
         with (obj_event_manager) {
             handle_event(event_name, data);
@@ -380,6 +380,13 @@ broadcast_event = function(event_name, data = {}) {
         show_debug_message("警告: 事件管理器不存在，無法廣播事件: " + event_name);
     }
 }
+
+// 將事件廣播方法綁定到實例變數
+#region BIND_METHODS
+// ... 其他綁定 ...
+_event_broadcaster = method(self, _local_broadcast_event); // <-- 修改賦值
+// ... 其他綁定 ...
+#endregion
 
 // 初始化
 initialize();
