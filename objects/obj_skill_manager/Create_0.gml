@@ -26,109 +26,161 @@ initialize = function() {
 load_skills_from_csv = function() {
     show_debug_message("正在從CSV載入技能資料...");
     
-    var file = "skills/skills.csv";
-    var skills_loaded_count = 0;
+    var _csv_file = "skills/skills.csv";
+    var grid = load_csv(_csv_file); // load_csv 會處理 datafiles/ 前綴檢查
     
-    // 檢查檔案是否存在
-    if (!file_exists(file)) {
-        show_debug_message("錯誤：技能資料檔案不存在 - " + file);
+    if (!ds_exists(grid, ds_type_grid)) {
+        show_debug_message("錯誤：無法通過 load_csv 加載技能文件: " + _csv_file);
+        skills_loaded = false;
         return false;
     }
     
-    // 開啟檔案
-    var file_id = file_text_open_read(file);
+    // 獲取行數和列數
+    var width = ds_grid_width(grid);
+    var height = ds_grid_height(grid);
+    show_debug_message("技能CSV讀取成功：" + string(height - 1) + " 行數據 (共 " + string(width) + " 列)");
     
-    // 讀取標題行
-    var header = file_text_read_string(file_id);
-    file_text_readln(file_id);
-    
-    // 解析標題獲取欄位索引
-    var header_fields = custom_string_split(header, ",");
-    var field_indices = ds_map_create();
-    
-    for (var i = 0; i < array_length(header_fields); i++) {
-        ds_map_add(field_indices, header_fields[i], i);
-    }
-    
-    show_debug_message("識別到的欄位：" + string(array_length(header_fields)));
-    
-    // 讀取每一行資料
-    while (!file_text_eof(file_id)) {
-        var line = file_text_read_string(file_id);
-        file_text_readln(file_id);
-        
-        // 跳過空行
-        if (line == "") continue;
-        
-        // 解析CSV行
-        var values = custom_string_split(line, ",");
-        
-        // 如果欄位數不足，跳過
-        if (array_length(values) < array_length(header_fields)) {
-            show_debug_message("警告：資料行欄位不足 - " + line);
-            continue;
-        }
-        
-        // 創建技能結構體
+    var skills_loaded_count = 0;
+    // 從第二行開始讀取
+    for (var i = 1; i < height; i++) {
         var skill = {};
+        var _skill_id = ""; // 存儲ID用於Map鍵
+        var _valid_row = true;
         
-        // 填充所有欄位
-        for (var i = 0; i < array_length(header_fields); i++) {
-            var field_name = header_fields[i];
-            var value = values[i];
+        // 遍歷所有列名 (假設標題行在第0行)
+        for (var j = 0; j < width; j++) {
+            var field_name = ds_grid_get(grid, j, 0); // 從grid獲取列名
+            var value_raw = ds_grid_get(grid, j, i); // 獲取原始值
+            var value_str = ""; // Default to empty string
             
-            // 根據欄位類型轉換值
+            // 檢查原始值是否為字符串，如果不是則嘗試轉換
+            try {
+                if (!is_undefined(value_raw)) {
+                    value_str = string(value_raw);
+                }
+            } catch (_err) {
+                show_debug_message("錯誤：在行 " + string(i+1) + ", 列 " + string(j) + " 轉換值時發生錯誤: " + string(_err));
+                value_str = "";
+                 _valid_row = false; // Consider invalidating row on conversion error
+                 // break; // Optional: break inner loop if conversion fails
+            }
+            
+            // 修改：使用更安全的 Trim 邏輯
+            var trimmed_value_str = value_str; // Start with the potentially converted string
+            if (is_string(trimmed_value_str)) { // Double-check it's a string before proceeding
+                // 手動移除前端空格 (ASCII 32)
+                while (string_length(trimmed_value_str) > 0 && ord(string_char_at(trimmed_value_str, 1)) == 32) {
+                    trimmed_value_str = string_delete(trimmed_value_str, 1, 1);
+                }
+                // 手動移除後端空格 (ASCII 32)
+                while (string_length(trimmed_value_str) > 0 && ord(string_char_at(trimmed_value_str, string_length(trimmed_value_str))) == 32) {
+                    trimmed_value_str = string_delete(trimmed_value_str, string_length(trimmed_value_str), 1);
+                }
+                // 可以在這裡添加對其他不可見字符的檢查和移除 (例如 ord(char) < 32)
+            } else {
+                // 如果轉換後仍然不是字符串，則保持為空
+                trimmed_value_str = "";
+                 show_debug_message("警告：在行 " + string(i+1) + ", 列 " + string(j) + " 無法獲取有效的字符串值用於Trim。");
+                 if (field_name == "id") { // If ID field is problematic, invalidate
+                     _valid_row = false;
+                 }
+            }
+            
+            // 增加詳細調試，就在錯誤行之前
+            // show_debug_message("Debug Check: Row=" + string(i+1) + ", Col=" + string(j) + ", Field='" + field_name + "', ValueStr='" + value_str + "', TrimmedValue='" + trimmed_value_str + "'");
+
+            // 使用處理過的 trimmed_value_str 進行判斷
+            if (field_name == "id") {
+                 if(string_length(trimmed_value_str) == 0) { // 使用手動 trim 後的結果
+                     _valid_row = false;
+                     // 如果ID行為空，可以選擇跳過該行的剩餘列處理
+                      show_debug_message("  因ID為空或無效，跳過行 " + string(i+1));
+                     break; // 跳出內層 j 循環
+                 } else {
+                     _skill_id = trimmed_value_str; // 記錄有效的 ID
+                 }
+            }
+
+             // 如果行因ID無效，跳過剩餘列
+             if (!_valid_row) continue;
+
+            // 根據欄位名稱轉換類型
             switch (field_name) {
+                case "id":
+                    skill[$ field_name] = _skill_id; // 使用已驗證的 ID
+                    break;
                 case "damage_multiplier":
                 case "range":
                 case "cooldown":
                 case "area_radius":
-                    // 數值型欄位轉為數字
-                    skill[$ field_name] = real(value);
-                    break;
-                    
-                case "anim_damage_frames":
-                    // 分號分隔的數字轉為陣列
-                    var frames = custom_string_split(value, ";");
-                    var frames_array = [];
-                    
-                    for (var j = 0; j < array_length(frames); j++) {
-                        array_push(frames_array, real(frames[j]));
+                case "anim_frames":
+                    try { // 添加 try-catch 以便捕獲特定行的錯誤
+                        if (is_string(trimmed_value_str) && is_numeric_safe(trimmed_value_str)) {
+                             skill[$ field_name] = real(trimmed_value_str);
+                        } else {
+                             // show_debug_message("  -> WARNING: Value is not a numeric string. Setting to 0.");
+                             skill[$ field_name] = 0;
+                        }
+                    } catch (_err) {
+                         show_debug_message("  -> CRITICAL ERROR during numeric check/conversion: " + string(_err));
+                         skill[$ field_name] = 0; 
                     }
-                    
+                    break;
+                case "anim_damage_frames":
+                    var frames_array = [];
+                    if (string_length(trimmed_value_str) > 0) {
+                        var frames = string_split(trimmed_value_str, ";"); 
+                        for (var k = 0; k < array_length(frames); k++) {
+                            var frame_str_raw = frames[k];
+                            var frame_str_trimmed = frame_str_raw;
+                            if (is_string(frame_str_trimmed)) {
+                                while (string_length(frame_str_trimmed) > 0 && ord(string_char_at(frame_str_trimmed, 1)) == 32) { frame_str_trimmed = string_delete(frame_str_trimmed, 1, 1); }
+                                while (string_length(frame_str_trimmed) > 0 && ord(string_char_at(frame_str_trimmed, string_length(frame_str_trimmed))) == 32) { frame_str_trimmed = string_delete(frame_str_trimmed, string_length(frame_str_trimmed), 1); }
+                            }
+                            try { 
+                                if (is_string(frame_str_trimmed) && is_numeric_safe(frame_str_trimmed)) {
+                                    array_push(frames_array, real(frame_str_trimmed));
+                                } else {
+                                    if (string_length(frame_str_trimmed) > 0) {
+                                         show_debug_message("  -> WARNING: Invalid frame value '" + frame_str_trimmed + "' in anim_damage_frames, Row: " + string(i+1));
+                                    }
+                                }
+                            } catch (_f_err) {
+                                show_debug_message("  -> CRITICAL ERROR during frame conversion for frame '" + frame_str_trimmed + "': " + string(_f_err));
+                            }
+                        }
+                    }
                     skill[$ field_name] = frames_array;
                     break;
-                    
-                case "anim_frames":
-                    // 單一數字轉為數字
-                    skill[$ field_name] = real(value);
-                    break;
-                    
                 default:
-                    // 字串欄位保持字串
-                    skill[$ field_name] = value;
+                    // 對於 name, description 等，使用原始轉換後的 value_str
+                    skill[$ field_name] = value_str;
+                    // 如果確定也要移除它們的前後空格，可以用 trimmed_value_str
+                    // skill[$ field_name] = trimmed_value_str; 
                     break;
             }
         }
         
-        // 添加到技能資料庫
-        var skill_id = skill.id;
-        ds_map_add(skill_database, skill_id, skill);
-        skills_loaded_count++;
-        
-        show_debug_message("已載入技能: " + skill_id + " - " + skill.name);
+        // 如果是有效行，添加到數據庫
+        if (_valid_row && _skill_id != "") {
+            ds_map_add(skill_database, _skill_id, skill);
+            skills_loaded_count++;
+        } else if (!_valid_row && _skill_id == "") {
+            // 只有當是因為ID無效而跳過時才顯示此信息
+            // show_debug_message("警告：跳過技能數據行 " + string(i+1) + "，因為 ID 為空或數據無效。");
+        } else if (_skill_id != "") {
+            // 如果 ID 有效但行中其他地方出錯(例如轉換失敗)
+            show_debug_message("警告：跳過技能數據行 " + string(i+1) + " (ID: " + _skill_id + ")，可能因為行中存在轉換錯誤。");
+        }
     }
     
-    // 關閉檔案
-    file_text_close(file_id);
-    
-    // 清理臨時資料
-    ds_map_destroy(field_indices);
+    // 清理 grid
+    ds_grid_destroy(grid);
     
     show_debug_message("技能載入完成，共載入 " + string(skills_loaded_count) + " 個技能");
-    skills_loaded = true;
+    skills_loaded = (skills_loaded_count > 0);
     
-    return true;
+    return skills_loaded;
 };
 
 // 取得技能資料

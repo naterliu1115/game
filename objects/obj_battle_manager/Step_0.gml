@@ -120,6 +120,62 @@ switch (battle_state) {
         // 戰鬥進行中
         battle_timer++;
         
+        // 檢查勝利條件：所有敵人都已死亡
+        var all_enemies_defeated = true;
+        if (ds_list_size(obj_unit_manager.enemy_units) > 0) { // 確保有敵人
+            for (var i = 0; i < ds_list_size(obj_unit_manager.enemy_units); i++) {
+                var enemy_id = obj_unit_manager.enemy_units[| i];
+                if (instance_exists(enemy_id) && !enemy_id.dead) {
+                    all_enemies_defeated = false;
+                    break; // 只要有一個敵人活著就不是勝利
+                }
+            }
+        } else {
+            all_enemies_defeated = false; // 如果沒有敵人單位列表，不算勝利
+        }
+        
+        if (all_enemies_defeated) {
+            show_debug_message("[Battle Manager] 勝利條件達成！");
+            battle_result = "VICTORY";
+            battle_timer_end = battle_timer; // 記錄結束時間
+            // 分配經驗值
+            distribute_battle_exp(); 
+            // 切換到結束狀態
+            battle_state = BATTLE_STATE.ENDING;
+            show_debug_message("戰鬥狀態變更：-> ENDING (勝利)");
+            // 在這裡觸發勝利相關的事件或UI
+            break; // 狀態已改變，跳出 switch
+        }
+        
+        // 檢查失敗條件：所有玩家單位都已死亡
+        var all_player_units_defeated = true;
+        if (ds_list_size(obj_unit_manager.player_units) > 0) { // 確保有我方單位
+            for (var i = 0; i < ds_list_size(obj_unit_manager.player_units); i++) {
+                var player_unit_id = obj_unit_manager.player_units[| i];
+                if (instance_exists(player_unit_id) && !player_unit_id.dead) {
+                    all_player_units_defeated = false;
+                    break; // 只要有一個活著就不是失敗
+                }
+            }
+        } else {
+             // 如果沒有玩家單位列表，是否算失敗？(根據遊戲設計決定)
+             // all_player_units_defeated = true;
+             all_player_units_defeated = false; // 暫定不算失敗
+        }
+        
+        if (all_player_units_defeated) {
+            show_debug_message("[Battle Manager] 失敗條件達成！");
+            battle_result = "DEFEAT";
+            battle_timer_end = battle_timer; // 記錄結束時間
+            // 失敗通常不分配經驗
+             ds_list_clear(defeated_enemies_exp); // 清理可能已記錄的經驗
+            // 切換到結束狀態
+            battle_state = BATTLE_STATE.ENDING;
+            show_debug_message("戰鬥狀態變更：-> ENDING (失敗)");
+            // 在這裡觸發失敗相關的事件或UI
+            break; // 狀態已改變，跳出 switch
+        }
+        
         // 安全網檢查 - 每秒檢查一次
         if (battle_timer mod game_get_speed(gamespeed_fps) == 0) {
             if (instance_exists(obj_unit_manager)) {

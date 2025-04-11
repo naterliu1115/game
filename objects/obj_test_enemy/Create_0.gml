@@ -162,6 +162,12 @@ initialize = function() {
     // 冷卻時間初始化
     battle_cooldown = 0;
     
+    // --- 新增：重新計算 ATB rate 以匹配最終計算的 spd ---
+    atb_rate = 1 + (spd * 0.1);
+    atb_current = 0; // 重置 ATB
+    atb_ready = false;
+    // --- 新增結束 ---
+
     // --- 增加除錯訊息：打印載入的屬性 --- 
     show_debug_message("--- [" + name + "] 模板數據載入完成 ---");
     show_debug_message("    Level: " + string(level) + " (來自模板)");

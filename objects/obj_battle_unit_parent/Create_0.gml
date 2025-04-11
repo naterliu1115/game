@@ -178,6 +178,28 @@ add_skill = function(skill_id) {
     return true;
 }
 
+// 檢查是否擁有指定技能 (基於 skill_ids 列表)
+has_skill = function(skill_id) {
+    // 首先檢查 skill_ids 列表是否存在且為 ds_list
+    if (!ds_exists(skill_ids, ds_type_list)) {
+        // 如果列表不存在，顯然不包含任何技能
+        // 可以選擇性地顯示一條警告信息，因為這通常不應該發生
+        // show_debug_message("警告: 在 " + object_get_name(object_index) + " 中檢查技能時 skill_ids 列表不存在!");
+        return false;
+    }
+
+    // 遍歷 skill_ids 列表查找匹配的 ID
+    for (var i = 0; i < ds_list_size(skill_ids); i++) {
+        if (skill_ids[| i] == skill_id) {
+            // 找到了匹配的 ID
+            return true;
+        }
+    }
+
+    // 遍歷完成後仍未找到
+    return false;
+}
+
 // 初始化方法(子类可以覆盖此方法添加自己的初始化)
 initialize = function() {
     // 初始化戰鬥計時器（如果尚未定義）
@@ -943,7 +965,6 @@ apply_skill_damage = function() {
         return;
     }
     
-    // 標記傷害已觸發
     skill_damage_triggered = true;
     
     // --- 動態計算傷害 ---
@@ -953,32 +974,30 @@ apply_skill_damage = function() {
     var attacker_attack = attack; // 直接讀取自身 attack 值
     // 計算基礎傷害
     var calculated_damage = attacker_attack * multiplier;
-    // --- 傷害計算結束 ---
+    show_debug_message("基礎傷害 (攻擊力×倍率)：" + string(calculated_damage));
     
-    // 考慮目標防禦
-    // 添加檢查確保 target.defense 存在且為數字
     var target_defense = 0;
     if (variable_instance_exists(target, "defense") && is_real(target.defense)) {
         target_defense = target.defense;
+        show_debug_message("目標防禦力：" + string(target_defense));
+    } else {
+        show_debug_message("警告：目標防禦力無效，使用預設值 0");
     }
-    calculated_damage = max(1, calculated_damage - target_defense); // 確保至少造成 1 點傷害
+    
+    calculated_damage = max(1, calculated_damage - target_defense);
+    show_debug_message("最終傷害 (考慮防禦後)：" + string(calculated_damage));
+    show_debug_message("------------------------");
     
     // 應用傷害
     with (target) {
-        // 傳遞計算出的局部傷害變數 calculated_damage
-        take_damage(calculated_damage, other.id, other.current_skill.id); 
+        take_damage(calculated_damage, other.id, other.current_skill.id);
     }
     
-    // 創建特效 (如果特效系統已存在)
-    // 檢查 current_skill.particle_effect 是否存在
+    // 特效處理
     var particle_effect_name = variable_struct_exists(current_skill, "particle_effect") ? current_skill.particle_effect : "";
     if (variable_global_exists("particle_system") && particle_effect_name != "") {
-        // 這裡將來添加粒子特效創建代碼
-        // particle_system.create_effect(target.x, target.y, particle_effect_name);
+        show_debug_message("觸發特效：" + particle_effect_name);
     }
-    
-    show_debug_message(object_get_name(object_index) + " 對 " + object_get_name(target.object_index) + 
-                      " 造成 " + string(calculated_damage) + " 點傷害 (技能: " + current_skill.name + ", 攻擊: " + string(attacker_attack) + ", 倍率: " + string(multiplier) + ")");
 }
 
 // 結束技能動畫
@@ -1072,6 +1091,18 @@ die = function() {
         
         // 創建死亡特效
         instance_create_layer(x, y, "Instances", obj_death_effect);
+        
+        // --- 新增：記錄擊敗經驗值 --- 
+        // 只有敵方單位 (team == 1) 死亡時才記錄經驗值給 Battle Manager
+        if (team == 1 && instance_exists(obj_battle_manager)) {
+            // 檢查自身是否存在 exp_reward 變數
+            if (variable_instance_exists(id, "exp_reward")) {
+                obj_battle_manager.record_defeated_enemy_exp(exp_reward);
+            } else {
+                show_debug_message("警告：死亡的敵人 " + object_get_name(object_index) + " 沒有 exp_reward 變數。");
+            }
+        }
+        // --- 經驗記錄結束 --- 
         
         // 設置自我銷毀延遲 (使用新的計時器系統)
         set_timer(TIMER_TYPE.DEATH, 15);

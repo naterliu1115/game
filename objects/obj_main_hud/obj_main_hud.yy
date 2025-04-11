@@ -10,8 +10,8 @@
   "name":"obj_main_hud",
   "overriddenProperties":[],
   "parent":{
-    "name":"MainUI",
-    "path":"folders/物体/MainUI.yy",
+    "name":"Main",
+    "path":"folders/物体/Main.yy",
   },
   "parentObjectId":null,
   "persistent":false,

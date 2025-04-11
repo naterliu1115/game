@@ -9,8 +9,8 @@
   "name":"parent_ui",
   "overriddenProperties":[],
   "parent":{
-    "name":"物体",
-    "path":"folders/物体.yy",
+    "name":"Main",
+    "path":"folders/物体/Main.yy",
   },
   "parentObjectId":null,
   "persistent":false,

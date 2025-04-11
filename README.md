@@ -126,6 +126,10 @@ if (instance_exists(obj_event_manager)) {
 - 新增：實現了浮動傷害文字系統 (`obj_floating_text`)，用於即時顯示傷害數值。
 - 新增：實現了通用的受傷視覺特效 (`obj_hurt_effect`)，獨立於單位動畫。
 - **更新**: 技能傷害計算已從單位初始化階段（可能讀取不完整數據）轉移到實際應用傷害時 (`obj_battle_unit_parent` 的 `apply_skill_damage` 函數中)。現在會根據攻擊者**當前**的攻擊力和技能的傷害倍率 (`damage_multiplier`) 動態計算。
+- **傷害驗證**: 已建立自動化測試 (`rm_damage_test`, `obj_damage_test_controller`, `obj_test_attacker`, `obj_test_target`) 並驗證 `apply_skill_damage` 中動態計算的傷害值符合預期。
+- **運行時錯誤修復**:
+    - 解決了因內建函數 `string_is_numeric` 行為異常導致的 CSV 加載崩潰問題（影響 `obj_skill_manager`, `obj_level_manager` 等）。通過創建並使用自定義輔助函數 `is_numeric_safe` 替代了有問題的內建函數。
+    - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
 
 ### 4. 單位系統 (Unit System)
 
@@ -606,14 +610,23 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
       - 實現了挖掘進度條和粒子效果
       - 實現了世界座標到螢幕座標的轉換機制
     - **敵人系統**: 工廠模式重構完成，數據驅動加載，實例化與初始化流程分離。
+    - **經驗與升級系統重構**:
+        - 實現了基於 CSV (`enemies.csv`) 的敵人經驗獎勵 (`exp_reward`)。
+        - `obj_battle_manager` 現在會記錄戰鬥中擊敗的敵人經驗，並在勝利後分配給存活的我方單位。
+        - 創建了等級經驗表 (`levels.csv`) 和對應的管理員 (`obj_level_manager`)，用於定義和加載升級所需經驗。
+        - 重構了 `obj_player_summon_parent` 的經驗獲取 (`gain_exp`) 和升級 (`level_up`) 邏輯，以使用等級表、處理連續升級，並根據模板學習新技能。
+        - 實現了升級時的視覺特效（浮動文字 + 粒子效果）。
     - **放置器修復**: 解決了 `obj_enemy_placer` 因事件廣播時序問題無法轉換的 Bug。
     - **UI 錯誤修復**: 解決了 `obj_monster_manager_ui` 關閉時崩潰、技能不顯示的問題；解決了 UI 繼承導致的初始化變數錯誤。
     - **技能傷害計算**: 將傷害計算邏輯從初始化階段移至實際造成傷害時，避免因依賴未完全初始化的屬性導致計算錯誤。
     - **工具函數**: 添加了自定義的 `array_join` 函數。
     - **UI 顯示修復**: 解決了召喚 UI 和怪物管理 UI 因錯誤獲取 Sprite 方式而無法顯示動態怪物圖片的問題，統一了數據結構 (`display_sprite`) 和 UI 讀取邏輯。
+    - **傷害驗證**: 已建立自動化測試 (`rm_damage_test`, `obj_damage_test_controller`, `obj_test_attacker`, `obj_test_target`) 並驗證 `apply_skill_damage` 中動態計算的傷害值符合預期。
+    - **運行時錯誤修復**:
+        - 解決了因內建函數 `string_is_numeric` 行為異常導致的 CSV 加載崩潰問題（影響 `obj_skill_manager`, `obj_level_manager` 等）。通過創建並使用自定義輔助函數 `is_numeric_safe` 替代了有問題的內建函數。
+        - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
 
 - **進行中/待辦**:
-    - **傷害驗證**: 需要驗證 `apply_skill_damage` 中動態計算的傷害值是否符合預期。
     - **快捷欄功能完善**: (保留)
     - **採集系統擴展**: (保留)
     - 完善具體的單位 AI

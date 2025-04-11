@@ -1,18 +1,15 @@
 {
   "$GMObject":"",
-  "%Name":"obj_ui_manager",
+  "%Name":"obj_level_manager",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
-    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":12,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
-    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
-    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":64,"eventType":8,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_ui_manager",
+  "name":"obj_level_manager",
   "overriddenProperties":[],
   "parent":{
-    "name":"Main",
-    "path":"folders/物体/Main.yy",
+    "name":"Monster",
+    "path":"folders/物体/Monster.yy",
   },
   "parentObjectId":null,
   "persistent":true,

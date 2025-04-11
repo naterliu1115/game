@@ -12,8 +12,8 @@
     "path":"folders/物体/Monster.yy",
   },
   "parentObjectId":{
-    "name":"obj_battle_unit_parent",
-    "path":"objects/obj_battle_unit_parent/obj_battle_unit_parent.yy",
+    "name":"obj_player_summon_parent",
+    "path":"objects/obj_player_summon_parent/obj_player_summon_parent.yy",
   },
   "persistent":false,
   "physicsAngularDamping":0.1,

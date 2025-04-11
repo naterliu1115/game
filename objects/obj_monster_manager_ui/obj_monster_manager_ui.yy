@@ -11,8 +11,8 @@
   "name":"obj_monster_manager_ui",
   "overriddenProperties":[],
   "parent":{
-    "name":"Monster",
-    "path":"folders/物体/Monster.yy",
+    "name":"Main",
+    "path":"folders/物体/Main.yy",
   },
   "parentObjectId":{
     "name":"parent_ui",

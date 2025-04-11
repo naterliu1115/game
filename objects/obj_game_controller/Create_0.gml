@@ -588,3 +588,76 @@ toggle_inventory_ui = function() {
 // 【新增】在 Create 事件末尾設置 Alarm 來延遲廣播
 show_debug_message("[GameController Create] 所有初始化完成，設置 Alarm[0] 以廣播 managers_initialized");
 alarm[0] = 1; // 延遲 1 幀後廣播
+
+/// @description 初始化遊戲控制器，包括全局粒子系統
+
+// 確保其他單例管理器存在 (如果有的話)
+// instance_create_unique(obj_event_manager);
+// instance_create_unique(obj_unit_manager);
+// instance_create_unique(obj_item_manager);
+// instance_create_unique(obj_skill_manager);
+// instance_create_unique(obj_level_manager); // 確保 level_manager 存在
+// instance_create_unique(obj_enemy_factory); // 確保 enemy_factory 存在
+// instance_create_unique(obj_battle_manager);
+
+// --- 初始化全局粒子系統 ---
+if (!variable_global_exists("particle_system")) {
+    // 檢查 "Effects" 圖層是否存在，如果不存在則創建它
+    var _particle_layer_name = "Effects"; 
+    if (!layer_exists(_particle_layer_name)) {
+        // 不指定深度，讓 GameMaker 根據圖層順序自動處理
+        layer_create(0, _particle_layer_name); // 使用深度 0 或其他預設值，但GM通常會把它放在合適位置
+        show_debug_message("創建了粒子圖層: " + _particle_layer_name);
+    }
+    
+    // 在指定的 "Effects" 圖層創建粒子系統
+    global.particle_system = part_system_create_layer(_particle_layer_name, false); 
+    if (part_system_exists(global.particle_system)) {
+        show_debug_message("全局粒子系統已創建。 ID: " + string(global.particle_system) + " 在圖層: " + _particle_layer_name);
+
+        // --- 創建升級特效粒子類型：pt_level_up_sparkle ---
+        if (!variable_global_exists("pt_level_up_sparkle")) {
+            global.pt_level_up_sparkle = part_type_create();
+            if (part_type_exists(global.pt_level_up_sparkle)) {
+                show_debug_message("  創建粒子類型: pt_level_up_sparkle. ID: " + string(global.pt_level_up_sparkle));
+                // 配置粒子外觀和行為
+                part_type_shape(global.pt_level_up_sparkle, pt_shape_spark);     
+                part_type_size(global.pt_level_up_sparkle, 0.15, 0.35, -0.01, 0); 
+                part_type_scale(global.pt_level_up_sparkle, 1, 1);               
+                part_type_color1(global.pt_level_up_sparkle, c_yellow);          
+                part_type_alpha3(global.pt_level_up_sparkle, 1, 0.8, 0);         
+                part_type_speed(global.pt_level_up_sparkle, 1.5, 3.5, -0.08, 0);  
+                part_type_direction(global.pt_level_up_sparkle, 60, 120, 0, 15); 
+                part_type_gravity(global.pt_level_up_sparkle, 0.1, 270);         
+                part_type_life(global.pt_level_up_sparkle, room_speed * 0.4, room_speed * 0.8); 
+            } else {
+                show_error("錯誤：無法創建 pt_level_up_sparkle 粒子類型！", false);
+            }
+        }
+        // --- 可以在此處添加其他全局粒子類型 --- 
+
+    } else {
+        show_error("錯誤：無法創建全局粒子系統！", true);
+        global.particle_system = -1; // 標記為無效
+    }
+}
+
+// --- 其他遊戲控制器初始化代碼... ---
+// 示例：初始化全局玩家怪物列表
+if (!variable_global_exists("player_monsters")) {
+    global.player_monsters = [];
+    // 在這裡添加加載初始怪物的代碼 (如果需要)
+    // 例如: add_initial_monster(1001, 5); // 添加 ID 1001 的怪物，等級 5
+}
+
+// 示例：初始化全局快捷欄
+if (!variable_global_exists("player_hotbar")) {
+    // 假設快捷欄有 10 格，初始為空 (用 noone 表示)
+    global.player_hotbar = array_create(10, noone);
+}
+
+// 延遲廣播管理器初始化完成事件 (確保其他實例完成創建)
+// alarm[0] = 1; // 假設 Alarm 0 用於此目的
+
+
+show_debug_message("obj_game_controller 初始化完成。請確保此物件持久化。")

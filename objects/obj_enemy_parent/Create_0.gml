@@ -47,46 +47,4 @@ enter_battle_mode = function() {
     show_debug_message("敌人: " + string(id) + " 进入战斗模式，确认team值为: " + string(team));
 }
 
-// 新增：檢查敵人是否擁有指定技能
-has_skill = function(skill_id) {
-    if (!ds_exists(skills, ds_type_list)) return false;
-    
-    for (var i = 0; i < ds_list_size(skills); i++) {
-        var skill = skills[| i];
-        if (is_struct(skill) && variable_struct_exists(skill, "id") && skill.id == skill_id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// 新增：添加新技能
-add_skill = function(skill_id, skill_name = undefined, skill_damage = undefined, skill_range = 50, skill_cooldown = 30) {
-    if (!ds_exists(skills, ds_type_list)) {
-        skills = ds_list_create();
-    }
-    
-    if (!ds_exists(skill_cooldowns, ds_type_map)) {
-        skill_cooldowns = ds_map_create();
-    }
-    
-    // 檢查是否已經有此技能
-    if (has_skill(skill_id)) return false;
-    
-    // 創建新技能
-    var new_skill = {
-        id: skill_id,
-        name: (skill_name != undefined) ? skill_name : skill_id,
-        damage: (skill_damage != undefined) ? skill_damage : attack,
-        range: skill_range,
-        cooldown: skill_cooldown
-    };
-    
-    // 添加技能
-    ds_list_add(skills, new_skill);
-    ds_map_add(skill_cooldowns, skill_id, 0);
-    
-    return true;
-}
-
 // 调用初始化

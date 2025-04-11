@@ -74,6 +74,110 @@ surface_needs_update = ui_data.surface_needs_update;
 // 戰鬥日誌
 battle_log = ds_list_create();
 
+// 戰鬥邊界和動畫
+border_target_scale = 0;
+border_current_scale = 0;
+border_anim_speed = 0.05;
+
+// 結果相關
+battle_result = ""; // "VICTORY", "DEFEAT", "ESCAPE"
+battle_timer_end = 0;
+
+// === 新增：經驗值追蹤 ===
+defeated_enemies_exp = ds_list_create(); // 記錄本場戰鬥擊敗敵人的經驗值
+
+// 記錄被擊敗敵人的經驗值
+record_defeated_enemy_exp = function(exp_value) {
+    if (!is_real(exp_value) || exp_value <= 0) return; // 忽略無效值
+    
+    ds_list_add(defeated_enemies_exp, exp_value);
+    show_debug_message("[Battle Manager] 記錄經驗值: " + string(exp_value));
+}
+
+// 分配戰鬥經驗值
+distribute_battle_exp = function() {
+    if (ds_list_size(defeated_enemies_exp) == 0) {
+        show_debug_message("[Battle Manager] 沒有經驗值可分配。");
+        return;
+    }
+    
+    // 1. 計算總經驗值
+    var total_exp_gained = 0;
+    for (var i = 0; i < ds_list_size(defeated_enemies_exp); i++) {
+        total_exp_gained += defeated_enemies_exp[| i];
+    }
+    show_debug_message("[Battle Manager] 本場戰鬥總經驗: " + string(total_exp_gained));
+    
+    // 2. 找到存活的我方單位
+    var living_player_units = [];
+    // (假設 player_units 列表會被正確維護)
+    for (var i = 0; i < ds_list_size(player_units); i++) {
+        var unit_id = player_units[| i];
+        if (instance_exists(unit_id) && !unit_id.dead) {
+            array_push(living_player_units, unit_id);
+        }
+    }
+    
+    if (array_length(living_player_units) == 0) {
+        show_debug_message("[Battle Manager] 沒有存活的我方單位，無法分配經驗。");
+        // 清理經驗列表
+        ds_list_clear(defeated_enemies_exp);
+        return;
+    }
+    
+    // 3. 分配經驗 (目前平分，可以修改分配規則)
+    var exp_per_unit = floor(total_exp_gained / array_length(living_player_units));
+    show_debug_message("[Battle Manager] 分配給 " + string(array_length(living_player_units)) + " 個存活單位，每個單位獲得經驗: " + string(exp_per_unit));
+    
+    if (exp_per_unit > 0) {
+        for (var i = 0; i < array_length(living_player_units); i++) {
+            var unit_to_gain_exp = living_player_units[i];
+            // 確保 gain_exp 方法存在
+            if (variable_instance_exists(unit_to_gain_exp, "gain_exp")) {
+                unit_to_gain_exp.gain_exp(exp_per_unit);
+            } else {
+                show_debug_message("警告：單位 " + object_get_name(unit_to_gain_exp.object_index) + " 沒有 gain_exp 方法。");
+            }
+        }
+    }
+    
+    // 4. 清理經驗列表
+    ds_list_clear(defeated_enemies_exp);
+    show_debug_message("[Battle Manager] 經驗分配完成並清理列表。");
+}
+
+// 清理資源 (Destroy 事件會用到)
+cleanup_battle_data = function() {
+    if (ds_exists(player_units, ds_type_list)) ds_list_destroy(player_units);
+    if (ds_exists(enemy_units, ds_type_list)) ds_list_destroy(enemy_units);
+    if (ds_exists(defeated_enemies_exp, ds_type_list)) ds_list_destroy(defeated_enemies_exp);
+    // 其他需要清理的資源...
+}
+
+// 添加戰鬥日誌
+add_battle_log = function(log_text) {
+    // 檢查 battle_log 是否有效 (以防萬一)
+    if (!ds_exists(battle_log, ds_type_list)) {
+        show_debug_message("錯誤：add_battle_log 嘗試操作無效的 battle_log！");
+        battle_log = ds_list_create(); // 嘗試重新初始化
+    }
+
+    ds_list_add(battle_log, log_text); // 使用 ds_list_add
+    // 假設 max_log_lines 在某處定義
+    if (variable_instance_exists(id, "max_log_lines") || variable_global_exists("max_log_lines")) {
+         var _max_lines = (variable_instance_exists(id, "max_log_lines")) ? max_log_lines : global.max_log_lines; 
+         if (ds_list_size(battle_log) > _max_lines) { // 使用 ds_list_size
+             ds_list_delete(battle_log, 0); // 使用 ds_list_delete (刪除第0個元素)
+         }
+    } else {
+         // 如果 max_log_lines 未定義，添加警告並設置默認值以防崩潰
+         show_debug_message("警告：add_battle_log 中未找到 max_log_lines 定義，使用默認值 10");
+         if (ds_list_size(battle_log) > 10) { 
+             ds_list_delete(battle_log, 0);
+         }
+    }
+}
+
 // 初始化方法
 initialize_battle_manager = function() {
     show_debug_message("===== 初始化戰鬥管理器 =====");
@@ -486,28 +590,6 @@ on_all_player_units_defeated = function(data) {
     }
     
     show_debug_message("===== 玩家單位被擊敗事件處理完成 =====");
-};
-
-// 添加戰鬥日誌
-add_battle_log = function(message) {
-    // 使用實際的battle_timer，不在ENDING狀態重置
-    var time_stamp = string_format(battle_timer / game_get_speed(gamespeed_fps), 2, 1);
-    var full_message = "[" + time_stamp + "s] " + message;
-    
-    // 添加到日誌
-    ds_list_add(battle_log, full_message);
-    
-    // 限制日誌大小
-    if (ds_list_size(battle_log) > 100) {
-        ds_list_delete(battle_log, 0);
-    }
-    
-    // 在UI中顯示最新日誌訊息
-    if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.battle_info = full_message;
-    }
-    
-    show_debug_message("戰鬥日誌: " + full_message);
 };
 
 // 輔助函數：發送事件消息

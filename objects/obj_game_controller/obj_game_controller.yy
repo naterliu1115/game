@@ -12,8 +12,8 @@
   "name":"obj_game_controller",
   "overriddenProperties":[],
   "parent":{
-    "name":"物体",
-    "path":"folders/物体.yy",
+    "name":"Main",
+    "path":"folders/物体/Main.yy",
   },
   "parentObjectId":null,
   "persistent":true,

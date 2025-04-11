@@ -1,18 +1,38 @@
 /// @function load_csv(filename)
 /// @description 載入並解析CSV文件
-/// @param {string} filename - CSV文件名稱
-/// @returns {ds_grid} 包含CSV數據的網格
+/// @param {string} filename - CSV文件名 (不含 'datafiles/' 前綴)
+/// @returns {ds_grid} 包含CSV數據的網格，失敗返回 -1
 function load_csv(filename) {
-    var file_path = working_directory + "datafiles/" + filename;
-    
-    if (!file_exists(file_path)) {
-        show_debug_message("錯誤：找不到CSV文件 " + file_path);
-        return -1;
+    // --- 修改：嘗試多個可能的相對路徑 --- 
+    var _csv_file_path = ""; // 存儲找到的有效路徑
+    // 優先嘗試 datafiles/ 前綴，然後嘗試根目錄
+    var _paths_to_try = ["datafiles/" + filename, filename]; 
+
+    for (var i = 0; i < array_length(_paths_to_try); i++) {
+        var _current_path = _paths_to_try[i];
+        show_debug_message("[load_csv] 嘗試檢查路徑: " + _current_path);
+        if (file_exists(_current_path)) {
+            _csv_file_path = _current_path;
+            show_debug_message("  [load_csv] 文件找到於: " + _csv_file_path);
+            break; // 找到就跳出循環
+        }
     }
+
+    // 檢查是否找到了文件
+    if (_csv_file_path == "") {
+        // 兩種路徑都找不到
+        show_debug_message("錯誤 [load_csv]：文件 " + filename + " 未在預期路徑找到! (已嘗試: " + string(_paths_to_try) + ")");
+        return -1; // 失敗返回 -1
+    }
+    // --- 路徑檢查結束 --- 
     
-    var file = file_text_open_read(file_path);
+    // var file_path = working_directory + "datafiles/" + filename; // <-- 移除 working_directory
+    // if (!file_exists(file_path)) { ... } // <-- 移除舊的檢查
+    
+    // 使用找到的有效路徑打開文件
+    var file = file_text_open_read(_csv_file_path);
     if (file == -1) {
-        show_debug_message("錯誤：無法打開文件 " + file_path);
+        show_debug_message("錯誤 [load_csv]：無法打開文件 " + _csv_file_path);
         return -1;
     }
     
@@ -46,8 +66,8 @@ function load_csv(filename) {
         }
     }
     
-    // 關閉文件並重新打開以重新讀取
-    file_text_close(file);
+    // 關閉文件 (在數據讀取循環之後)
+    // file_text_close(file); // <-- 這行需要移到數據處理完畢後
     
     // 如果沒有實際行數據，返回錯誤
     if (row_count == 0) {
@@ -76,7 +96,10 @@ function load_csv(filename) {
         }
     }
     
-    show_debug_message("成功載入CSV文件：" + filename + "，共 " + string(row_count) + " 行，" + string(col_count) + " 列");
+    // 在填充完 grid 後關閉文件
+    file_text_close(file);
+
+    show_debug_message("成功載入CSV文件：" + filename + " (從 " + _csv_file_path + ")，共 " + string(row_count) + " 行，" + string(col_count) + " 列");
     return grid;
 }
 
