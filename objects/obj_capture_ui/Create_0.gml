@@ -165,27 +165,100 @@ finalize_capture = function() {
     if (capture_result) {
         // 捕獲成功的處理邏輯
         if (target_enemy != noone && instance_exists(target_enemy)) {
-            // 在這裡添加怪物加入收藏的邏輯
             show_debug_message("成功捕獲: " + object_get_name(target_enemy.object_index));
+
+            // --- Start: Revised logic to create captured monster data ---
+
+            // 1. Get essential info from the captured instance
+            var _template_id = target_enemy.template_id;
+            var _level = target_enemy.level;
+            var _name = target_enemy.name; // Use the instance's name
+            var _type = target_enemy.object_index;
+
+            // 2. Fetch the template from the factory
+            var _template = undefined;
+            if (instance_exists(obj_enemy_factory)) {
+                _template = obj_enemy_factory.get_enemy_template(_template_id);
+            }
+
+            if (_template == undefined) {
+                show_debug_message("錯誤：無法從工廠獲取模板 ID: " + string(_template_id) + "。無法保存捕獲的怪物。");
+                // Optionally, still destroy the enemy or handle error differently
+                 with (target_enemy) { instance_destroy(); }
+                 hide();
+                 return; // Stop processing capture
+            }
+
+            // 3. Calculate stats based on template and captured level
+            // Ensure template fields exist before accessing
+            var _hp_base = variable_struct_exists(_template, "hp_base") ? _template.hp_base : 1;
+            var _hp_growth = variable_struct_exists(_template, "hp_growth") ? _template.hp_growth : 0;
+            var _attack_base = variable_struct_exists(_template, "attack_base") ? _template.attack_base : 1;
+            var _attack_growth = variable_struct_exists(_template, "attack_growth") ? _template.attack_growth : 0;
+            var _defense_base = variable_struct_exists(_template, "defense_base") ? _template.defense_base : 1;
+            var _defense_growth = variable_struct_exists(_template, "defense_growth") ? _template.defense_growth : 0;
+            var _speed_base = variable_struct_exists(_template, "speed_base") ? _template.speed_base : 1;
+            var _speed_growth = variable_struct_exists(_template, "speed_growth") ? _template.speed_growth : 0;
+
+            var _max_hp = ceil(_hp_base + (_hp_base * _hp_growth * (_level - 1)));
+            var _attack = ceil(_attack_base + (_attack_base * _attack_growth * (_level - 1)));
+            var _defense = ceil(_defense_base + (_defense_base * _defense_growth * (_level - 1)));
+            var _spd = ceil(_speed_base + (_speed_base * _speed_growth * (_level - 1)));
             
-            // 刪除敵人
+            // Ensure minimum stats
+            _max_hp = max(1, _max_hp);
+            _attack = max(1, _attack);
+            _defense = max(1, _defense);
+            _spd = max(1, _spd);
+
+            // --- 添加：獲取模板的基礎 Sprite --- 
+            var _sprite_idle = variable_struct_exists(_template, "sprite_idle") ? _template.sprite_idle : -1;
+            show_debug_message(">>> finalize_capture: Template sprite_idle = " + string(_sprite_idle)); // DEBUG ADDED
+            // --- 添加結束 ---
+
+            // 4 & 5. Create the standardized data structure
+            var captured_monster_data = {
+                id: _template_id,
+                level: _level,
+                name: _name,
+                type: _type,
+                display_sprite: _sprite_idle,
+                max_hp: _max_hp,
+                hp: _max_hp, // Set current HP to max HP after capture
+                attack: _attack,
+                defense: _defense,
+                spd: _spd
+                // No need to store skills array here
+            };
+
+            // 6. Ensure global array exists and add the monster
+            if (!variable_global_exists("player_monsters")) {
+                global.player_monsters = [];
+            }
+            array_push(global.player_monsters, captured_monster_data);
+            show_debug_message("已將 [" + captured_monster_data.name + " Lv." + string(_level) + "] (ID: " + string(_template_id) + ") 添加到玩家列表");
+            show_debug_message(">>> Added to global_player_monsters: " + json_stringify(captured_monster_data)); // DEBUG ADDED - Print full structure
+
+            // --- End: Revised logic ---
+
+            // Destroy the captured enemy instance
             with (target_enemy) {
                 instance_destroy();
             }
-            
-            // 通知戰鬥UI
+
+            // Notify Battle UI
             if (instance_exists(obj_battle_ui)) {
                 obj_battle_ui.show_info("成功捕獲怪物！");
             }
         }
     } else {
-        // 捕獲失敗
+        // Capture failed
         if (instance_exists(obj_battle_ui)) {
             obj_battle_ui.show_info("捕獲失敗！");
         }
     }
-    
-    // 關閉 UI
+
+    // Close the UI
     hide();
 };
 

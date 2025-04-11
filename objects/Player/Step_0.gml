@@ -304,9 +304,39 @@ if (!is_dialogue_active()) {
 // **進入戰鬥檢查**
 if (!in_battle) {
     var enemy = instance_place(x, y, obj_enemy_parent);
-    if (enemy != noone && battle_manager_exists) {
-        with (obj_battle_manager) {
-            start_battle(enemy);
+    if (enemy != noone) {
+        // 檢查敵人是否有冷卻期
+        if (!variable_instance_exists(enemy, "battle_cooldown") || enemy.battle_cooldown <= 0) {
+            // 保存敵人信息
+            var enemy_x = enemy.x;
+            var enemy_y = enemy.y;
+            
+            // 獲取敵人模板ID
+            var template_id = 1001; // 默認基礎敵人模板ID
+            if (variable_instance_exists(enemy, "template_id") && enemy.template_id != -1) {
+                template_id = enemy.template_id;
+            }
+            
+            // 從地圖移除原始敵人
+            instance_destroy(enemy);
+            
+            // 檢查戰鬥管理器是否存在
+            if (!instance_exists(obj_battle_manager)) {
+                instance_create_layer(0, 0, "Controllers", obj_battle_manager);
+            }
+            
+            // 使用工廠啟動戰鬥
+            with (obj_battle_manager) {
+                // 使用新的工廠方法啟動戰鬥
+                if (instance_exists(obj_enemy_factory)) {
+                    start_factory_battle(template_id, enemy_x, enemy_y);
+                } else {
+                    // 如果工廠不存在，使用傳統方法
+                    show_debug_message("警告：敵人工廠不存在，使用傳統方法啟動戰鬥");
+                    var fallback_enemy = instance_create_layer(enemy_x, enemy_y, "Instances", obj_test_enemy);
+                    start_battle(fallback_enemy);
+                }
+            }
         }
     }
 }

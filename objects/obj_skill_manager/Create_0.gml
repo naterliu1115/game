@@ -142,28 +142,19 @@ get_skill = function(skill_id) {
 };
 
 // 複製技能資料 (避免修改原始資料)
-copy_skill = function(skill_id, unit) {
+copy_skill = function(skill_id, unit_data_or_id) {
     var skill_template = get_skill(skill_id);
-    
-    if (skill_template == undefined) {
-        return undefined;
-    }
-    
-    // 創建技能複本
+    if (skill_template == undefined) return undefined;
+
     var skill_copy = {};
-    
-    // 複製所有屬性
     var field_names = variable_struct_get_names(skill_template);
     for (var i = 0; i < array_length(field_names); i++) {
         var field = field_names[i];
         skill_copy[$ field] = skill_template[$ field];
     }
-    
-    // 使用單位屬性計算實際傷害
-    if (instance_exists(unit)) {
-        skill_copy.damage = unit.attack * skill_template.damage_multiplier;
-    }
-    
+
+    show_debug_message("[SkillManager] Copied skill template: " + skill_id);
+
     return skill_copy;
 };
 

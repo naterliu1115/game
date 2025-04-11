@@ -12,8 +12,8 @@
     "path":"folders/物体/Monster.yy",
   },
   "parentObjectId":{
-    "name":"obj_player_summon_parent",
-    "path":"objects/obj_player_summon_parent/obj_player_summon_parent.yy",
+    "name":"obj_battle_unit_parent",
+    "path":"objects/obj_battle_unit_parent/obj_battle_unit_parent.yy",
   },
   "persistent":false,
   "physicsAngularDamping":0.1,
@@ -32,10 +32,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"Monster1",
-    "path":"sprites/Monster1/Monster1.yy",
-  },
+  "spriteId":null,
   "spriteMaskId":null,
   "visible":true,
 }

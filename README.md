@@ -82,6 +82,7 @@ idle_update_rate = 9;
 - 事件訂閱: `subscribe_to_event(event_name, instance_id, callback)` (通過 `obj_event_manager`)
 - 事件廣播: `broadcast_event(event_name, data = {})` (通過 `obj_event_manager`)
 - 事件取消訂閱: `unsubscribe_from_event(event_name, instance_id)` (通過 `obj_event_manager`)
+- **更新**: `obj_game_controller` 現在使用 Alarm[0] 延遲廣播 `managers_initialized` 事件，以確保所有實例（如 `obj_enemy_placer`）有足夠時間完成創建和訂閱。
 
 **使用示例:**
 ```gml
@@ -124,6 +125,7 @@ if (instance_exists(obj_event_manager)) {
 - 經驗系統
 - 新增：實現了浮動傷害文字系統 (`obj_floating_text`)，用於即時顯示傷害數值。
 - 新增：實現了通用的受傷視覺特效 (`obj_hurt_effect`)，獨立於單位動畫。
+- **更新**: 技能傷害計算已從單位初始化階段（可能讀取不完整數據）轉移到實際應用傷害時 (`obj_battle_unit_parent` 的 `apply_skill_damage` 函數中)。現在會根據攻擊者**當前**的攻擊力和技能的傷害倍率 (`damage_multiplier`) 動態計算。
 
 ### 4. 單位系統 (Unit System)
 
@@ -151,6 +153,90 @@ if (instance_exists(obj_event_manager)) {
 **單位優化:**
 - 使用對象池系統優化單位創建和回收 (若已實現)
 - 追蹤單位統計信息以便進行遊戲平衡
+
+#### 4.1 敵人系統工廠化 (Enemy System Factory)
+
+為了集中管理敵人數據、簡化敵人創建流程並方便平衡調整，敵人系統採用了工廠模式進行重構。此設計將敵人數據與其實例化邏輯分離。
+
+**主要組件與數據流:**
+
+1.  **數據源 (`datafiles/enemies.csv`)**: 
+    *   核心數據存儲在 CSV 文件中，定義了每個敵人的所有屬性，包括：
+        *   基礎信息 (id, name, category, family, variant, rank)
+        *   基礎屬性與成長率 (level, hp_base, attack_base, ..., hp_growth, ...)
+        *   視覺資源 (sprite_idle, sprite_move, sprite_attack)
+        *   群組行為 (is_pack_leader, pack_min/max, pack_pattern, companions)
+        *   戰利品與獎勵 (loot_table, exp_reward, gold_reward)
+        *   戰鬥 AI (ai_type, attack_range, aggro_range, attack_interval)
+        *   捕獲相關 (capturable, capture_rate_base)
+        *   技能 (skills, skill_unlock_levels)
+    *   **複雜欄位格式**: 部分欄位如 `companions` (`id:weight;...`), `loot_table` (`item_id:chance:min-max;...`), `skills` (`id;...`), `skill_unlock_levels` (`lvl;...`) 使用特定格式存儲列表或結構化數據。
+
+2.  **CSV 解析器 (`scripts/scr_csv_parser`)**: 
+    *   提供通用的 CSV 文件處理函數：
+        *   `load_csv(filename)`: 讀取 CSV 文件並返回一個 `ds_grid`。
+        *   `string_split(str, delimiter)`: 更健壯的字符串分割，能處理帶引號的字段。
+        *   `string_trim(str)`: 移除前後空白和引號。
+        *   `csv_grid_get(grid, col_name, row)`: 根據列名安全地從網格獲取值。
+        *   `bool(value)`: 將字符串或數字轉換為布爾值。
+
+3.  **敵人數據/枚舉腳本 (`scripts/scr_enemy_data`, `scripts/scr_enemy_enums`)**:
+    *   `scr_enemy_data`: 包含 `create_enemy_base_data()` 函數，定義了一個與 CSV 列對應的完整敵人數據結構，可用於參考或創建模板。
+    *   `scr_enemy_enums`: 定義了敵人相關的枚舉 (`ENEMY_CATEGORY`, `ENEMY_RANK`, `ENEMY_AI`, `SPAWN_PATTERN`)，提高程式碼可讀性和維護性。
+
+4.  **敵人工廠 (`obj_enemy_factory`)**: 
+    *   **核心職責**: 作為敵人數據的中央樞紐和實例創建者。
+    *   **初始化 (`initialize`)**: 在遊戲啟動時（由 `obj_game_controller` 保證創建），調用 `load_enemies_from_csv()`。**更新**: 移除了加載 CSV 失敗時回退到 `register_test_enemies` 的邏輯，現在會直接調用 `show_error()` 中止遊戲。
+    *   **數據載入 (`load_enemies_from_csv`)**: 使用 `scr_csv_parser` 讀取 `enemies.csv`，解析每一行數據，進行類型轉換（數字、布爾），解析複雜欄位（如 `companions`, `loot_table`, `skills`），查找精靈資源 ID，最終將每行數據轉換為一個結構化的**敵人模板 (struct)**，並以敵人 ID 為鍵存儲在 `enemy_templates` (ds_map) 中。
+    *   **模板獲取 (`get_enemy_template(enemy_id)`)**: 提供給外部系統（如 `obj_test_enemy`, `obj_game_controller`, `obj_capture_ui`）根據 ID 獲取唯讀的敵人模板數據。
+    *   **實例創建 (`create_enemy_instance(id, x, y, [level])`)**: 
+        *   接收敵人 ID、位置和可選的等級覆蓋參數。
+        *   獲取對應的模板。
+        *   創建一個 **`obj_test_enemy`** 實例（目前固定使用此物件類型）。
+        *   **更新**: 在 `with (instance)` 上下文中，**僅設置** 該實例的 `template_id` 和最終的 `level` (如果提供了有效的 `_level_param`)。
+        *   **呼叫實例自身的 `initialize()` 方法**，將後續的屬性計算和設置（包括基於等級的技能確定）**完全委託**給實例自己完成。
+    *   **群組生成 (`generate_enemy_group(leader_id, x, y, [level])`)**: 根據首領模板信息，使用 `create_enemy_instance` 創建首領和可能的同伴，並使用 `calculate_spawn_position` 計算陣型位置。
+    *   **技能數據複製 (`copy_skill`)**: **更新**: 此函數現在只複製技能模板數據（包括 `damage_multiplier`），不再在初始化時根據傳入的單位計算 `damage` 值，以避免使用不完整的單位屬性。
+
+5.  **敵人基類 (`obj_enemy_parent`)**: 
+    *   定義敵人通用的屬性（如 `is_capturable`）和從工廠獲取數據所需的變數 (`template_id`, `level`, `name` 等，帶有初始預設值）。
+    *   其 `initialize` 方法主要負責基礎設定（如 `team=1`）和呼叫更上層父類 (`obj_battle_unit_parent`) 的初始化。**它不再直接與工廠交互或設置大量屬性。**
+
+6.  **敵人實作 (`obj_test_enemy`)**: 
+    *   繼承自 `obj_enemy_parent`。
+    *   **核心初始化發生在此**: 其 `initialize` 方法被 `obj_enemy_factory` 在創建實例後調用。
+    *   **主要邏輯**: 
+        *   （可選地）呼叫 `event_inherited()` 執行父類初始化。
+        *   使用自身的 `template_id` 向 `obj_enemy_factory.get_enemy_template()` 獲取模板數據。
+        *   **更新**: **根據獲取的模板數據和自身的 `level`，計算並設置所有詳細屬性** (HP, 攻防速，基於基礎值和成長率；AI 模式；掉落物；視覺效果等)。
+        *   **更新**: 在此階段，會調用 `add_skill` 將達到當前等級的技能（從模板獲取 ID，通過 `copy_skill` 獲取數據）添加到自身的技能列表中。
+        *   處理模板獲取失敗的情況。
+
+7.  **編輯器放置器 (`obj_enemy_placer`)**: 
+    *   用於在房間編輯器中方便地放置敵人。
+    *   創建時從工廠或 CSV 加載可用模板列表供編輯器選擇。
+    *   **更新**: 遊戲運行開始時，通過訂閱 `managers_initialized` 事件（現在由 `obj_game_controller` 的 Alarm 延遲觸發）來調用 `obj_enemy_factory.create_enemy_instance()` 生成對應的 `obj_test_enemy` 實例（並傳遞在編輯器中設置的 `enemyLevel`），然後自我銷毀。修復了之前的時序問題。
+
+8.  **遊戲控制器 (`obj_game_controller`)**: 
+    *   確保 `obj_enemy_factory` 在遊戲開始時被創建。
+    *   **更新**: 負責**初始化玩家的初始怪物列表 (`global.player_monsters`)**: 
+        *   從工廠獲取指定初始怪物的模板。
+        *   根據模板和指定等級計算標準屬性。
+        *   創建一個**標準化的數據結構** (包含 `id`, `level`, `name`, `type`, **`display_sprite` (來自模板的基礎 Sprite ID)**, 屬性等)。
+        *   **新增**: 會根據模板技能和解鎖等級，將達到初始等級的**技能 ID** 填充到 `monster_data.skills` 陣列中。
+        *   添加到 `global.player_monsters`。
+    *   **更新**: 使用自定義的 `array_join` 腳本函數替換了之前錯誤的內建函數調用。
+
+9.  **捕獲 UI (`obj_capture_ui`)**: 
+    *   在 `finalize_capture` 時，使用被捕獲敵人的 `template_id` 從工廠獲取其原始模板。
+    *   根據模板數據和捕獲時的等級，計算標準屬性，創建與 `obj_game_controller` 生成的初始怪物**結構相同**的數據 (同樣包含 `display_sprite`)，並添加到 `global.player_monsters`。
+
+**主要優點回顧:**
+- **數據驅動**: 敵人行為和屬性主要由 `enemies.csv` 文件控制。
+- **易於擴展與修改**: 新增或調整敵人主要通過修改 CSV 和相關資源完成。
+- **代碼解耦**: 數據載入、模板管理、實例創建和實例初始化邏輯分離。
+- **維護性提高**: 集中管理數據和枚舉，減少硬編碼和魔法數字。
+- **初始化標準化**: 確保所有敵人（包括玩家的初始/捕獲怪物）的屬性計算遵循統一規則。
 
 ### 5. 對話系統 (Dialogue System)
 
@@ -328,6 +414,11 @@ UI 系統管理遊戲中的各種用戶界面元素。
 - 視圖裁剪優化 (適用於滾動列表)
 - 事件節流和防抖 (適用於頻繁觸發的 UI 事件)
 
+**處理怪物 Sprite**: 由於怪物的 Sprite 是根據配置表動態加載到實例的 `sprite_index`，而非在 IDE 中靜態設置給物件資源，因此：
+    -   顯示**場景中活動怪物實例**的預覽圖時 (如捕獲 UI)，應直接讀取該實例的 `sprite_index`。
+    -   顯示**基於儲存數據**（如 `global.player_monsters`）的怪物預覽圖時 (如召喚 UI、怪物管理 UI)，應讀取數據結構中儲存的 `display_sprite` 欄位（該欄位儲存了從模板獲取的基礎 Sprite ID）。
+    -   **不應**使用 `object_get_sprite(物件索引)` 來獲取動態怪物的 Sprite。
+
 ### 8. 浮動文字系統 (Floating Text System)
 
 該系統用於在遊戲畫面上顯示短暫的浮動文字，例如傷害數字、狀態效果提示等。
@@ -485,8 +576,6 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
 - 利用動畫系統的調試輸出監控角色動畫狀態變化 (如果有的話)
 - 使用 GameMaker 的內建調試器 (Debugger) 設置斷點、檢查變量值和單步執行
 
-
-
 ## 專案進度與未來展望
 
 - **已完成**:
@@ -516,15 +605,17 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
       - 實現了物品獲取的飛行動畫效果 (`obj_flying_item`)
       - 實現了挖掘進度條和粒子效果
       - 實現了世界座標到螢幕座標的轉換機制
+    - **敵人系統**: 工廠模式重構完成，數據驅動加載，實例化與初始化流程分離。
+    - **放置器修復**: 解決了 `obj_enemy_placer` 因事件廣播時序問題無法轉換的 Bug。
+    - **UI 錯誤修復**: 解決了 `obj_monster_manager_ui` 關閉時崩潰、技能不顯示的問題；解決了 UI 繼承導致的初始化變數錯誤。
+    - **技能傷害計算**: 將傷害計算邏輯從初始化階段移至實際造成傷害時，避免因依賴未完全初始化的屬性導致計算錯誤。
+    - **工具函數**: 添加了自定義的 `array_join` 函數。
+    - **UI 顯示修復**: 解決了召喚 UI 和怪物管理 UI 因錯誤獲取 Sprite 方式而無法顯示動態怪物圖片的問題，統一了數據結構 (`display_sprite`) 和 UI 讀取邏輯。
 
 - **進行中/待辦**:
-    - **快捷欄功能完善**:
-      - **實現快捷欄物品的使用邏輯** (當前僅能選擇)。
-      - 提供更明確的視覺回饋（指派成功/失敗/已滿等提示，目前僅控制台輸出）。
-    - **採集系統擴展**:
-      - 添加更多可採集資源類型 (如植物、木材等)
-      - 實現不同工具對不同資源的效率差異
-      - 添加資源重生機制
+    - **傷害驗證**: 需要驗證 `apply_skill_damage` 中動態計算的傷害值是否符合預期。
+    - **快捷欄功能完善**: (保留)
+    - **採集系統擴展**: (保留)
     - 完善具體的單位 AI
     - 實現裝備系統的效果
     - 實現捕捉系統的邏輯
@@ -536,4 +627,4 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
     - 設計遊戲關卡和流程
 
 - **已知問題**:
-    - (列出當前遇到的主要問題或 Bug)
+    - (清空或更新已知問題列表)

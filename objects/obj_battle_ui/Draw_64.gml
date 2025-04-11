@@ -216,16 +216,16 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
     if (ds_list_size(obj_battle_manager.enemy_units) <= 0) {
         result_text = "戰鬥勝利!";
         draw_set_color(c_lime);
-        
+        /*
         show_debug_message("[DEBUG] 獎勵面板狀態檢查：");
         show_debug_message("[DEBUG] - reward_visible = " + string(reward_visible));
         show_debug_message("[DEBUG] - reward_exp = " + string(reward_exp));
         show_debug_message("[DEBUG] - reward_gold = " + string(reward_gold));
         show_debug_message("[DEBUG] - items count = " + string(array_length(reward_items_list)));
-        
+        */
         // 顯示獎勵視窗
         if (reward_visible) {
-            show_debug_message("[DEBUG] 開始繪製獎勵面板");
+            //show_debug_message("[DEBUG] 開始繪製獎勵面板");
             
             // 計算完全置中的位置
             var reward_x, reward_y, panel_width, panel_height;
@@ -237,10 +237,10 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
                 reward_x = display_get_gui_width() / 2;
                 reward_y = display_get_gui_height() / 2;
                 
-                show_debug_message("[DEBUG] 使用 spr_reward_panel 繪製背景");
+               /* show_debug_message("[DEBUG] 使用 spr_reward_panel 繪製背景");
                 show_debug_message("[DEBUG] 面板尺寸: " + string(panel_width) + "x" + string(panel_height));
                 show_debug_message("[DEBUG] 置中位置: (" + string(reward_x) + ", " + string(reward_y) + ")");
-                
+                */
                 // 先繪製勝利文字
                 var scale = 1.5 + sin(current_time / 200) * 0.2;
                 draw_text_outlined(
@@ -275,7 +275,7 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
                 
                 // 繪製金幣圖示
                 if (sprite_exists(spr_gold)) {
-                    show_debug_message("[DEBUG] 使用 spr_gold 繪製金幣圖示");
+                    //show_debug_message("[DEBUG] 使用 spr_gold 繪製金幣圖示");
                     var gold_icon_width = sprite_get_width(spr_gold);
                     draw_sprite(spr_gold, 0, content_x, content_y + 100);
                     draw_text_safe(content_x + gold_icon_width + 5, content_y + 100, string(reward_gold));

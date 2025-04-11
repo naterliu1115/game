@@ -20,6 +20,10 @@ surface_needs_update = true;
 // 動畫相關
 open_animation = 0;
 open_speed = 0.1;
+close_animation = 0;
+alpha = 1;
+is_closing = false;
+close_callback = undefined;
 
 // 提示信息
 info_text = "";
@@ -73,3 +77,6 @@ check_surface = function() {
     }
     return false;
 };
+
+// 添加調試信息，打印實例ID和物件名稱
+show_debug_message("創建 parent_ui 子類實例：" + string(id) + " - " + object_get_name(object_index));

@@ -30,6 +30,7 @@ animation_frames = {
     DIE: [0, 4]          // 臨時用右下角移動替代
 }
 
+
 // 動畫控制變數
 current_animation = UNIT_ANIMATION.IDLE;
 current_animation_name = "";
@@ -139,9 +140,6 @@ initialize_skills = function() {
     ds_list_clear(skills);
     ds_map_clear(skill_cooldowns);
     
-    // 所有單位都有基本攻擊
-    add_skill("basic_attack");
-    
     // 子類可以添加更多技能
 }
 
@@ -176,7 +174,7 @@ add_skill = function(skill_id) {
     // 初始化冷卻時間
     ds_map_add(skill_cooldowns, skill_id, 0);
     
-    show_debug_message(object_get_name(object_index) + " 添加技能: " + skill_id);
+    show_debug_message(object_get_name(object_index) + " 添加技能: " + skill_id + " (數據已複製)");
     return true;
 }
 
@@ -374,59 +372,129 @@ if (ai_mode == AI_MODE.FOLLOW) {
 
 // 选择技能
 choose_skill = function() {
-    // 檢查AI模式
-    if (ai_mode == AI_MODE.PASSIVE) {
-        current_skill = noone;
+    // --- 修改後的日誌：記錄 choose_skill 開始時的狀態 ---
+    var _obj_name = object_get_name(object_index);
+    var _inst_id = string(id);
+    // show_debug_message("--- [" + _obj_name + ":" + _inst_id + "] choose_skill 開始 ---"); // DEBUG REMOVED
+
+    // --- 以下 DEBUG 訊息已移除 ---
+    /*
+    if (ds_exists(skills, ds_type_list)) {
+        var _size = ds_list_size(skills);
+        // show_debug_message("    skills 列表存在，大小: " + string(_size));
+        if (_size > 0) {
+            // show_debug_message("    檢查 skills 內容:");
+            for (var _log_i = 0; _log_i < _size; _log_i++) {
+                var _item = skills[| _log_i];
+                var _is_struct = is_struct(_item);
+                var _has_id = false;
+                var _id_val = "<N/A>";
+                if (_is_struct) {
+                    _has_id = variable_struct_exists(_item, "id");
+                    if (_has_id) { 
+                        try { _id_val = string(_item.id); } catch (_e) { _id_val = "<讀取錯誤>"; }
+                    }
+                }
+                // show_debug_message("      索引 " + string(_log_i) + ": is_struct=" + string(_is_struct) + ", has_id=" + string(_has_id) + ", id=" + _id_val);
+            }
+        }
+    } else {
+        // show_debug_message("    skills 列表不存在!");
+    }
+    */
+    // --- 日誌修改結束 ---
+
+    current_skill = noone;
+    // atb_ready = false; // <-- 已移除此行
+
+    // 如果沒有目標，無法選擇技能
+    if (target == noone || !instance_exists(target)) {
+        // show_debug_message("    無有效目標，退出 choose_skill。"); // DEBUG REMOVED
         return;
     }
-    
-    // 跟隨模式下檢查玩家移動
-    if (ai_mode == AI_MODE.FOLLOW && instance_exists(follow_target)) {
-        var player_moving = (follow_target.x != follow_target.xprevious || 
-                           follow_target.y != follow_target.yprevious);
-        if (player_moving) {
-            current_skill = noone;
-            return;
-        }
-    }
-    
-    // 获取可用技能列表（不包括基本攻擊）
+
+    // 查找可用的技能列表
     var available_skills = ds_list_create();
     var basic_attack_index = -1;
-    
-    // 檢查目標是否存在
-    if (target == noone || !instance_exists(target)) {
-        ds_list_destroy(available_skills);
-        current_skill = noone;
-        return;
-    }
-    
     var dist_to_target = point_distance(x, y, target.x, target.y);
-    
-    for (var i = 0; i < ds_list_size(skill_ids); i++) {
-        var skill_id = skill_ids[| i];
-        var cooldown = ds_map_find_value(skill_cooldowns, skill_id);
-        
-        if (cooldown <= 0) {
-            // 從技能列表獲取技能資料
+
+    // --- 修改後的循環 + 內部日誌 ---
+    if (ds_exists(skills, ds_type_list)) {
+        var _list_size = ds_list_size(skills);
+        // show_debug_message("    開始遍歷 skills 列表 (大小: " + string(_list_size) + ")"); // DEBUG REMOVED
+        for (var i = 0; i < _list_size; i++) {
+            // show_debug_message("      循環索引: " + string(i)); // DEBUG REMOVED
             var skill = skills[| i];
+            var skill_id_str = "<未定義或讀取失敗>";
+            var skill_range = -1; // Default invalid range
+            var is_skill_struct = is_struct(skill);
             
-            // 如果是基本攻擊，直接記錄索引（不考慮範圍）
-            if (skill_id == "basic_attack") {
-                basic_attack_index = i;
+            // show_debug_message("        獲取的 skill 是否為 struct: " + string(is_skill_struct)); // DEBUG REMOVED
+
+            if (is_skill_struct) {
+                // 嘗試安全讀取 ID
+                if (variable_struct_exists(skill, "id")) {
+                    try {
+                        skill_id_str = string(skill.id);
+                        // show_debug_message("          成功讀取 skill.id: " + skill_id_str); // DEBUG REMOVED
+                    } catch (_e) {
+                        // show_debug_message("          讀取 skill.id 時發生錯誤: " + string(_e)); // DEBUG REMOVED
+                    }
+                } else {
+                    // show_debug_message("          skill 結構中不存在 'id' 欄位"); // DEBUG REMOVED
+                }
+                
+                // 嘗試安全讀取 Range (如果需要)
+                 if (variable_struct_exists(skill, "range") && is_real(skill.range)) {
+                     skill_range = skill.range;
+                 } else {
+                     // show_debug_message("          skill 結構中不存在 'range' 欄位或非數字"); // DEBUG REMOVED
+                 }
+
+            } else {
+                // show_debug_message("        警告：索引 " + string(i) + " 處的項目不是結構體!"); // DEBUG REMOVED
+                continue; // 如果不是結構體，無法處理，跳過本次循環
             }
-            // 特殊技能需要檢查範圍
-            else if (dist_to_target <= skill.range) {
+
+            // 檢查冷卻時間 (使用之前讀取的 skill_id_str)
+             // 需要確保 skill_id_str 在這裡是有效的 ID 字符串
+             // --- 修改：使用 ds_map_exists 檢查 key 是否存在 ---
+             if (skill_id_str != "<未定義或讀取失敗>" && ds_map_exists(skill_cooldowns, skill_id_str)) { 
+                 if (skill_cooldowns[? skill_id_str] > 0) { 
+                      // show_debug_message("        技能 " + skill_id_str + " 正在冷卻，跳過。"); // DEBUG REMOVED
+                      continue; // 技能在冷卻中
+                 } 
+             } else if (skill_id_str == "<未定義或讀取失敗>") {
+                 // show_debug_message("        無法讀取技能ID，跳過冷卻檢查。"); // DEBUG REMOVED
+                 continue; 
+             } else if (skill_id_str != "<未定義或讀取失敗>") { // --- 修改：僅在 ID 有效但 key 不存在時才警告 ---
+                 // 保留這個潛在的警告，因為它表示數據不一致
+                 show_debug_message("        警告：技能ID "+skill_id_str+" 不在 skill_cooldowns map 中 (ds_map_exists 返回 false)!");
+             }
+            // --- 修改結束 ---
+
+            // 如果是基本攻擊，直接記錄索引（不考慮範圍）
+            if (skill_id_str == "basic_attack") {
+                basic_attack_index = i;
+                // show_debug_message("        找到 basic_attack，索引設置為: " + string(i)); // DEBUG REMOVED
+            }
+            // 特殊技能需要檢查範圍 (使用之前讀取的 skill_range)
+            else if (skill_range != -1 && dist_to_target <= skill_range) {
                 ds_list_add(available_skills, i);
+                // show_debug_message("        技能 " + skill_id_str + " 在範圍內，添加到可用列表。"); // DEBUG REMOVED
+            } else if (skill_id_str != "basic_attack") {
+                 // show_debug_message("        技能 " + skill_id_str + " 超出範圍 (" + string(dist_to_target) + " > " + string(skill_range) + ") 或範圍無效。"); // DEBUG REMOVED
             }
         }
+        // show_debug_message("    結束遍歷 skills 列表"); // DEBUG REMOVED
     }
-    
+    // --- 循環和內部日誌修改結束 ---
+
     // 如果有特殊技能可用且在範圍內，優先使用特殊技能
     if (ds_list_size(available_skills) > 0) {
         var selected_index = available_skills[| irandom(ds_list_size(available_skills) - 1)];
         current_skill = skills[| selected_index];
-        show_debug_message(object_get_name(object_index) + " 選擇技能: " + current_skill.name);
+        show_debug_message(object_get_name(object_index) + " 選擇技能: " + current_skill.name); // 保留這個關鍵選擇訊息
     }
     // 如果有基本攻擊可用，使用基本攻擊
     else if (basic_attack_index != -1) {
@@ -434,14 +502,13 @@ choose_skill = function() {
         
         // 只在範圍內時顯示使用基本攻擊的訊息
         if (dist_to_target <= current_skill.range) {
-            show_debug_message(object_get_name(object_index) + " 使用基本攻擊");
+             // show_debug_message(object_get_name(object_index) + " 使用基本攻擊"); // 這個訊息在 start_skill_animation 中也有，移除此處重複的
         }
     }
     // 如果連基本攻擊都不可用，重置狀態
     else {
         current_skill = noone;
-        atb_ready = false;
-        show_debug_message(object_get_name(object_index) + " 無可用技能，等待下一次機會");
+        show_debug_message(object_get_name(object_index) + " 無可用技能，等待下一次機會"); // 保留這個狀態訊息
     }
     
     // 清理臨時列表
@@ -869,31 +936,49 @@ start_skill_animation = function() {
 
 // 應用技能傷害
 apply_skill_damage = function() {
-    if (target == noone || !instance_exists(target) || target.dead) {
+    if (target == noone || !instance_exists(target) || target.dead || current_skill == noone) { // 添加 current_skill 檢查
+        show_debug_message("應用傷害取消：無效的目標或技能。");
+        // 可能需要重置某些狀態如果在這裡中止
+        end_skill_animation(); // 提前結束防止卡住
         return;
     }
     
     // 標記傷害已觸發
     skill_damage_triggered = true;
     
-    // 計算傷害
-    var damage = current_skill.damage;
+    // --- 動態計算傷害 ---
+    // 獲取技能的傷害倍率，如果不存在則預設為 0
+    var multiplier = variable_struct_exists(current_skill, "damage_multiplier") ? current_skill.damage_multiplier : 0;
+    // 獲取攻擊者的當前攻擊力
+    var attacker_attack = attack; // 直接讀取自身 attack 值
+    // 計算基礎傷害
+    var calculated_damage = attacker_attack * multiplier;
+    // --- 傷害計算結束 ---
     
     // 考慮目標防禦
-    damage = max(1, damage - target.defense);
+    // 添加檢查確保 target.defense 存在且為數字
+    var target_defense = 0;
+    if (variable_instance_exists(target, "defense") && is_real(target.defense)) {
+        target_defense = target.defense;
+    }
+    calculated_damage = max(1, calculated_damage - target_defense); // 確保至少造成 1 點傷害
     
     // 應用傷害
     with (target) {
-        take_damage(damage, other.id, other.current_skill.id);
+        // 傳遞計算出的局部傷害變數 calculated_damage
+        take_damage(calculated_damage, other.id, other.current_skill.id); 
     }
     
     // 創建特效 (如果特效系統已存在)
-    if (variable_global_exists("particle_system") && current_skill.particle_effect != "") {
+    // 檢查 current_skill.particle_effect 是否存在
+    var particle_effect_name = variable_struct_exists(current_skill, "particle_effect") ? current_skill.particle_effect : "";
+    if (variable_global_exists("particle_system") && particle_effect_name != "") {
         // 這裡將來添加粒子特效創建代碼
+        // particle_system.create_effect(target.x, target.y, particle_effect_name);
     }
     
     show_debug_message(object_get_name(object_index) + " 對 " + object_get_name(target.object_index) + 
-                      " 造成 " + string(damage) + " 點傷害 (技能: " + current_skill.name + ")");
+                      " 造成 " + string(calculated_damage) + " 點傷害 (技能: " + current_skill.name + ", 攻擊: " + string(attacker_attack) + ", 倍率: " + string(multiplier) + ")");
 }
 
 // 結束技能動畫

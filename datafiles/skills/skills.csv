@@ -6,3 +6,12 @@ slash,斬擊,1.5,45,90,arc,20,slash_effect,14,44,揮動武器造成範圍傷害
 heal,治療,0.8,80,180,circle,30,heal_glow,20,44,恢復隊友生命值
 poison_cloud,毒霧,0.7,100,150,circle,40,poison_mist,24,44,釋放毒霧持續傷害
 thunder_strike,雷擊,1.8,120,200,circle,25,lightning_flash,16,44,召喚雷電攻擊目標 
+slime_attack,史萊姆攻擊,1,40,0,single,0,basic_hit,12,44,史萊姆的普通攻擊
+slime_heal,史萊姆治療,1,40,0,single,0,basic_hit,12,44,史萊姆的治療技能
+slime_splash,史萊姆濺射,1,40,0,single,0,basic_hit,12,44,史萊姆的濺射攻擊
+slime_quake,史萊姆震擊,1,40,0,single,0,basic_hit,12,44,史萊姆的震擊技能
+bat_attack,蝙蝠攻擊,1,40,0,single,0,basic_hit,12,44,蝙蝠的普通攻擊
+bat_poison,蝙蝠毒擊,1,40,0,single,0,basic_hit,12,44,蝙蝠的毒性攻擊
+ghost_attack,幽靈攻擊,1,40,0,single,0,basic_hit,12,44,幽靈的普通攻擊
+ghost_fear,幽靈恐懼,1,40,0,single,0,basic_hit,12,44,幽靈的恐懼技能
+ghost_vanish,幽靈消失,1,40,0,single,0,basic_hit,12,44,幽靈的消失技能 

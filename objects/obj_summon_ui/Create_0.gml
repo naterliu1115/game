@@ -136,32 +136,46 @@ summon_selected_monster = function() {
             
             // 創建對應類型的召喚物
             var summon_type = monster_data.type;
+            // 在創建前打印 summon_type 的值
+            show_debug_message("[Summon UI] 準備創建實例，類型 object_index: " + string(summon_type) + " (" + object_get_name(summon_type) + ")");
             var new_summon = instance_create_layer(summon_x, summon_y, "Instances", summon_type);
             
             // 設置召喚物的屬性與數據匹配
             with (new_summon) {
-                level = monster_data.level;
-                max_hp = monster_data.max_hp;
-                hp = monster_data.hp;
-                attack = monster_data.attack;
-                defense = monster_data.defense;
-                spd = monster_data.spd;
-                
-                // 確保技能列表已經創建
-                if (ds_exists(skill_ids, ds_type_list)) {
-                    ds_list_clear(skill_ids);
-                }
-                if (ds_exists(skills, ds_type_list)) {
-                    ds_list_clear(skills);
+                // 1. 首先設置 active 變量，防止 parent_ui 的 Step 事件出錯
+                if (variable_instance_exists(id, "active")) {
+                     active = false;  // 確保重置為 false，即使父類可能設置了
+                } else {
+                     active = false;  // 如果不存在，直接創建並設為 false
                 }
                 
-                // 重要：只初始化一次！
-                // 之前的問題是我們在此處設置屬性後調用initialize()，
-                // 然後在initialize()中又重新調用event_inherited()，
-                // 這導致了多次添加技能
-                initialize();
+                // 2. 然後設置 template_id (假設 monster_data.id 是模板 ID)
+                if (variable_struct_exists(monster_data, "id")) { // 檢查 id 是否存在
+                    template_id = monster_data.id;
+                    show_debug_message("設置召喚物 template_id 為: " + string(template_id));
+                } else {
+                    show_debug_message("錯誤：monster_data 中缺少 id (template_id)");
+                    instance_destroy(); // 創建失敗，銷毀
+                    return false; // 或者返回錯誤
+                }
                 
-                show_debug_message("玩家召唤物初始化完成: ref instance " + string(id));
+                // 3. 設置 level (從 monster_data 中獲取)
+                if (variable_struct_exists(monster_data, "level")) { // 檢查 level 是否存在
+                    level = monster_data.level;
+                    show_debug_message("設置召喚物 level 為: " + string(level));
+                } else {
+                    show_debug_message("警告：monster_data 中缺少 level，預設為 1");
+                    level = 1; // 如果缺少 level，提供一個預設值
+                }
+                
+                // 4. 最後才調用 initialize
+                if (variable_instance_exists(id, "initialize")) {
+                     initialize();
+                     show_debug_message("玩家召唤物初始化完成: ref instance " + string(id));
+                } else {
+                    show_debug_message("錯誤：召喚物缺少 initialize 函數");
+                    // 可能需要額外處理
+                }
             }
             
             // 添加到玩家單位列表
@@ -265,16 +279,17 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     draw_set_color(c_dkgray);
     draw_rectangle(x + 11, y + 11, x + 69, y + 69, false);
     
-    // 嘗試獲取並繪製怪物精靈
+    // --- 修改：嘗試從 monster_data.display_sprite 獲取精靈 --- 
     var monster_sprite = -1;
-    if (variable_struct_exists(monster_data, "type")) {
-        var obj_index = monster_data.type;
-        if (object_exists(obj_index)) {
-            monster_sprite = object_get_sprite(obj_index);
-        }
+    if (variable_struct_exists(monster_data, "display_sprite")) {
+        monster_sprite = monster_data.display_sprite;
+        show_debug_message(">>> draw_monster_card: Found display_sprite = " + string(monster_sprite) + " for " + monster_data.name); // DEBUG ADDED (顯示值和名稱)
+    } else {
+        show_debug_message(">>> draw_monster_card: display_sprite NOT FOUND in monster_data for " + monster_data.name); // DEBUG ADDED
     }
+    // --- 修改結束 ---
     
-    if (monster_sprite != -1) {
+    if (monster_sprite != -1 && sprite_exists(monster_sprite)) { // <-- 添加 sprite_exists 檢查
         draw_sprite_stretched(monster_sprite, 0, x + 11, y + 11, 58, 58);
     } else {
         // 如未找到精靈，繪製一個占位符

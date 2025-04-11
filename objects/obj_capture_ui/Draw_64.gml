@@ -234,7 +234,7 @@ switch (capture_state) {
 // 如果有目標敵人，繪製敵人信息
 if (target_enemy != noone && instance_exists(target_enemy)) {
     // 敵人精靈
-    var enemy_sprite = object_get_sprite(target_enemy.object_index);
+    var enemy_sprite = target_enemy.sprite_index;
     var enemy_x = ui_x + 100;
     var enemy_y = ui_y + ui_height / 2 - 30;
     

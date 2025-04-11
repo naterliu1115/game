@@ -560,5 +560,100 @@ _event_broadcaster = method(self, _local_broadcast_event); // <-- 修改賦值
 // ... 其他綁定 ...
 #endregion
 
+// 添加工廠式戰鬥啟動函數
+start_factory_battle = function(enemy_template_id, center_x, center_y) {
+    show_debug_message("===== 開始使用工廠啟動戰鬥 =====");
+    show_debug_message("敵人模板ID: " + string(enemy_template_id));
+    show_debug_message("位置: (" + string(center_x) + ", " + string(center_y) + ")");
+    
+    if (battle_state != BATTLE_STATE.INACTIVE) {
+        show_debug_message("警告：戰鬥已經在進行中，狀態：" + string(battle_state));
+        return false;
+    }
+    
+    // 設置戰鬥狀態
+    battle_state = BATTLE_STATE.STARTING;
+    battle_timer = 0;
+    battle_result_handled = false;
+    
+    // 設置全局戰鬥標誌
+    global.in_battle = true;
+    
+    // 設置戰鬥區域
+    battle_area.center_x = center_x;
+    battle_area.center_y = center_y;
+    battle_area.boundary_radius = 0; // 初始為0，會在Step事件中擴張
+    
+    // 更新直接引用
+    battle_center_x = center_x;
+    battle_center_y = center_y;
+    battle_boundary_radius = 0;
+    
+    // 檢查敵人工廠是否存在
+    if (!instance_exists(obj_enemy_factory)) {
+        show_debug_message("錯誤：敵人工廠不存在");
+        instance_create_layer(0, 0, "Controllers", obj_enemy_factory);
+    }
+    
+    // 檢查單位管理器是否存在
+    if (!instance_exists(obj_unit_manager)) {
+        show_debug_message("錯誤：單位管理器不存在");
+        instance_create_layer(0, 0, "Controllers", obj_unit_manager);
+    }
+    
+    // 使用敵人工廠生成敵人群組
+    var enemies = [];
+    with (obj_enemy_factory) {
+        // 修正：添加第四個參數 level_param (暫設為 1)
+        var default_enemy_level = 1; // 或者根據需要設置其他等級邏輯
+        enemies = generate_enemy_group(enemy_template_id, center_x, center_y, default_enemy_level);
+    }
+    
+    // 檢查是否成功生成敵人
+    if (array_length(enemies) == 0) {
+        show_debug_message("錯誤：無法生成敵人");
+        battle_state = BATTLE_STATE.INACTIVE;
+        global.in_battle = false;
+        return false;
+    }
+    
+    // 添加敵人到單位管理器
+    with (obj_unit_manager) {
+        // 先清空敵人列表
+        ds_list_clear(enemy_units);
+        
+        // 添加生成的敵人
+        for (var i = 0; i < array_length(enemies); i++) {
+            ds_list_add(enemy_units, enemies[i]);
+        }
+        
+        show_debug_message("已添加 " + string(array_length(enemies)) + " 個敵人到單位管理器");
+    }
+    
+    // 記錄戰鬥開始
+    add_battle_log("戰鬥開始! 敵人模板: " + string(enemy_template_id) + ", 數量: " + string(array_length(enemies)));
+    
+    // 發送戰鬥開始事件
+    _event_broadcaster("battle_start", {
+        center_x: center_x,
+        center_y: center_y,
+        required_radius: 300, // 使用預設值
+        template_id: enemy_template_id
+    });
+    
+    // 顯示戰鬥UI
+    if (instance_exists(obj_battle_ui)) {
+        with (obj_battle_ui) {
+            show();
+            show_info("戰鬥開始!");
+        }
+    } else {
+        instance_create_layer(0, 0, "UI", obj_battle_ui);
+    }
+    
+    show_debug_message("===== 戰鬥初始化完成 =====");
+    return true;
+};
+
 // 初始化
 initialize_battle_manager();

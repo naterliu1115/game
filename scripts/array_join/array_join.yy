@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"array_join",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"array_join",
+  "parent":{
+    "name":"脚本",
+    "path":"folders/脚本.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
