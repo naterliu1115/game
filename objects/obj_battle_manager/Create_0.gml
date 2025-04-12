@@ -73,6 +73,7 @@ surface_needs_update = ui_data.surface_needs_update;
 
 // 戰鬥日誌
 battle_log = ds_list_create();
+enemies_defeated_this_battle = 0; // <--- 新增：本場戰鬥擊敗敵人數
 
 // 戰鬥邊界和動畫
 border_target_scale = 0;
@@ -82,6 +83,7 @@ border_anim_speed = 0.05;
 // 結果相關
 battle_result = ""; // "VICTORY", "DEFEAT", "ESCAPE"
 battle_timer_end = 0;
+final_battle_duration_seconds = 0; // 新增：儲存最終戰鬥持續時間（秒）
 
 // === 新增：經驗值追蹤 ===
 defeated_enemies_exp = ds_list_create(); // 記錄本場戰鬥擊敗敵人的經驗值
@@ -206,6 +208,8 @@ initialize_battle_manager = function() {
     // 訂閱相關事件
     subscribe_to_events();
     
+    enemies_defeated_this_battle = 0; // <--- 重置計數器
+    
     show_debug_message("戰鬥管理器初始化完成");
 };
 
@@ -221,7 +225,6 @@ subscribe_to_events = function() {
             // 戰鬥結果相關事件
             subscribe_to_event("all_enemies_defeated", other.id, "on_all_enemies_defeated");
             subscribe_to_event("all_player_units_defeated", other.id, "on_all_player_units_defeated");
-            subscribe_to_event("show_battle_result", other.id, "on_show_battle_result");
             subscribe_to_event("battle_defeat_handled", other.id, "on_battle_defeat_handled");
             
             show_debug_message("正在訂閱單位相關事件...");
@@ -233,6 +236,9 @@ subscribe_to_events = function() {
             // 戰鬥階段相關事件
             subscribe_to_event("battle_ending", other.id, "on_battle_ending");
             subscribe_to_event("battle_result_confirmed", other.id, "on_battle_result_confirmed");
+            
+            // 新增：訂閱獎勵計算完成事件
+            subscribe_to_event("rewards_calculated", other.id, "on_rewards_calculated");
         }
         show_debug_message("所有事件訂閱完成");
     }
@@ -253,6 +259,14 @@ on_unit_died = function(data) {
     
     // 更新戰鬥日誌
     add_battle_log("單位 " + string(data.unit_id) + " 已陣亡");
+    
+    // 增加擊敗計數器
+    if (is_struct(data) && variable_struct_exists(data, "team")) {
+        if (data.team == 1) { // 假設 1 代表敵方隊伍
+            enemies_defeated_this_battle++;
+            show_debug_message("[Battle Manager] 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+        }
+    }
     
     // 只在戰鬥進行中時檢查勝負
     if (battle_state == BATTLE_STATE.ACTIVE) {
@@ -294,39 +308,61 @@ on_unit_died = function(data) {
 
 // 處理單位統計更新事件
 on_unit_stats_updated = function(data) {
+    // 加入詳細調試訊息，查看收到的原始數據
+    show_debug_message("[on_unit_stats_updated] Received data: " + json_stringify(data)); 
+    
+    // 安全檢查 data 是否為 struct
+    if (!is_struct(data)) {
+        show_debug_message("錯誤：單位統計更新事件數據無效 (非 struct)");
+        return;
+    }
+
+    // 檢查必要的欄位是否存在
+    if (!variable_struct_exists(data, "player_units") || !variable_struct_exists(data, "enemy_units")) {
+         show_debug_message("錯誤：單位統計更新事件數據缺少 player_units 或 enemy_units");
+         return;
+    }
+
     if (battle_state == BATTLE_STATE.ACTIVE) {
         show_debug_message("===== 單位統計更新 =====");
         show_debug_message("玩家單位: " + string(data.player_units));
         show_debug_message("敵方單位: " + string(data.enemy_units));
+    }
+    
+    // 可選：處理可能存在的 reason 欄位（防禦性程式碼）
+    if (variable_struct_exists(data, "reason")) {
+        var _reason = data.reason;
+        show_debug_message("統計更新原因 (額外欄位): " + string(_reason));
+        // 可以在這裡根據 reason 做額外處理
     }
 };
 
 // 處理戰鬥結束事件
 on_battle_ending = function(data) {
     show_debug_message("===== 收到戰鬥結束事件 =====");
-    show_debug_message("勝利: " + string(data.victory));
-    show_debug_message("原因: " + string(data.reason));
+    // 加入檢查並設置預設值
+    var _reason = "unknown";
+    var _victory = false;
+    var _source = "system"; // 新增 source 預設值
+    if (is_struct(data)) {
+        if (variable_struct_exists(data, "reason")) { _reason = data.reason; }
+        if (variable_struct_exists(data, "victory")) { _victory = data.victory; }
+        if (variable_struct_exists(data, "source")) { _source = data.source; } // 檢查 source
+    } else {
+         show_debug_message("警告: on_battle_ending 收到非 struct 數據");
+    }
+
+    show_debug_message("勝利: " + string(_victory));
+    show_debug_message("原因: " + string(_reason)); // 使用檢查過的 _reason
+    show_debug_message("來源: " + string(_source)); // 顯示來源
     show_debug_message("當前戰鬥狀態: " + string(battle_state));
-    
+
     // 只在非結束狀態時處理
-    if (battle_state != BATTLE_STATE.ENDING && battle_state != BATTLE_STATE.RESULT) {
-        battle_state = BATTLE_STATE.ENDING;
-        // 不重置battle_timer
-        add_battle_log("戰鬥即將結束! 原因: " + string(data.reason));
-        
-        // 通知UI顯示相應信息
-        if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.show_info(data.victory ? "戰鬥勝利!" : "戰鬥失敗!");
-        }
-        
-        // 顯示戰鬥結果
-        _event_broadcaster("show_battle_result", {
-            victory: data.victory,
-            battle_duration: battle_timer / game_get_speed(gamespeed_fps),
-            exp_gained: rewards.exp,
-            gold_gained: rewards.gold,
-            items_gained: rewards.items_list
-        });
+    battle_state = BATTLE_STATE.ENDING;
+    add_battle_log("戰鬥即將結束! 原因: " + string(_reason)); // 使用檢查過的 _reason
+
+    if (instance_exists(obj_battle_ui)) {
+        obj_battle_ui.show_info(_victory ? "戰鬥勝利!" : "戰鬥失敗!");
     }
 };
 
@@ -334,6 +370,46 @@ on_battle_ending = function(data) {
 on_battle_result_confirmed = function(data) {
     show_debug_message("===== 戰鬥結果已確認 =====");
     end_battle();
+};
+
+// 處理獎勵計算完成事件
+on_rewards_calculated = function(data) {
+    // show_debug_message("===== 收到獎勵計算完成事件 ====="); // 可以移除
+    // show_debug_message("Received data: " + json_stringify(data)); // 可以移除
+
+    if (is_struct(data)) {
+        // 更新內部的 rewards 結構
+        if (variable_struct_exists(data, "exp_gained")) { rewards.exp = data.exp_gained; }
+        if (variable_struct_exists(data, "gold_gained")) { rewards.gold = data.gold_gained; }
+        if (variable_struct_exists(data, "item_drops")) { rewards.items_list = data.item_drops; } // 注意欄位名稱是 item_drops
+        // 更新擊敗敵人數
+        if (variable_struct_exists(data, "defeated_enemies")) { enemies_defeated_this_battle = data.defeated_enemies; }
+        
+        // show_debug_message("內部獎勵數據已更新: EXP=" + string(rewards.exp) + ", Gold=" + string(rewards.gold) + ", Defeated=" + string(enemies_defeated_this_battle)); // 可以移除
+
+        // 提取數據用於廣播 (修改 variable_struct_get 的用法)
+        var _victory = variable_struct_exists(data, "victory") ? variable_struct_get(data, "victory") : false; // <-- 使用兩參數版本
+        var _duration = variable_struct_exists(data, "duration") ? variable_struct_get(data, "duration") : 0; // <-- 使用兩參數版本
+        var _reason = "rewards_calculated";
+        var _source = "reward_system";
+
+        // --- 實際的廣播呼叫 --- 
+        _event_broadcaster("show_battle_result", {
+            victory: _victory,
+            battle_duration: _duration,
+            defeated_enemies: enemies_defeated_this_battle, // 使用更新後的計數
+            exp_gained: rewards.exp,                 // 使用更新後的經驗
+            gold_gained: rewards.gold,                // 使用更新後的金幣
+            item_drops: rewards.items_list,           // 使用更新後的物品列表 (鍵名確認為 item_drops)
+            reason: _reason,
+            source: _source
+        });
+        // --- 新增結束 ---
+
+        // show_debug_message("已廣播 show_battle_result 事件 (來自 on_rewards_calculated)"); // 可以移除
+    } else {
+        show_debug_message("警告: on_rewards_calculated 收到非 struct 數據");
+    }
 };
 
 // 確保所有必要的管理器都存在
@@ -514,43 +590,52 @@ end_battle = function() {
 // 處理所有敵人被擊敗事件
 on_all_enemies_defeated = function(data) {
     show_debug_message("===== 收到所有敵人被擊敗事件 =====");
-    
-    // 安全檢查
-    if (!is_struct(data)) {
-        data = { reason: "unknown", source: "system" };
+    // 加入檢查並設置預設值
+    var _reason = "unknown";
+    var _source = "system";
+    if (is_struct(data)) {
+        if (variable_struct_exists(data, "reason")) { _reason = data.reason; }
+        if (variable_struct_exists(data, "source")) { _source = data.source; }
+    } else {
+         show_debug_message("警告: on_all_enemies_defeated 收到非 struct 數據");
     }
-    
+
     show_debug_message("當前戰鬥狀態: " + string(battle_state));
-    show_debug_message("觸發原因: " + string(data.reason));
-    show_debug_message("來源: " + string(data.source));
-    
+    show_debug_message("觸發原因: " + string(_reason)); // 使用檢查過的 _reason
+    show_debug_message("來源: " + string(_source)); // 使用檢查過的 _source
+
     // 只在ACTIVE狀態且尚未開始結束流程時處理
     if (battle_state == BATTLE_STATE.ACTIVE) {
-        // 檢查是否已經在處理結束流程
+        // 檢查是否已經在處理結束流程 (這段檢查 is_ending 的邏輯可能需要根據你的 event_manager 實現調整)
         var is_ending = false;
-        if (instance_exists(obj_event_manager)) {
-            with(obj_event_manager) {
-                is_ending = variable_instance_exists(id, "pending_events") && 
-                           ds_list_find_index(pending_events, "battle_ending") != -1;
-            }
-        }
-        
-        if (!is_ending) {
-            show_debug_message("從 ACTIVE 狀態轉換到 ENDING 狀態");
+        // if (instance_exists(obj_event_manager)) {
+        //     with(obj_event_manager) {
+        //         is_ending = variable_instance_exists(id, "pending_events") &&
+        //                    ds_list_find_index(pending_events, "battle_ending") != -1;
+        //     }
+        // }
+
+        if (!is_ending) { // 暫時移除 is_ending 檢查，如果需要請恢復
+            // show_debug_message("從 ACTIVE 狀態轉換到 ENDING 狀態 (勝利)"); // 保留或移除皆可
+            final_battle_duration_seconds = battle_timer / game_get_speed(gamespeed_fps);
+            // show_debug_message("[Battle Manager Event] final_battle_duration_seconds set to: " + string(final_battle_duration_seconds) + " seconds (Victory)"); // 可以移除
             battle_state = BATTLE_STATE.ENDING;
-            
+
             // 通知UI顯示勝利信息
             if (instance_exists(obj_battle_ui)) {
                 obj_battle_ui.show_info("戰鬥勝利!");
             }
-            
+
             add_battle_log("所有敵人被擊敗，戰鬥勝利!");
-            
+
+            // 分配經驗值
+            distribute_battle_exp(); // <--- 在這裡觸發經驗分配
+
             // 發送戰鬥即將結束事件
             _event_broadcaster("battle_ending", {
                 victory: true,
-                reason: "all_enemies_defeated",
-                source: data.source
+                reason: "all_enemies_defeated", // 這裡廣播時可以固定原因
+                source: _source // 可以傳遞原始來源
             });
         } else {
             show_debug_message("忽略重複的敵人被擊敗事件：結束流程已在進行中");
@@ -558,77 +643,139 @@ on_all_enemies_defeated = function(data) {
     } else {
         show_debug_message("警告：收到敵人被擊敗事件，但戰鬥狀態不是 ACTIVE（當前狀態：" + string(battle_state) + "）");
     }
-    
+
     show_debug_message("===== 敵人被擊敗事件處理完成 =====");
 };
 
 // 處理所有玩家單位被擊敗事件
 on_all_player_units_defeated = function(data) {
     show_debug_message("===== 收到所有玩家單位被擊敗事件 =====");
+    // 加入檢查並設置預設值
+    var _reason = "unknown";
+    var _source = "system"; // 新增 source 預設值
+    if (is_struct(data)) {
+        if (variable_struct_exists(data, "reason")) { _reason = data.reason; }
+        if (variable_struct_exists(data, "source")) { _source = data.source; } // 檢查 source
+    } else {
+         show_debug_message("警告: on_all_player_units_defeated 收到非 struct 數據");
+    }
+
     show_debug_message("當前戰鬥狀態: " + string(battle_state));
-    show_debug_message("觸發原因: " + string(data.reason));
-    
+    show_debug_message("觸發原因: " + string(_reason)); // 使用檢查過的 _reason
+    show_debug_message("來源: " + string(_source)); // 顯示來源
+
     if (battle_state == BATTLE_STATE.ACTIVE) {
-        show_debug_message("從 ACTIVE 狀態轉換到 ENDING 狀態");
+        // show_debug_message("從 ACTIVE 狀態轉換到 ENDING 狀態 (失敗)"); // 保留或移除皆可
+        final_battle_duration_seconds = battle_timer / game_get_speed(gamespeed_fps);
+        // show_debug_message("[Battle Manager Event] final_battle_duration_seconds set to: " + string(final_battle_duration_seconds) + " seconds (Defeat)"); // 可以移除
         battle_state = BATTLE_STATE.ENDING;
-        battle_timer = 0;
-        
+        // battle_timer = 0; // 失敗時是否重置計時器？根據需要決定
+
         // 通知UI顯示失敗信息
         if (instance_exists(obj_battle_ui)) {
             obj_battle_ui.show_info("戰鬥失敗!");
         }
-        
+
         add_battle_log("所有玩家單位被擊敗，戰鬥失敗!");
-        
+
         // 發送戰鬥即將結束事件
         _event_broadcaster("battle_ending", {
             victory: false,
-            reason: "all_player_units_defeated"
+            reason: "all_player_units_defeated", // 這裡廣播時可以固定原因
+            source: _source // 可以傳遞原始來源
         });
     } else {
         show_debug_message("警告：收到玩家單位被擊敗事件，但戰鬥狀態不是 ACTIVE（當前狀態：" + string(battle_state) + "）");
     }
-    
+
     show_debug_message("===== 玩家單位被擊敗事件處理完成 =====");
 };
 
 // 輔助函數：發送事件消息
 _local_broadcast_event = function(event_name, data = {}) {
     if (instance_exists(obj_event_manager)) {
+        show_debug_message("[BattleManager Broadcaster] Attempting to broadcast: " + event_name + " with data: " + json_stringify(data)); // <-- 修改並增強日誌
         with (obj_event_manager) {
+            // 在呼叫 handle_event 前再加一層日誌，確保 with 塊執行
+            show_debug_message("[BattleManager Broadcaster] Inside with(obj_event_manager) block, about to call handle_event for: " + event_name);
             handle_event(event_name, data);
         }
+        show_debug_message("[BattleManager Broadcaster] Call to handle_event seems completed for: " + event_name); // <-- 修改日誌
     } else {
-        show_debug_message("警告: 事件管理器不存在，無法廣播事件: " + event_name);
+        show_debug_message("警告: [BattleManager Broadcaster] 事件管理器不存在，無法廣播事件: " + event_name);
     }
 };
 
+/* // <-- Start comment block
 // 新增：處理顯示戰鬥結果事件
 on_show_battle_result = function(data) {
     show_debug_message("===== 顯示戰鬥結果 =====");
-    
-    // 更新獎勵數據
-    rewards.exp = data.exp_gained;
-    rewards.gold = data.gold_gained;
-    rewards.items_list = data.items_gained;
-    rewards.visible = true;
-    
-    // 更新UI顯示 - 修改此行，傳遞必要參數
-    if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.show_rewards(rewards.exp, rewards.gold, rewards.items_list);
+    show_debug_message("Received data: " + json_stringify(data)); // 添加日誌
+
+    // 加入檢查並設置預設值
+    var _victory = false;
+    var _duration = 0;
+    var _defeated_count = 0; 
+    var _exp_gained = 0;
+    var _gold_gained = 0;
+    var _items_gained = [];
+    if (is_struct(data)) {
+        if (variable_struct_exists(data, "victory")) { _victory = data.victory; }
+        if (variable_struct_exists(data, "battle_duration")) { _duration = data.battle_duration; }
+        if (variable_struct_exists(data, "defeated_enemies")) { _defeated_count = data.defeated_enemies; }
+        if (variable_struct_exists(data, "exp_gained")) { _exp_gained = data.exp_gained; }
+        if (variable_struct_exists(data, "gold_gained")) { _gold_gained = data.gold_gained; }
+        if (variable_struct_exists(data, "items_gained")) { _items_gained = data.items_gained; }
+    } else {
+        show_debug_message("警告: on_show_battle_result 收到非 struct 數據");
     }
-    
+
+    // 更新獎勵數據 (使用檢查後的值)
+    rewards.exp = _exp_gained;
+    rewards.gold = _gold_gained;
+    rewards.items_list = _items_gained;
+    rewards.visible = true;
+	
+	
+
+    // 更新UI顯示 - 傳遞所有參數給 show_rewards
+    if (instance_exists(obj_battle_ui)) {
+        var ui_instance = instance_find(obj_battle_ui, 0); // 獲取第一個找到的實例
+        if (instance_exists(ui_instance)) { // 再次確認獲取的實例有效
+             show_debug_message(">>> 準備呼叫 show_rewards on instance: " + string(ui_instance)); // *** 新增日誌 ***
+             ui_instance.show_rewards(_victory, _duration, _defeated_count, rewards.exp, rewards.gold, rewards.items_list);
+             show_debug_message("<<< show_rewards 呼叫完成"); // *** 新增日誌 ***
+        } else {
+             show_debug_message("警告: instance_find(obj_battle_ui, 0) 未找到有效實例");
+        }
+    } else {
+        show_debug_message("警告: obj_battle_ui 不存在於 on_show_battle_result");
+    }
+
     add_battle_log("顯示戰鬥結果!");
-};
+
+*/ // <-- End comment block
 
 // 新增：處理戰鬥失敗處理事件
 on_battle_defeat_handled = function(data) {
     show_debug_message("===== 處理戰鬥失敗 =====");
-    add_battle_log("戰鬥結果處理完成，勝利: " + string(data.victory));
+    show_debug_message("Received data: " + json_stringify(data)); // 添加日誌
+
+    // 加入檢查並設置預設值
+    var _victory = false; // Defeat is handled, assume victory is false unless specified
+    var _gold_loss = 0;
+    if (is_struct(data)) {
+        if (variable_struct_exists(data, "victory")) { _victory = data.victory; }
+        if (variable_struct_exists(data, "gold_loss")) { _gold_loss = data.gold_loss; } // 檢查 gold_loss
+    } else {
+         show_debug_message("警告: on_battle_defeat_handled 收到非 struct 數據");
+    }
     
+    add_battle_log("戰鬥結果處理完成，勝利: " + string(_victory) + ", 金幣損失: " + string(_gold_loss)); // 使用檢查後的值
+
     // 確保獎勵面板可見
     rewards.visible = true;
-    
+
     // 更新UI顯示
     if (instance_exists(obj_battle_ui)) {
         obj_battle_ui.update_rewards_display();

@@ -283,7 +283,7 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     var monster_sprite = -1;
     if (variable_struct_exists(monster_data, "display_sprite")) {
         monster_sprite = monster_data.display_sprite;
-        show_debug_message(">>> draw_monster_card: Found display_sprite = " + string(monster_sprite) + " for " + monster_data.name); // DEBUG ADDED (顯示值和名稱)
+       // show_debug_message(">>> draw_monster_card: Found display_sprite = " + string(monster_sprite) + " for " + monster_data.name); // DEBUG ADDED (顯示值和名稱)
     } else {
         show_debug_message(">>> draw_monster_card: display_sprite NOT FOUND in monster_data for " + monster_data.name); // DEBUG ADDED
     }

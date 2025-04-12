@@ -135,16 +135,12 @@ switch (battle_state) {
         }
         
         if (all_enemies_defeated) {
-            show_debug_message("[Battle Manager] 勝利條件達成！");
-            battle_result = "VICTORY";
-            battle_timer_end = battle_timer; // 記錄結束時間
-            // 分配經驗值
-            distribute_battle_exp(); 
-            // 切換到結束狀態
+            // show_debug_message("[Battle Manager] 勝利條件達成！"); // 保留
+            final_battle_duration_seconds = battle_timer / game_get_speed(gamespeed_fps);
+            // show_debug_message("[Battle Manager] final_battle_duration_seconds set to: " + string(final_battle_duration_seconds) + " seconds"); // 移除
             battle_state = BATTLE_STATE.ENDING;
-            show_debug_message("戰鬥狀態變更：-> ENDING (勝利)");
-            // 在這裡觸發勝利相關的事件或UI
-            break; // 狀態已改變，跳出 switch
+            // show_debug_message("戰鬥狀態變更：-> ENDING (勝利)"); // 移除
+            break;
         }
         
         // 檢查失敗條件：所有玩家單位都已死亡
@@ -164,16 +160,12 @@ switch (battle_state) {
         }
         
         if (all_player_units_defeated) {
-            show_debug_message("[Battle Manager] 失敗條件達成！");
-            battle_result = "DEFEAT";
-            battle_timer_end = battle_timer; // 記錄結束時間
-            // 失敗通常不分配經驗
-             ds_list_clear(defeated_enemies_exp); // 清理可能已記錄的經驗
-            // 切換到結束狀態
+            // show_debug_message("[Battle Manager] 失敗條件達成！"); // 保留
+            final_battle_duration_seconds = battle_timer / game_get_speed(gamespeed_fps);
+            // show_debug_message("[Battle Manager] final_battle_duration_seconds set to: " + string(final_battle_duration_seconds) + " seconds"); // 移除
             battle_state = BATTLE_STATE.ENDING;
-            show_debug_message("戰鬥狀態變更：-> ENDING (失敗)");
-            // 在這裡觸發失敗相關的事件或UI
-            break; // 狀態已改變，跳出 switch
+            // show_debug_message("戰鬥狀態變更：-> ENDING (失敗)"); // 移除
+            break;
         }
         
         // 安全網檢查 - 每秒檢查一次
@@ -227,13 +219,24 @@ switch (battle_state) {
             
             // 邊界縮小完成，顯示戰鬥結果
             if (radius <= 0) {
-                show_debug_message("邊界收縮完成，轉換到 RESULT 狀態");
+                // show_debug_message("邊界收縮完成，轉換到 RESULT 狀態"); // 移除
                 battle_state = BATTLE_STATE.RESULT;
                 battle_timer = 0;  // 重置計時器
-                add_battle_log("顯示戰鬥結果!");
                 
-                // 發送顯示結果事件
-                _event_broadcaster("show_battle_result", {});
+                // --- 直接使用儲存好的秒數 --- 
+                var _duration_to_broadcast = 0;
+                if (variable_instance_exists(id, "final_battle_duration_seconds")) {
+                    _duration_to_broadcast = final_battle_duration_seconds;
+                } else {
+                    show_debug_message("警告: final_battle_duration_seconds 變數未定義! Setting duration to 0."); // 保留警告
+                }
+                
+                // 發送事件以觸發最終的獎勵計算
+                _event_broadcaster("finalize_battle_results", {
+                    defeated_enemies: enemies_defeated_this_battle,
+                    duration: _duration_to_broadcast
+                });
+                show_debug_message("[Battle Manager] Broadcasted finalize_battle_results with duration: " + string(_duration_to_broadcast) + " and defeated_enemies: " + string(enemies_defeated_this_battle)); // 保留關鍵信息
             }
         } else {
             show_debug_message("警告：單位管理器不存在，直接轉換到 RESULT 狀態");

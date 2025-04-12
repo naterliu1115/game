@@ -9,8 +9,8 @@
   "name":"obj_event_manager",
   "overriddenProperties":[],
   "parent":{
-    "name":"battle",
-    "path":"folders/物体/battle.yy",
+    "name":"Main",
+    "path":"folders/物体/Main.yy",
   },
   "parentObjectId":null,
   "persistent":false,

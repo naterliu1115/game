@@ -211,254 +211,98 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     
-    // 判斷戰鬥結果
+    // 修改：判斷戰鬥結果，使用 battle_victory_status
     var result_text = "";
-    if (ds_list_size(obj_battle_manager.enemy_units) <= 0) {
+    var result_color = c_white;
+    var stats_y = display_get_gui_height() / 2; // 統計文本的起始 Y 座標
+
+    if (battle_victory_status == 1) { // 勝利
         result_text = "戰鬥勝利!";
-        draw_set_color(c_lime);
-        /*
-        show_debug_message("[DEBUG] 獎勵面板狀態檢查：");
-        show_debug_message("[DEBUG] - reward_visible = " + string(reward_visible));
-        show_debug_message("[DEBUG] - reward_exp = " + string(reward_exp));
-        show_debug_message("[DEBUG] - reward_gold = " + string(reward_gold));
-        show_debug_message("[DEBUG] - items count = " + string(array_length(reward_items_list)));
-        */
-        // 顯示獎勵視窗
-        if (reward_visible) {
-            //show_debug_message("[DEBUG] 開始繪製獎勵面板");
-            
-            // 計算完全置中的位置
-            var reward_x, reward_y, panel_width, panel_height;
-            
-            if (sprite_exists(spr_reward_panel)) {
-                panel_width = sprite_get_width(spr_reward_panel);
-                panel_height = sprite_get_height(spr_reward_panel);
-                // 計算面板中心點位置
-                reward_x = display_get_gui_width() / 2;
-                reward_y = display_get_gui_height() / 2;
-                
-               /* show_debug_message("[DEBUG] 使用 spr_reward_panel 繪製背景");
-                show_debug_message("[DEBUG] 面板尺寸: " + string(panel_width) + "x" + string(panel_height));
-                show_debug_message("[DEBUG] 置中位置: (" + string(reward_x) + ", " + string(reward_y) + ")");
-                */
-                // 先繪製勝利文字
-                var scale = 1.5 + sin(current_time / 200) * 0.2;
-                draw_text_outlined(
-                    reward_x,    // X 位置：面板中心
-                    reward_y - panel_height/2 - 60,  // Y 位置：面板上方
-                    result_text,
-                    c_lime,
-                    c_black,
-                    TEXT_ALIGN_CENTER,
-                    TEXT_VALIGN_MIDDLE,
-                    scale * 2.4  // 加入縮放效果
-                );
-                
-                // 再繪製背板
-                draw_sprite(spr_reward_panel, 0, reward_x, reward_y);
-                
-                // 調整內容起始位置（從面板左上角開始）
-                var content_x = reward_x - panel_width/2 + 30;  // 內容左邊距
-                var content_y = reward_y - panel_height/2;      // 內容頂部起始點
-                var title_x = reward_x;  // 標題置中
-                
-                // 繪製獎勵內容
-                draw_set_halign(fa_center);
-                draw_set_color(c_yellow);
-                draw_text_safe(title_x, content_y + 50, "戰鬥獎勵", c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-                
-                draw_set_halign(fa_left);
-                draw_set_color(c_white);
-                
-                // 繪製經驗值
-                draw_text_safe(content_x, content_y + 70, "經驗值: " + string(reward_exp), c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_TOP);
-                
-                // 繪製金幣圖示
-                if (sprite_exists(spr_gold)) {
-                    //show_debug_message("[DEBUG] 使用 spr_gold 繪製金幣圖示");
-                    var gold_icon_width = sprite_get_width(spr_gold);
-                    draw_sprite(spr_gold, 0, content_x, content_y + 100);
-                    draw_text_safe(content_x + gold_icon_width + 5, content_y + 100, string(reward_gold));
-                } else {
-                    show_debug_message("[DEBUG] spr_gold 不存在，使用純文字顯示");
-                    draw_text_safe(content_x, content_y + 100, "金幣: " + string(reward_gold));
-                }
-                
-                // 畫道具圖示（最多顯示 3 個）
-                if (array_length(reward_items_list) > 0) {
-                    var icon_spacing = 80; // 增加圖示間距
-                    var icon_width = sprite_exists(spr_gold) ? sprite_get_width(spr_gold) : 32;
-                    
-                    for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
-                        var item = reward_items_list[i];
-                        var item_x = content_x + (i * icon_spacing);
-                        
-                        // 繪製物品圖示
-                        if (sprite_exists(spr_gold)) {
-                            draw_sprite(spr_gold, 0, item_x, content_y + 140);
-                        } else {
-                            draw_set_color(c_yellow);
-                            draw_circle(item_x, content_y + 140, 15, false);
-                        }
-                        
-                        // 繪製物品名稱和數量
-                        draw_set_color(c_white);
-                        var item_name = variable_struct_exists(item, "name") ? item.name : "物品";
-                        var item_rarity = variable_struct_exists(item, "rarity") ? " (" + item.rarity + ")" : "";
-                        draw_text_safe(item_x + icon_width + 5, content_y + 140, item_name + item_rarity, c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_TOP);
-                    }
-                }
-            } else {
-                show_debug_message("[DEBUG] spr_reward_panel 不存在，使用備用背景");
-                // 備用背景（根據畫面大小自適應）
-                var gui_width = display_get_gui_width();
-                var gui_height = display_get_gui_height();
-                
-                // 計算合適的面板大小
-                panel_width = min(gui_width * 0.6, 800);    // 最大寬度為畫面的 60% 或 800px
-                panel_height = min(gui_height * 0.5, 500);  // 最大高度為畫面的 50% 或 500px
-                
-                // 確保最小尺寸
-                panel_width = max(panel_width, 300);   // 最小寬度 300px
-                panel_height = max(panel_height, 200); // 最小高度 200px
-                
-                // 計算中心點位置
-                reward_x = gui_width / 2;
-                reward_y = gui_height / 2;
-                
-                // 先繪製勝利文字
-                var scale = 1.5 + sin(current_time / 200) * 0.2;
-                draw_text_outlined(
-                    reward_x,    // X 位置：面板中心
-                    reward_y - panel_height/2 - 60,  // Y 位置：面板上方
-                    result_text,
-                    c_lime,
-                    c_black,
-                    TEXT_ALIGN_CENTER,
-                    TEXT_VALIGN_MIDDLE,
-                    scale * 2.4  // 加入縮放效果
-                );
-                
-                // 再繪製備用背景
-                draw_set_color(c_navy);
-                draw_rectangle(
-                    reward_x - panel_width/2,  // 左
-                    reward_y - panel_height/2, // 上
-                    reward_x + panel_width/2,  // 右
-                    reward_y + panel_height/2, // 下
-                    false
-                );
-                draw_set_color(c_aqua);
-                draw_rectangle(
-                    reward_x - panel_width/2,  // 左
-                    reward_y - panel_height/2, // 上
-                    reward_x + panel_width/2,  // 右
-                    reward_y + panel_height/2, // 下
-                    true
-                );
-                
-                // 調整內容起始位置（從面板左上角開始）
-                var content_x = reward_x - panel_width/2 + 30;  // 內容左邊距
-                var content_y = reward_y - panel_height/2;      // 內容頂部起始點
-                var title_x = reward_x;  // 標題置中
-                
-                // 繪製獎勵內容
-                draw_set_halign(fa_center);
-                draw_set_color(c_yellow);
-                draw_text_safe(title_x, content_y + 30, "戰鬥獎勵", c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-                
-                draw_set_halign(fa_left);
-                draw_set_color(c_white);
-                
-                // 繪製經驗值
-                draw_text_safe(content_x, content_y + 70, "經驗值: " + string(reward_exp), c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_TOP);
-                
-                // 繪製金幣圖示
-                if (sprite_exists(spr_gold)) {
-                    show_debug_message("[DEBUG] 使用 spr_gold 繪製金幣圖示");
-                    var gold_icon_width = sprite_get_width(spr_gold);
-                    draw_sprite(spr_gold, 0, content_x, content_y + 100);
-                    draw_text_safe(content_x + gold_icon_width + 5, content_y + 100, string(reward_gold));
-                } else {
-                    show_debug_message("[DEBUG] spr_gold 不存在，使用純文字顯示");
-                    draw_text_safe(content_x, content_y + 100, "金幣: " + string(reward_gold));
-                }
-                
-                // 畫道具圖示（最多顯示 3 個）
-                if (array_length(reward_items_list) > 0) {
-                    var icon_spacing = 80; // 增加圖示間距
-                    var icon_width = sprite_exists(spr_gold) ? sprite_get_width(spr_gold) : 32;
-                    
-                    for (var i = 0; i < min(array_length(reward_items_list), 3); i++) {
-                        var item = reward_items_list[i];
-                        var item_x = content_x + (i * icon_spacing);
-                        
-                        // 繪製物品圖示
-                        if (sprite_exists(spr_gold)) {
-                            draw_sprite(spr_gold, 0, item_x, content_y + 140);
-                        } else {
-                            draw_set_color(c_yellow);
-                            draw_circle(item_x, content_y + 140, 15, false);
-                        }
-                        
-                        // 繪製物品名稱和數量
-                        draw_set_color(c_white);
-                        var item_name = variable_struct_exists(item, "name") ? item.name : "物品";
-                        var item_rarity = variable_struct_exists(item, "rarity") ? " (" + item.rarity + ")" : "";
-                        draw_text_safe(item_x + icon_width + 5, content_y + 140, item_name + item_rarity, c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_TOP);
-                    }
-                }
-            }
-        } else {
-            // 如果獎勵面板還沒顯示，將勝利文字置中
-            var scale = 1.5 + sin(current_time / 200) * 0.2;
-            draw_text_outlined(
-                display_get_gui_width() / 2,
-                display_get_gui_height() / 2 - 80,
-                result_text,
-                c_lime,
-                c_black,
-                TEXT_ALIGN_CENTER,
-                TEXT_VALIGN_MIDDLE,
-                scale * 2.4  // 加入縮放效果
-            );
-        }
-    } else {
-        result_text = "戰鬥失敗!";
-        draw_set_color(c_red);
+        result_color = c_lime;
         
-        // 顯示失敗文字
+        // 繪製勝利文字
         var scale = 1.5 + sin(current_time / 200) * 0.2;
         draw_text_outlined(
             display_get_gui_width() / 2,
-            display_get_gui_height() / 2 - 80,
+            stats_y - 100, // 向上移動標題
             result_text,
-            c_red,
+            result_color,
             c_black,
             TEXT_ALIGN_CENTER,
             TEXT_VALIGN_MIDDLE,
-            scale * 2.4  // 加入縮放效果
+            scale * 2.0 // 調整縮放
         );
+
+        // 顯示獎勵信息
+        if (reward_visible) {
+            draw_set_color(c_white);
+            // 修改：使用記錄的變數顯示統計
+            draw_text_safe(display_get_gui_width() / 2, stats_y - 30, "戰鬥時間: " + string_format(battle_duration, 3, 1) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+            draw_text_safe(display_get_gui_width() / 2, stats_y + 0, "擊敗敵人: " + string(defeated_enemies_count), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+            draw_set_color(c_yellow);
+            draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "獲得經驗: " + string(reward_exp), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+            draw_set_color(make_color_rgb(255, 215, 0)); // 金色
+            draw_text_safe(display_get_gui_width() / 2, stats_y + 60, "獲得金幣: " + string(reward_gold), make_color_rgb(255, 215, 0), TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+            
+            // 顯示獲得物品 (如果有的話)
+            // ... (可以添加繪製物品列表的邏輯)
+        }
+    } else if (battle_victory_status == 0) { // 失敗
+        result_text = "戰鬥失敗!";
+        result_color = c_red;
+        
+        // 繪製失敗文字
+        var scale = 1.5 + sin(current_time / 200) * 0.2;
+        draw_text_outlined(
+            display_get_gui_width() / 2,
+            stats_y - 80, // 向上移動標題
+            result_text,
+            result_color,
+            c_black,
+            TEXT_ALIGN_CENTER,
+            TEXT_VALIGN_MIDDLE,
+            scale * 2.4
+        );
+
+        // 顯示懲罰信息
+        draw_set_color(c_white);
+        // *** 添加繪製前日誌 ***
+        show_debug_message("[Draw GUI] Drawing defeat stats: duration=" + string(battle_duration) + ", defeated=" + string(defeated_enemies_count));
+        draw_text_safe(display_get_gui_width() / 2, stats_y - 30, "戰鬥時間: " + string_format(battle_duration, 3, 1) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+        draw_text_safe(display_get_gui_width() / 2, stats_y + 0, "擊敗敵人: " + string(defeated_enemies_count), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+        // 顯示經驗 (可能是部分經驗)
+        if (reward_exp > 0) {
+            draw_set_color(c_yellow);
+            // *** 添加繪製前日誌 ***
+            show_debug_message("[Draw GUI] Drawing defeat exp: " + string(reward_exp));
+            draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "獲得經驗: " + string(reward_exp), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+        }
+        // 顯示金幣損失 (使用 defeat_penalty_text)
+        if (variable_instance_exists(id, "defeat_penalty_text") && defeat_penalty_text != "") {
+             // *** 添加繪製前日誌 ***
+             show_debug_message("[Draw GUI] Drawing defeat penalty text: " + defeat_penalty_text);
+             draw_text_outlined(
+                 display_get_gui_width() / 2,
+                 stats_y + 60, // 調整Y位置
+                 defeat_penalty_text,
+                 c_white,
+                 c_black,
+                 TEXT_ALIGN_CENTER,
+                 TEXT_VALIGN_MIDDLE
+            );
+        }
+    } else { // 未知狀態
+        result_text = "等待結果...";
+        result_color = c_white;
+        draw_set_color(result_color);
+        draw_text_safe(display_get_gui_width() / 2, display_get_gui_height() / 2, result_text, result_color, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
     }
     
-    // 戰鬥統計數據
-    draw_set_color(c_white);
-    var stats_y = display_get_gui_height() / 2;
-    draw_text_safe(display_get_gui_width() / 2, stats_y, "戰鬥時間: " + string(battle_result.duration) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-    draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "擊敗敵人: " + string(battle_result.defeated_enemies), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-    
-    if (battle_result.victory) {
-        draw_set_color(c_yellow);
-        draw_text_safe(display_get_gui_width() / 2, stats_y + 60, "獲得經驗: " + string(battle_result.exp_gained), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
+    // 添加通用提示
+    if (battle_victory_status != -1) { // 只有在結果確定後才顯示
+        draw_set_color(c_white);
+        draw_text_safe(display_get_gui_width() / 2, display_get_gui_height() - 60, "按空格鍵繼續", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_BOTTOM);
     }
-    
-    draw_set_color(c_aqua);
-    draw_text_safe(display_get_gui_width() / 2, display_get_gui_height() / 2 + 100, 
-              "按空格鍵繼續", c_aqua, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-    
-    // 重置文本對齊
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
 }
 
 // 重置繪圖顏色

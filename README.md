@@ -114,15 +114,27 @@ if (instance_exists(obj_event_manager)) {
 - `STARTING`: 戰鬥開始過渡（邊界擴張）
 - `PREPARING`: 戰鬥準備階段（玩家召喚單位）
 - `ACTIVE`: 戰鬥進行中
-- `ENDING`: 戰鬥結束過渡
+- `ENDING`: 戰鬥結束過渡 (邊界縮小)
 - `RESULT`: 顯示戰鬥結果
 
 **主要功能:**
 - 戰鬥初始化
 - 回合管理
 - 勝負判定
-- 獎勵分配
-- 經驗系統
+- **獎勵與結果流程 (重構):**
+  - 戰鬥結束時 (`ENDING` 狀態末尾)，`obj_battle_manager` 廣播 `finalize_battle_results` 事件，包含**最終戰鬥持續時間(秒)** 和**擊敗敵人ID列表**。
+  - `obj_reward_system` 監聽此事件，根據傳入的擊敗敵人列表和 `enemies.csv` 中的 `exp_reward`/`gold_reward` 計算總獎勵，並更新內部 `battle_result` 結構體 (包含經驗、金幣、掉落物、持續時間等)。
+  - `obj_reward_system` 計算完成後廣播 `rewards_calculated` 事件，包含完整的 `battle_result`。
+  - `obj_battle_manager` 監聽 `rewards_calculated`，更新自身狀態後，最終廣播 `show_battle_result` 事件給 UI。
+  - `obj_battle_ui` 監聽 `show_battle_result`，使用收到的完整數據更新結果畫面。
+- **經驗與升級系統 (重構):**
+  - **經驗獲取**: 敵人經驗值 (`exp_reward`) 由 `enemies.csv` 定義。
+  - **經驗記錄**: `obj_battle_manager` 在單位死亡時 (`on_unit_died` 事件處理中) 記錄被擊敗敵人的經驗值。
+  - **經驗分配**: 戰鬥勝利後 (`ACTIVE` 狀態檢測到勝利時)，`obj_battle_manager` 調用 `distribute_battle_exp()` 將累計的經驗值分配給所有存活的我方單位 (調用其 `gain_exp` 方法)。
+  - **升級曲線**: 升級所需經驗由 `levels.csv` 定義，由 `obj_level_manager` 載入和管理 (`global.level_exp_map`)。
+  - **升級處理**: `obj_player_summon_parent` 的 `gain_exp` 方法會檢查是否達到升級所需經驗，如果達到則調用 `level_up`。
+  - **屬性成長與技能學習**: `level_up` 方法負責提升單位等級、根據模板數據 (`hp_growth` 等) 重新計算屬性、檢查並學習達到新等級要求的新技能 (從模板數據獲取技能 ID)。
+  - **視覺效果**: 升級時觸發浮動文字提示和粒子效果。
 - 新增：實現了浮動傷害文字系統 (`obj_floating_text`)，用於即時顯示傷害數值。
 - 新增：實現了通用的受傷視覺特效 (`obj_hurt_effect`)，獨立於單位動畫。
 - **更新**: 技能傷害計算已從單位初始化階段（可能讀取不完整數據）轉移到實際應用傷害時 (`obj_battle_unit_parent` 的 `apply_skill_damage` 函數中)。現在會根據攻擊者**當前**的攻擊力和技能的傷害倍率 (`damage_multiplier`) 動態計算。
@@ -616,6 +628,10 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
         - 創建了等級經驗表 (`levels.csv`) 和對應的管理員 (`obj_level_manager`)，用於定義和加載升級所需經驗。
         - 重構了 `obj_player_summon_parent` 的經驗獲取 (`gain_exp`) 和升級 (`level_up`) 邏輯，以使用等級表、處理連續升級，並根據模板學習新技能。
         - 實現了升級時的視覺特效（浮動文字 + 粒子效果）。
+    - **戰鬥結果事件流修復**:
+        - 重新設計了戰鬥結束到結果顯示的事件流程 (`finalize_battle_results`, `rewards_calculated`, `show_battle_result`)。
+        - 修正了戰鬥持續時間 (`duration`) 在事件傳遞中丟失的問題。
+        - 確保了擊敗敵人數、經驗、金幣等數據在系統間正確傳遞。
     - **放置器修復**: 解決了 `obj_enemy_placer` 因事件廣播時序問題無法轉換的 Bug。
     - **UI 錯誤修復**: 解決了 `obj_monster_manager_ui` 關閉時崩潰、技能不顯示的問題；解決了 UI 繼承導致的初始化變數錯誤。
     - **技能傷害計算**: 將傷害計算邏輯從初始化階段移至實際造成傷害時，避免因依賴未完全初始化的屬性導致計算錯誤。
@@ -627,8 +643,7 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
         - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
 
 - **進行中/待辦**:
-    - **快捷欄功能完善**: (保留)
-    - **採集系統擴展**: (保留)
+    - **實現從 `enemies.csv` 讀取金幣和物品掉落獎勵** (目前經驗值已實現，金幣和掉落物仍需實作)。
     - 完善具體的單位 AI
     - 實現裝備系統的效果
     - 實現捕捉系統的邏輯

@@ -397,24 +397,6 @@ function cleanup() {
 // 初始化
 initialize();
 
-// 新增：處理顯示戰鬥結果事件
-on_show_battle_result = function(data) {
-    show_debug_message("===== 顯示戰鬥結果 =====");
-    
-    // 更新獎勵數據
-    rewards.exp = data.exp_gained;
-    rewards.gold = data.gold_gained;
-    rewards.items_list = data.items_gained;
-    rewards.visible = true;
-    
-    // 更新UI顯示
-    if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.show_rewards(rewards.exp, rewards.gold, rewards.items_list);
-    }
-    
-    add_battle_log("顯示戰鬥結果!");
-};
-
 // 從UI管理器中移除UI
 function remove_ui(ui_instance) {
     if (!instance_exists(ui_instance)) {

@@ -88,31 +88,36 @@ if (mouse_check_button_pressed(mb_left)) {
 }
 
 // 更新戰鬥信息
+/* // <--- 開始註解
 if (instance_exists(obj_battle_manager)) {
     // 如果戰鬥狀態變為結果，更新戰鬥結果數據
     if (obj_battle_manager.battle_state == BATTLE_STATE.RESULT) {
         var player_units_left = ds_list_size(obj_battle_manager.player_units);
         var enemy_units_left = ds_list_size(obj_battle_manager.enemy_units);
         
-        battle_result.victory = (enemy_units_left <= 0);
-        battle_result.duration = obj_battle_manager.battle_timer / game_get_speed(gamespeed_fps);
+        // 移除對已不存在的 battle_result 的讀寫
+        // battle_result.victory = (enemy_units_left <= 0);
+        // battle_result.duration = obj_battle_manager.battle_timer / game_get_speed(gamespeed_fps);
         
-        // 這裡假設有一個全局變量來追蹤擊敗的敵人數量
-        if (!variable_global_exists("defeated_enemies_count")) {
-            global.defeated_enemies_count = 0;
-        }
-        battle_result.defeated_enemies = global.defeated_enemies_count;
+        // 移除對全局變量的依賴和計算邏輯
+        // if (!variable_global_exists("defeated_enemies_count")) {
+        //     global.defeated_enemies_count = 0;
+        // }
+        // battle_result.defeated_enemies = global.defeated_enemies_count;
         
-        // 計算經驗值獎勵 (這裡使用一個簡單的公式)
-        if (battle_result.victory) {
-            battle_result.exp_gained = battle_result.defeated_enemies * 50 + battle_result.duration;
-        } else {
-            battle_result.exp_gained = floor(battle_result.defeated_enemies * 20);
-        }
+        // 移除經驗值計算邏輯
+        // if (battle_result.victory) {
+        //     battle_result.exp_gained = battle_result.defeated_enemies * 50 + battle_result.duration;
+        // } else {
+        //     battle_result.exp_gained = floor(battle_result.defeated_enemies * 20);
+        // }
     }
 }
+*/ // <--- 結束註解
 
 // 檢查surface是否丟失
 if (active && !surface_exists(ui_surface)) {
     surface_needs_update = true;
 }
+
+// --- 其他原有的 Step 事件邏輯應該保留 ---

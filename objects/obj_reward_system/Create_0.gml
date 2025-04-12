@@ -35,16 +35,19 @@ function initialize() {
     // 訂閱相關事件
     if (instance_exists(obj_event_manager)) {
         with (obj_event_manager) {
-            subscribe_to_event("battle_end", other.id, "on_battle_end");
+            // subscribe_to_event("battle_end", other.id, "on_battle_end"); // <-- 移除對 battle_end 的訂閱
             subscribe_to_event("all_enemies_defeated", other.id, "on_all_enemies_defeated");
             subscribe_to_event("all_player_units_defeated", other.id, "on_all_player_units_defeated");
+            // 新增：訂閱 finalize_battle_results 事件
+            subscribe_to_event("finalize_battle_results", other.id, "on_finalize_battle_results");
         }
     }
     
     show_debug_message("獎勵系統已初始化");
 }
 
-// 處理戰鬥結束事件
+// 處理戰鬥結束事件 <-- 移除這個函數
+/* // <-- 開始註解
 on_battle_end = function(data) {
     // 更新持續時間
     if (variable_struct_exists(data, "duration")) {
@@ -69,6 +72,46 @@ on_battle_end = function(data) {
     
     // 發送獎勵已計算事件
     _event_broadcaster("rewards_calculated", battle_result);
+    show_debug_message("[Reward System] Broadcasted rewards_calculated event with data: " + json_stringify(battle_result));
+};
+*/ // <-- 結束註解
+
+// 新增：處理最終計算獎勵事件
+on_finalize_battle_results = function(event_data) {
+    // show_debug_message("===== 收到 finalize_battle_results 事件 ====="); // 移除
+    // show_debug_message("Received data: " + json_stringify(event_data)); // 移除
+    
+    // --- 從事件數據中獲取持續時間和擊敗數 ---
+    var _defeated_count = variable_struct_get(event_data, "defeated_enemies");
+    var _battle_duration = variable_struct_get(event_data, "duration");
+
+    // --- 檢查並更新 battle_result 結構體 --- 
+    if (!is_undefined(_defeated_count)) {
+        battle_result.defeated_enemies = _defeated_count; // 直接更新結構體
+        // show_debug_message("[Reward System] Updated battle_result.defeated_enemies: " + string(battle_result.defeated_enemies)); // 移除
+    } else {
+        battle_result.defeated_enemies = 0; // 如果未定義，設為0
+        show_debug_message("警告 (finalize_battle_results): 未收到 defeated_enemies，battle_result.defeated_enemies 設為 0。");
+    }
+    
+    if (!is_undefined(_battle_duration)) { 
+        battle_result.duration = _battle_duration; // 直接更新結構體
+        // show_debug_message("[Reward System] Updated battle_result.duration: " + string(battle_result.duration)); // 移除
+    } else {
+        battle_result.duration = 0; // 如果未定義，設為0
+        show_debug_message("警告 (finalize_battle_results): 未收到 duration，battle_result.duration 設為 0。");
+    }
+
+    // 根據戰鬥結果（儲存在 reward_system 內部）計算獎勵或懲罰
+    if (battle_result.victory) {
+        calculate_victory_rewards();
+    } else {
+        calculate_defeat_penalties();
+    }
+
+    // 發送獎勵已計算事件 (現在 battle_result 應該是正確的)
+    _event_broadcaster("rewards_calculated", battle_result);
+    show_debug_message("[Reward System] Broadcasted rewards_calculated event with data: " + json_stringify(battle_result)); // 保留關鍵信息
 };
 
 // 處理所有敵人被擊敗事件
@@ -142,10 +185,12 @@ calculate_victory_rewards = function() {
     battle_result.gold_gained = total_gold;
     battle_result.item_drops = item_rewards;
     
-    // 顯示獎勵日誌
-    show_debug_message("獎勵計算完成: 經驗=" + string(total_exp) + 
-                     ", 金幣=" + string(total_gold) + 
-                     ", 物品=" + string(array_length(item_rewards)));
+    // show_debug_message("[Reward Calc] Processing enemy ID: " + string(enemy_id)); // 可以在循環內移除
+    // show_debug_message("[Reward Calc] Fetched template for ID: " + string(enemy_id)); // 移除
+    // show_debug_message("[Reward Calc] Template EXP: " + string(template.exp_reward) + ", Gold: " + string(template.gold_reward)); // 移除
+    // show_debug_message("[Reward Calc] Total after enemy " + string(enemy_id) + ": EXP=" + string(total_exp) + ", Gold=" + string(total_gold)); // 移除
+    // show_debug_message("警告: 未找到 ID 為 " + string(enemy_id) + " 的敵人模板"); // 保留警告
+    // show_debug_message("獎勵計算完成: 經驗=" + string(total_exp) + ", 金幣=" + string(total_gold) + ", 物品=" + string(item_drops_count)); // 可以移除，因為會在廣播前顯示最終數據
 };
 
 // 計算失敗懲罰
@@ -173,15 +218,22 @@ calculate_defeat_penalties = function() {
     battle_result.gold_gained = -gold_loss; // 負數表示損失
     battle_result.item_drops = []; // 失敗不掉落物品
     
-    show_debug_message("失敗懲罰計算完成: 部分經驗=" + string(partial_exp) + 
-                     ", 金幣損失=" + string(gold_loss));
+    // show_debug_message("[Reward Calc] Calculating defeat penalties."); // 移除
+    // show_debug_message("失敗懲罰計算完成: 部分經驗=" + string(exp_penalty) + ", 金幣損失=" + string(gold_penalty)); // 可以移除
+    
+    // **確保即使計算完成也廣播帶有 victory: false 的事件**
+    // （移動廣播點到 grant_rewards 或 handle_defeat_effects 末尾可能更合適，但暫時在此添加）
+    // _event_broadcaster("battle_defeat_handled", { 
+    //     gold_loss: gold_loss, 
+    //     victory: false 
+    // }); 
 };
 
 // 發放獎勵
 grant_rewards = function() {
     if (!battle_result.victory) {
-        handle_defeat_effects();
-        return;
+        handle_defeat_effects(); // 失敗時調用失敗處理
+        return; // 失敗不執行後續的獎勵發放
     }
     
     // 增加玩家金錢
@@ -213,6 +265,7 @@ grant_rewards = function() {
     _event_broadcaster("rewards_granted", battle_result);
     
     // 通知UI顯示獎勵
+    /*
     if (instance_exists(obj_battle_ui)) {
         // 確保 item_drops 是一個數組
         if (!is_array(battle_result.item_drops)) {
@@ -220,63 +273,77 @@ grant_rewards = function() {
         }
         
         obj_battle_ui.show_rewards(
+            battle_result.victory, 
+            battle_result.duration, 
+            battle_result.defeated_enemies, 
             battle_result.exp_gained,
             battle_result.gold_gained,
             battle_result.item_drops
         );
         show_debug_message("獎勵系統: 通知UI顯示獎勵");
     }
+    */
 };
 
 // 處理失敗效果
 handle_defeat_effects = function() {
     // 已經在calculate_defeat_penalties中處理了金幣損失
+    show_debug_message("獎勵系統: 正在處理失敗效果...");
     
-    // 降低怪物HP
+    // 降低怪物HP (保留現有邏輯)
     if (variable_global_exists("player_monsters")) {
-        // 獲取參加戰鬥的怪物列表
         var battle_participants = [];
-        
         if (instance_exists(obj_unit_manager)) {
             with (obj_unit_manager) {
                 for (var i = 0; i < ds_list_size(player_units); i++) {
                     var unit = player_units[| i];
                     if (instance_exists(unit)) {
-                        array_push(battle_participants, unit.object_index);
+                        // 獲取怪物的基礎 ID 或某種標識符，而不是 object_index
+                        if (variable_instance_exists(unit, "monster_id")) { // 假設怪物有 monster_id
+                             array_push(battle_participants, unit.monster_id);
+                        } else {
+                             // 如果沒有 monster_id，使用 object_index 作為後備（可能不準確）
+                             array_push(battle_participants, unit.object_index);
+                             show_debug_message("警告: 單位 " + string(unit) + " 缺少 monster_id，使用 object_index 作為標識符。");
+                        }
                     }
                 }
             }
         }
-        
-        // 降低參戰怪物的HP
+
+        // 遍歷全局怪物列表
         for (var i = 0; i < array_length(global.player_monsters); i++) {
-            var monster = global.player_monsters[i];
-            
-            // 檢查是否參加了戰鬥
+            var monster_data = global.player_monsters[i];
+            // 檢查怪物是否參與了戰鬥
             var participated = false;
+            var identifier_to_check = (variable_struct_exists(monster_data, "id")) ? monster_data.id : monster_data.object_index; // 優先使用 id
             for (var j = 0; j < array_length(battle_participants); j++) {
-                if (monster.type == battle_participants[j]) {
+                if (battle_participants[j] == identifier_to_check) {
                     participated = true;
                     break;
                 }
             }
-            
+
             if (participated) {
-                monster.hp = max(1, floor(monster.hp * 0.5)); // 降低到一半HP，但至少保留1點
+                // 如果怪物參與了戰鬥並且失敗，降低其當前HP (例如降為1，或按比例)
+                if (variable_struct_exists(monster_data, "current_hp")) {
+                    var original_hp = monster_data.current_hp;
+                    monster_data.current_hp = 1; // 直接設為 1 HP
+                    show_debug_message("獎勵系統: 怪物 " + string(identifier_to_check) + " HP 從 " + string(original_hp) + " 降至 1");
+                } else {
+                     show_debug_message("警告: 怪物數據 " + string(identifier_to_check) + " 缺少 current_hp 欄位。");
+                }
             }
         }
-        
         show_debug_message("獎勵系統: 已降低參戰怪物HP");
     }
     
-    // 通知UI顯示失敗信息
-    if (instance_exists(obj_battle_ui)) {
-        obj_battle_ui.result_text = "戰鬥失敗!";
-        obj_battle_ui.show_info("戰鬥失敗! 損失 " + string(abs(battle_result.gold_gained)) + " 金幣");
-    }
-    
-    // 發送失敗事件
-    _event_broadcaster("battle_defeat_handled", {gold_loss: abs(battle_result.gold_gained)});
+    // **在處理完所有失敗效果後，廣播事件**
+    _event_broadcaster("battle_defeat_handled", { 
+        gold_loss: abs(battle_result.gold_gained), // 從 battle_result 獲取金幣損失值
+        victory: false 
+    });
+    show_debug_message("獎勵系統: 已廣播 battle_defeat_handled 事件 (victory=false)");
 };
 
 // 分配經驗值給參戰單位
