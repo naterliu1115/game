@@ -74,6 +74,7 @@ surface_needs_update = ui_data.surface_needs_update;
 // 戰鬥日誌
 battle_log = ds_list_create();
 enemies_defeated_this_battle = 0; // <--- 新增：本場戰鬥擊敗敵人數
+defeated_enemy_ids_this_battle = []; // <--- 新增：記錄本場戰鬥擊敗敵人的模板ID列表
 
 // 戰鬥邊界和動畫
 border_target_scale = 0;
@@ -254,17 +255,27 @@ on_unit_died = function(data) {
         return;
     }
     
-    show_debug_message("死亡單位ID: " + string(data.unit_id));
-    show_debug_message("單位隊伍: " + string(data.team));
+    var _unit_id = data.unit_id;
+    var _team = data.team;
+    
+    show_debug_message("死亡單位ID: " + string(_unit_id));
+    show_debug_message("單位隊伍: " + string(_team));
     
     // 更新戰鬥日誌
-    add_battle_log("單位 " + string(data.unit_id) + " 已陣亡");
+    add_battle_log("單位 " + string(_unit_id) + " 已陣亡");
     
-    // 增加擊敗計數器
-    if (is_struct(data) && variable_struct_exists(data, "team")) {
-        if (data.team == 1) { // 假設 1 代表敵方隊伍
-            enemies_defeated_this_battle++;
-            show_debug_message("[Battle Manager] 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+    // 增加擊敗計數器並記錄ID
+    if (_team == 1) { // 假設 1 代表敵方隊伍
+        enemies_defeated_this_battle++;
+        show_debug_message("[Battle Manager] 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+        
+        // 檢查實例是否存在且是否有 template_id
+        if (instance_exists(_unit_id) && variable_instance_exists(_unit_id, "template_id")) {
+            var _template_id = _unit_id.template_id;
+            array_push(defeated_enemy_ids_this_battle, _template_id);
+            show_debug_message("[Battle Manager] 記錄被擊敗敵人的 Template ID: " + string(_template_id));
+        } else {
+            show_debug_message("警告：死亡的敵方單位實例不存在或缺少 template_id，無法記錄其 ID。");
         }
     }
     
@@ -694,13 +705,13 @@ on_all_player_units_defeated = function(data) {
 // 輔助函數：發送事件消息
 _local_broadcast_event = function(event_name, data = {}) {
     if (instance_exists(obj_event_manager)) {
-        show_debug_message("[BattleManager Broadcaster] Attempting to broadcast: " + event_name + " with data: " + json_stringify(data)); // <-- 修改並增強日誌
+        show_debug_message("[BattleManager Broadcaster] Attempting to broadcast: " + event_name + " with data: " + json_stringify(data)); // <-- 保留這個重要的LOG
         with (obj_event_manager) {
             // 在呼叫 handle_event 前再加一層日誌，確保 with 塊執行
-            show_debug_message("[BattleManager Broadcaster] Inside with(obj_event_manager) block, about to call handle_event for: " + event_name);
+            // show_debug_message("[BattleManager Broadcaster] Inside with(obj_event_manager) block, about to call handle_event for: " + event_name); // <-- 註解掉
             handle_event(event_name, data);
         }
-        show_debug_message("[BattleManager Broadcaster] Call to handle_event seems completed for: " + event_name); // <-- 修改日誌
+        // show_debug_message("[BattleManager Broadcaster] Call to handle_event seems completed for: " + event_name); // <-- 註解掉
     } else {
         show_debug_message("警告: [BattleManager Broadcaster] 事件管理器不存在，無法廣播事件: " + event_name);
     }

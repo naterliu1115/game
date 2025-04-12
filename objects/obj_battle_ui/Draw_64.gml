@@ -267,7 +267,7 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         // 顯示懲罰信息
         draw_set_color(c_white);
         // *** 添加繪製前日誌 ***
-        show_debug_message("[Draw GUI] Drawing defeat stats: duration=" + string(battle_duration) + ", defeated=" + string(defeated_enemies_count));
+        //show_debug_message("[Draw GUI] Drawing defeat stats: duration=" + string(battle_duration) + ", defeated=" + string(defeated_enemies_count));
         draw_text_safe(display_get_gui_width() / 2, stats_y - 30, "戰鬥時間: " + string_format(battle_duration, 3, 1) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
         draw_text_safe(display_get_gui_width() / 2, stats_y + 0, "擊敗敵人: " + string(defeated_enemies_count), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
         // 顯示經驗 (可能是部分經驗)
@@ -280,7 +280,7 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         // 顯示金幣損失 (使用 defeat_penalty_text)
         if (variable_instance_exists(id, "defeat_penalty_text") && defeat_penalty_text != "") {
              // *** 添加繪製前日誌 ***
-             show_debug_message("[Draw GUI] Drawing defeat penalty text: " + defeat_penalty_text);
+            //show_debug_message("[Draw GUI] Drawing defeat penalty text: " + defeat_penalty_text);
              draw_text_outlined(
                  display_get_gui_width() / 2,
                  stats_y + 60, // 調整Y位置

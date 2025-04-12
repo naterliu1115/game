@@ -142,6 +142,11 @@ if (instance_exists(obj_event_manager)) {
 - **運行時錯誤修復**:
     - 解決了因內建函數 `string_is_numeric` 行為異常導致的 CSV 加載崩潰問題（影響 `obj_skill_manager`, `obj_level_manager` 等）。通過創建並使用自定義輔助函數 `is_numeric_safe` 替代了有問題的內建函數。
     - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
+- **獎勵系統重構 (金幣與掉落物)**:
+    - `obj_battle_manager` 現在會記錄並在 `finalize_battle_results` 事件中傳遞被擊敗敵人的模板 ID 列表 (`defeated_enemy_ids`)。
+    - `obj_reward_system` 的 `calculate_victory_rewards` 函數已重構，現在會根據傳入的 `defeated_enemy_ids` 列表和 `enemies.csv` 中對應的 `gold_reward`（金幣）欄位計算總金幣獎勵。
+    - `calculate_victory_rewards` 現在也會解析 `enemies.csv` 中的 `loot_table` 欄位（格式：`item_id:chance:min-max;...`），根據機率和數量範圍計算實際掉落的物品，並將結果存儲在 `battle_result.item_drops` 中。
+    - 修復了 `is_numeric_safe` 函數未能正確處理從模板中讀取的數字（而非字符串）的問題。
 
 ### 4. 單位系統 (Unit System)
 
@@ -641,9 +646,15 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
     - **運行時錯誤修復**:
         - 解決了因內建函數 `string_is_numeric` 行為異常導致的 CSV 加載崩潰問題（影響 `obj_skill_manager`, `obj_level_manager` 等）。通過創建並使用自定義輔助函數 `is_numeric_safe` 替代了有問題的內建函數。
         - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
+        - **獎勵系統重構 (金幣與掉落物)**:
+            - `obj_battle_manager` 現在會記錄並在 `finalize_battle_results` 事件中傳遞被擊敗敵人的模板 ID 列表 (`defeated_enemy_ids`)。
+            - `obj_reward_system` 的 `calculate_victory_rewards` 函數已重構，現在會根據傳入的 `defeated_enemy_ids` 列表和 `enemies.csv` 中對應的 `gold_reward`（金幣）欄位計算總金幣獎勵。
+            - `calculate_victory_rewards` 現在也會解析 `enemies.csv` 中的 `loot_table` 欄位（格式：`item_id:chance:min-max;...`），根據機率和數量範圍計算實際掉落的物品，並將結果存儲在 `battle_result.item_drops` 中。
+            - 修復了 `is_numeric_safe` 函數未能正確處理從模板中讀取的數字（而非字符串）的問題。
 
 - **進行中/待辦**:
-    - **實現從 `enemies.csv` 讀取金幣和物品掉落獎勵** (目前經驗值已實現，金幣和掉落物仍需實作)。
+    - **採集系統擴展**: (保留)
+    - 實現更多種類的物品和技能
     - 完善具體的單位 AI
     - 實現裝備系統的效果
     - 實現捕捉系統的邏輯

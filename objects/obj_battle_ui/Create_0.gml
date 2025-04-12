@@ -56,7 +56,7 @@ battle_duration = 0;          // 儲存戰鬥持續時間 (秒)
 defeated_enemies_count = 0; // 儲存本場戰鬥擊敗的敵人數量
 reward_exp = 0;             // 儲存獲得或損失的經驗值
 reward_gold = 0;            // 儲存獲得或損失的金幣 (失敗時為負數)
-reward_items_list = [];     // 儲存獲得的物品列表 (結構體數組)
+reward_items_list = ds_list_create(); // 儲存獲得的物品列表 (結構體數組)
 reward_visible = false;       // 控制獎勵/結果面板是否可見的標誌
 defeat_penalty_text = "";    // 儲存用於顯示失敗懲罰的特定文本 (例如 "損失金幣: XXX")
 
@@ -97,7 +97,8 @@ show_rewards = function(victory_flag, duration_val, enemies_defeated_val, exp_va
         var i;
         var count = array_length(items_val);
         for (i = 0; i < count; i++) {
-            array_push(reward_items_list, items_val[i]);
+            // array_push(reward_items_list, items_val[i]); // <-- 註解掉舊的
+            ds_list_add(reward_items_list, items_val[i]); // <-- 改用 ds_list_add
         }
     }
     

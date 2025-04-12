@@ -69,7 +69,7 @@ function subscribe_to_event(event_name, instance_id, callback) {
     });
     
     if (event_debug_mode) {
-        show_debug_message("事件系統: 實例 " + string(instance_id) + " 訂閱了事件 " + event_name + " (回調類型: " + callback_type + ")");
+        // show_debug_message("事件系統: 實例 " + string(instance_id) + " 訂閱了事件 " + event_name + " (回調類型: " + callback_type + ")"); // <-- 註解掉
     }
 }
 
@@ -85,7 +85,7 @@ function unsubscribe_from_event(event_name, instance_id) {
             ds_list_delete(subscriber_list, i);
             
             if (event_debug_mode) {
-                show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消訂閱事件 " + event_name);
+                // show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消訂閱事件 " + event_name); // <-- 註解掉
             }
         }
     }
@@ -101,7 +101,7 @@ function unsubscribe_from_all_events(instance_id) {
     }
     
     if (event_debug_mode) {
-        show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消了所有事件訂閱");
+        // show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消了所有事件訂閱"); // <-- 註解掉
     }
 }
 
@@ -123,13 +123,13 @@ function handle_event(event_name, data) {
                 ds_list_delete(event_history, 0);
             }
             
-            show_debug_message("事件觸發: " + event_name);
+            // show_debug_message("事件觸發: " + event_name); // <-- 註解掉
         }
         
         // 如果沒有訂閱者，直接返回
         if (!ds_map_exists(event_subscribers, event_name)) {
             if (event_debug_mode) {
-                show_debug_message("事件 " + event_name + " 沒有訂閱者");
+                // show_debug_message("事件 " + event_name + " 沒有訂閱者"); // <-- 註解掉
             }
             return;
         }
@@ -173,13 +173,13 @@ function handle_event(event_name, data) {
             var _instance_id = subscriber.instance;
             
             // --- 新增日誌：檢查回調類型和值 ---
-            show_debug_message("[EventManager HandleEvent] Checking callback for instance " + string(_instance_id) + ". Callback Value: " + string(_callback) + ", Type: " + typeof(_callback));
+            // show_debug_message("[EventManager HandleEvent] Checking callback for instance " + string(_instance_id) + ". Callback Value: " + string(_callback) + ", Type: " + typeof(_callback)); // <-- 註解掉
             
             // 執行回調
             try {
                 if (is_string(_callback)) {
                     // --- 處理字符串方法名 --- 
-                    show_debug_message("[EventManager HandleEvent] Callback is STRING.");
+                    // show_debug_message("[EventManager HandleEvent] Callback is STRING."); // <-- 註解掉
                     with (_instance_id) {
                         if (!variable_instance_exists(id, _callback)) {
                             show_debug_message("警告: 回調方法(字符串) " + string(_callback) + " 在實例 " + string(id) + " 中不存在 (執行時)");
@@ -191,21 +191,21 @@ function handle_event(event_name, data) {
                             continue; // 跳過
                         }
                         // 執行方法
-                        show_debug_message("[EventManager] Executing METHOD: " + _callback + " on instance " + string(id));
+                        // show_debug_message("[EventManager] Executing METHOD: " + _callback + " on instance " + string(id)); // <-- 註解掉
                         callback_method(data);
                     }
                 } else if (is_real(_callback)) {
                     // --- 處理腳本索引 --- 
-                    show_debug_message("[EventManager HandleEvent] Callback is REAL (Script Index?). Entering script handling block.");
+                    // show_debug_message("[EventManager HandleEvent] Callback is REAL (Script Index?). Entering script handling block."); // <-- 註解掉
                     if (!script_exists(_callback)) {
                         show_debug_message("錯誤: 回調腳本索引 " + string(_callback) + " 在執行時不存在");
                         continue; // 跳過
                     }
-                    show_debug_message("[EventManager HandleEvent] Script " + script_get_name(_callback) + " exists. Preparing to execute.");
+                    // show_debug_message("[EventManager HandleEvent] Script " + script_get_name(_callback) + " exists. Preparing to execute."); // <-- 註解掉
                     // 執行腳本，傳遞數據和實例ID
-                    show_debug_message("[EventManager] Executing SCRIPT: " + script_get_name(_callback) + " for instance " + string(_instance_id));
+                    // show_debug_message("[EventManager] Executing SCRIPT: " + script_get_name(_callback) + " for instance " + string(_instance_id)); // <-- 註解掉
                     script_execute(_callback, data, _instance_id);
-                    show_debug_message("[EventManager HandleEvent] script_execute for " + script_get_name(_callback) + " called. Script execution *may* have started.");
+                    // show_debug_message("[EventManager HandleEvent] script_execute for " + script_get_name(_callback) + " called. Script execution *may* have started."); // <-- 註解掉
                 } else {
                      show_debug_message("錯誤: 未知的回調類型: " + string(_callback));
                  }

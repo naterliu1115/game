@@ -49,7 +49,13 @@ get_enemy_template = function(enemy_id) {
         return undefined;
     }
     
-    return enemy_templates[? enemy_id];
+    var template_to_return = enemy_templates[? enemy_id];
+    
+    // === 新增除錯：打印將要返回的模板結構 ===
+    // show_debug_message("[get_enemy_template] Returning template for ID " + string(enemy_id) + ": " + json_stringify(template_to_return));
+    // === 除錯結束 ===
+    
+    return template_to_return;
 }
 
 // 創建敵人實例
@@ -420,8 +426,13 @@ load_enemies_from_csv = function(file_name) {
         enemy_data.capture_rate_base = real(csv_grid_get(grid, "capture_rate_base", i));
         
         // 讀取獎勵
-        enemy_data.exp_reward = real(csv_grid_get(grid, "exp_reward", i));
-        enemy_data.gold_reward = real(csv_grid_get(grid, "gold_reward", i));
+        var raw_exp = csv_grid_get(grid, "exp_reward", i);
+        var raw_gold = csv_grid_get(grid, "gold_reward", i);
+        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.id) + ": Raw exp_reward='" + string(raw_exp) + "', Raw gold_reward='" + string(raw_gold) + "'");
+        
+        enemy_data.exp_reward = real(raw_exp); // Keep using real() for now
+        enemy_data.gold_reward = real(raw_gold);
+        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.id) + ": Parsed exp=" + string(enemy_data.exp_reward) + ", Parsed gold=" + string(enemy_data.gold_reward));
         
         // 讀取技能
         var skills_str = csv_grid_get(grid, "skills", i);
