@@ -678,11 +678,13 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
     - 添加音效和音樂
     - 設計遊戲關卡和流程
     - **敵人死亡演出與獎勵流程優化**:
-        - 在敵人死亡時 (`on_unit_died`) 計算並觸發物品掉落 (`obj_flying_item`) 演出。
-        - 將實際掉落物品列表記錄在 `obj_battle_manager` 中，並通過 `finalize_battle_results` 事件傳遞。
-        - 修改 `obj_reward_system` 以接收預先計算好的掉落列表，不再自行解析 `loot_table`。
-        - **戰鬥結果 UI**: 更新 `obj_battle_ui` 以顯示掉落的物品圖示和數量。
-        - **戰鬥結果分層**: 重構 `obj_battle_manager` 狀態機，加入等待掉落動畫和升級動畫完成的狀態，確保結果 UI 在演出結束後才顯示。
+        - **已實現**: 在敵人死亡時 (`on_unit_died`) 計算掉落物。
+        - **已實現**: 使用佇列系統 (`obj_battle_manager` 的 `pending_flying_items` 和 `Alarm[1]`) 處理多個 `obj_flying_item` 的創建請求，解決了先前 Alarm 覆蓋導致只處理最後一個物品的問題。
+        - **已實現**: 將實際掉落物品列表記錄在 `obj_battle_manager` 的 `current_battle_drops` 中，並通過 `finalize_battle_results` 事件傳遞。
+        - **已確認**: `obj_reward_system` 現在能正確接收預先計算好的掉落列表。
+        - **已解決**: `obj_flying_item` 的視覺動畫問題。
+        - **戰鬥結果 UI**: 需要確認 `obj_battle_ui` 是否正確顯示佇列處理後的所有掉落物品圖示和數量（目前邏輯數據似乎正確）。
+        - **戰鬥結果分層**: (保留) 重構 `obj_battle_manager` 狀態機，加入等待掉落動畫和升級動畫完成的狀態，確保結果 UI 在演出結束後才顯示。
     - **Battle Log 功能**:
         - 在主 HUD 添加按鈕。
         - 創建 `obj_battle_log_ui` 面板。
@@ -711,4 +713,5 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
         - 考慮快捷欄在非戰鬥狀態下的使用。
 
 - **已知問題**:
-    - (清空或更新已知問題列表)
+    - 飛行道具 (`obj_flying_item`) 的起始座標轉換 (`world_to_gui_coords`) 可能不準確，尤其在攝像機移動或縮放時。
+    - 飛行道具 (`obj_flying_item`) 飛向玩家的目標座標計算可能不準確，因直接使用世界座標作為 GUI 層目標。
