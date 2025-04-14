@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: "GameMaker Project Rules - 專案開發規則"
 globs: ["**/*.gml", "**/*.yy"]
 alwaysApply: true
@@ -15,3 +20,4 @@ alwaysApply: true
 - 必須參照GML的規格並適時透過網路搜尋參考官方文檔
 - 針對問題進行精確修正，不進行多餘優化
 - 在提出方案前必須完整搜尋專案，不進行未經確認的假設
+- **主要使用 `fnt_dialogue` 作為標準字體資源。在需要設定字體時，應優先使用此字體，或在物件的 Create 事件中明確定義字體變數。**

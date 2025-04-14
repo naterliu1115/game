@@ -120,4 +120,100 @@ if (active && !surface_exists(ui_surface)) {
     surface_needs_update = true;
 }
 
+// --- 新增：處理戰鬥結果物品懸停與 Popup --- 
+if (reward_visible) { // 只在結果畫面顯示時執行
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    
+    var prev_hovered_index = hovered_reward_item_index; // 記錄之前的懸停狀態
+    hovered_reward_item_index = -1; // 重置當前懸停索引
+    
+    var list_size = ds_list_size(reward_items_list);
+    
+    for (var i = 0; i < list_size; i++) {
+        var col = i % items_cols;
+        var row = floor(i / items_cols);
+        
+        var item_x = items_start_x + col * items_cell_width;
+        var item_y = items_start_y + row * items_cell_height;
+        
+        // 檢查滑鼠是否在當前物品格子內
+        if (point_in_rectangle(mx, my, item_x, item_y, item_x + items_cell_width, item_y + items_cell_height)) {
+            hovered_reward_item_index = i;
+            break; // 一次只懸停一個
+        }
+    }
+    
+    // 根據懸停狀態管理 Popup
+    if (hovered_reward_item_index != -1) {
+        // 從列表中獲取當前懸停物品的數據
+        var current_item_struct = reward_items_list[| hovered_reward_item_index];
+        var item_id = current_item_struct.item_id;
+        
+        // 檢查物品管理器是否存在
+        if (instance_exists(obj_item_manager)) {
+            // 獲取完整的物品數據
+            var item_data_struct = obj_item_manager.get_item(item_id);
+            
+            if (item_data_struct != undefined) {
+                 // --- 修改：使用 UI Manager 管理彈窗 ---
+                if (!instance_exists(item_popup_instance)) { 
+                    // 創建實例
+                    item_popup_instance = instance_create_layer(mx + 15, my + 15, "UI", obj_item_info_popup); // 使用實際的 "UI" 圖層
+                    if (instance_exists(item_popup_instance)) { 
+                        // 設置數據和位置
+                        item_popup_instance.setup_item_data(item_data_struct, -1); 
+                        item_popup_instance.x = mx + 15;
+                        item_popup_instance.y = my + 15;
+                        
+                        // 使用 UI 管理器顯示
+                        if (instance_exists(obj_ui_manager)) {
+                            obj_ui_manager.show_ui(item_popup_instance, "popup");
+                            show_debug_message("Item Info Popup shown via UI Manager for item ID: " + string(item_id));
+                        } else {
+                             show_debug_message("警告：找不到 UI 管理器，彈窗可能無法正常顯示！");
+                             item_popup_instance.show(); // 備選方案
+                        }
+                    } else {
+                       item_popup_instance = noone; 
+                       show_debug_message("錯誤：創建 Item Info Popup 失敗");
+                    }
+                } else { // 彈窗已存在，更新位置和數據
+                    item_popup_instance.x = mx + 15;
+                    item_popup_instance.y = my + 15;
+                    
+                    // 如果懸停到不同物品，更新數據
+                    if (item_popup_instance.item_data == noone || item_popup_instance.item_data.ID != item_id) {
+                         item_popup_instance.setup_item_data(item_data_struct, -1);
+                         show_debug_message("Item Info Popup updated for item ID: " + string(item_id));
+                    }
+                }
+                 // --- 結束修改 ---
+            } else { 
+                 // get_item 失敗，關閉彈窗
+                 if (instance_exists(item_popup_instance)) {
+                      item_popup_instance.close(); // 調用彈窗自己的關閉方法
+                      item_popup_instance = noone; // 重置本地追蹤變數
+                      show_debug_message("Item Info Popup closed (get_item failed)");
+                 }
+            }
+        } else {
+            // 物品管理器不存在，關閉彈窗
+            if (instance_exists(item_popup_instance)) {
+                 item_popup_instance.close(); // 調用彈窗自己的關閉方法
+                 item_popup_instance = noone; // 重置本地追蹤變數
+                 show_debug_message("Item Info Popup closed (item manager missing)");
+            }
+        }
+    } else {
+        // 滑鼠未懸停，關閉彈窗
+        if (instance_exists(item_popup_instance)) {
+            item_popup_instance.close(); // 調用彈窗自己的關閉方法
+            item_popup_instance = noone; // 重置本地追蹤變數
+            show_debug_message("Item Info Popup closed (mouse left items)");
+        }
+    }
+}
+// --- 結束新增 --- 
+
 // --- 其他原有的 Step 事件邏輯應該保留 ---

@@ -244,8 +244,64 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
             draw_set_color(make_color_rgb(255, 215, 0)); // 金色
             draw_text_safe(display_get_gui_width() / 2, stats_y + 60, "獲得金幣: " + string(reward_gold), make_color_rgb(255, 215, 0), TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
             
-            // 顯示獲得物品 (如果有的話)
-            // ... (可以添加繪製物品列表的邏輯)
+            // --- 新增：繪製獲得物品網格 --- 
+            var list_size = ds_list_size(reward_items_list);
+            if (list_size > 0) {
+                draw_set_halign(fa_left);
+                draw_set_valign(fa_top);
+                draw_set_font(fnt_dialogue);
+                draw_set_color(c_white);
+                draw_text(items_start_x, items_start_y - 20, "獲得物品:");
+                
+                for (var i = 0; i < list_size; i++) {
+                    var item_struct = reward_items_list[| i];
+                    var item_id = item_struct.item_id;
+                    var quantity = item_struct.quantity;
+                    
+                    // **從 reward_items 結構體獲取 item_data**
+                    // **假設 reward_items[i] 的結構是 { item_id: ..., quantity: ..., item_data: ... }**
+                    // **如果不是，需要先用 get_item 獲取**
+                    var item_data = obj_item_manager.get_item(item_id); // **假設需要重新獲取**
+                    if (is_undefined(item_data)) {
+                        show_debug_message("警告: 在繪製戰利品時找不到物品資料 ID: " + string(item_id));
+                        continue; // 跳過這個物品
+                    }
+
+                    var col = i % items_cols;
+                    var row = floor(i / items_cols);
+                    
+                    // 計算格子和圖示的繪製位置
+                    var cell_x = items_start_x + col * items_cell_width;
+                    var cell_y = items_start_y + row * items_cell_height;
+                    var icon_x = cell_x + (items_cell_width - items_icon_size) / 2;
+                    var icon_y = cell_y + (items_cell_height - items_icon_size) / 2;
+                    
+                    // --- 新增：使用 draw_ui_item_slot 繪製物品槽 ---
+                    draw_ui_item_slot(
+                        cell_x, 
+                        cell_y, 
+                        items_cell_width, 
+                        items_cell_height, 
+                        item_data,        // 傳遞完整的物品資料
+                        quantity,         // 傳遞數量
+                        false             // is_selected 設為 false
+                    );
+                    // --- 結束新增 ---
+                    
+                    // (可選) 繪製懸停高亮
+                    if (hovered_reward_item_index == i) {
+                        draw_set_alpha(0.3);
+                        draw_set_color(c_yellow);
+                        draw_rectangle(cell_x, cell_y, cell_x + items_cell_width - 1, cell_y + items_cell_height - 1, false); // 畫一個高亮框
+                        draw_set_alpha(1.0);
+                    }
+                }
+                // 重置繪製對齊和顏色
+                draw_set_halign(fa_center);
+                draw_set_valign(fa_middle);
+                draw_set_color(c_white);
+            }
+            // --- 結束新增 --- 
         }
     } else if (battle_victory_status == 0) { // 失敗
         result_text = "戰鬥失敗!";
