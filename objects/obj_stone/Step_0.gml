@@ -143,10 +143,8 @@ if (can_start_mining) {
                     start_world_x : stone_world_x,
                     start_world_y : stone_world_y,
                     sprite_index : item_sprite_index
-                    // 不再儲存目標位置，因為飛行道具只會飛向中心再淡出
                 };
-                alarm[0] = 1; // 觸發 Alarm 0 在下一幀執行創建
-                show_debug_message("設置 Alarm 0 創建飛行物品。儲存的世界座標: (" + string(stone_world_x) + "," + string(stone_world_y) + ")");
+                alarm[0] = 1;
             }
             // --- 延遲創建準備結束 ---
 

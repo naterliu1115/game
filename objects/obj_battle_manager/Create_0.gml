@@ -248,7 +248,7 @@ subscribe_to_events = function() {
 
 // 處理單位死亡事件 (包含掉落物計算)
 function on_unit_died(data) {
-    show_debug_message(">>>>>>>>>> on_unit_died METHOD EXECUTING! <<<<<<<<<<"); // 增加執行標記
+    // show_debug_message(">>>>>>>>>> on_unit_died METHOD EXECUTING! <<<<<<<<<<"); // 移除執行標記
     
     // 檢查事件數據是否包含必要的 unit_instance
     if (!variable_struct_exists(data, "unit_instance")) {
@@ -299,7 +299,7 @@ function on_unit_died(data) {
 
 
     // --- 掉落物計算邏輯開始 ---
-    show_debug_message("[Unit Died Drop Calc] 開始處理掉落物，單位模板 ID: " + string(_template_id));
+    // show_debug_message("[Unit Died Drop Calc] 開始處理掉落物，單位模板 ID: " + string(_template_id)); // 移除
     
     // 檢查 template_id 是否有效，以及敵人工廠是否存在
     if (is_undefined(_template_id)) {
@@ -315,12 +315,14 @@ function on_unit_died(data) {
     var template = obj_enemy_factory.get_enemy_template(_template_id);
     
     // === 新增除錯：檢查從工廠獲取的模板中的 loot_table ===
+    /* // 移除區塊
     if (is_struct(template)) {
         var _loot_table_value = variable_struct_exists(template, "loot_table") ? template.loot_table : "<未定義>";
         show_debug_message("[Check Template Data] Template ID " + string(_template_id) + ", loot_table value: '" + string(_loot_table_value) + "'");
     } else {
         show_debug_message("[Check Template Data] Template ID " + string(_template_id) + ", 無法獲取模板結構體。");
     }
+    */
     // === 除錯結束 ===
 
     // 檢查模板是否有效且包含 loot_table
@@ -335,7 +337,7 @@ function on_unit_died(data) {
     }
     
     var loot_table_string = template.loot_table;
-    show_debug_message("[Unit Died Drop Calc] Loot Table Found: " + loot_table_string);
+    // show_debug_message("[Unit Died Drop Calc] Loot Table Found: " + loot_table_string); // 移除
     
     // 解析 loot_table (假設格式為 itemID:chance:minQty-maxQty;...)    
     var drop_entries = string_split(loot_table_string, ";");
@@ -348,7 +350,7 @@ function on_unit_died(data) {
         if (entry == "") continue;
 
         // *** 新增調試信息：迴圈檢查 ***
-        show_debug_message("[Loop Check] Processing entry: " + entry);
+        // show_debug_message("[Loop Check] Processing entry: " + entry); // 移除
 
         var details = string_split(entry, ":");
 
@@ -387,13 +389,13 @@ function on_unit_died(data) {
                 continue;
             }
 
-            show_debug_message("[Unit Died Drop Calc]     Parsed: ItemID=" + string(item_id) + ", Chance=" + string(chance) + ", MinQty=" + string(min_qty) + ", MaxQty=" + string(max_qty));
+            // show_debug_message("[Unit Died Drop Calc]     Parsed: ItemID=" + string(item_id) + ", Chance=" + string(chance) + ", MinQty=" + string(min_qty) + ", MaxQty=" + string(max_qty)); // 移除
 
             // *** 新增調試信息：掉落檢查 ***
-            show_debug_message("[Drop Check] About to roll for Item ID: " + string(item_id) + " (Chance: " + string(chance) + ")");
+            // show_debug_message("[Drop Check] About to roll for Item ID: " + string(item_id) + " (Chance: " + string(chance) + ")"); // 移除
             var roll = random(1);
             var drop_success = (roll <= chance);
-            show_debug_message("[Drop Check Result] Roll: " + string(roll) + ", Success: " + string(drop_success));
+            // show_debug_message("[Drop Check Result] Roll: " + string(roll) + ", Success: " + string(drop_success)); // 移除
 
 
             // --- 執行掉落判定 ---
@@ -404,67 +406,58 @@ function on_unit_died(data) {
                 } else {
                     quantity_dropped = irandom_range(min_qty, max_qty);
                 }
-                show_debug_message("[Unit Died Drop Calc]       * Drop Success! Quantity: " + string(quantity_dropped));
+                // show_debug_message("[Unit Died Drop Calc]       * Drop Success! Quantity: " + string(quantity_dropped)); // 移除
 
                 // 添加到戰鬥結果列表
                 array_push(current_battle_drops, { item_id: item_id, quantity: quantity_dropped });
-                show_debug_message("[Unit Died Drop Calc] Added drop to list: " + json_stringify({ item_id: item_id, quantity: quantity_dropped }));
+                // show_debug_message("[Unit Died Drop Calc] Added drop to list: " + json_stringify({ item_id: item_id, quantity: quantity_dropped })); // 移除
 
 
                 // --- 修正：獲取物品數據並準備飛行道具 ---
                 var item_data = undefined;
                 if (_item_manager_exists) {
                     // *** 新增調試信息：獲取物品數據調用 ***
-                    show_debug_message("[Get Item Call] About to call obj_item_manager.get_item for ID: " + string(item_id));
-                    item_data = obj_item_manager.get_item(item_id); // 使用正確的函數名
+                    // show_debug_message("[Get Item Call] About to call obj_item_manager.get_item for ID: " + string(item_id)); // 移除
+                    item_data = obj_item_manager.get_item(item_id);
                     // *** 新增調試信息：獲取物品數據結果 ***
-                    show_debug_message("[Get Item Result] Item data for ID " + string(item_id) + " is: " + (is_undefined(item_data) ? "undefined" : "found"));
+                    // show_debug_message("[Get Item Result] Item data for ID " + string(item_id) + " is: " + (is_undefined(item_data) ? "undefined" : "found")); // 移除
                 } else {
-                    show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品數據。");
-                     // 如果沒有 item_manager，我們無法獲取 sprite_index，所以這裡可以考慮 continue 或有其他處理
-                     continue; // 跳過此物品的動畫處理
-                }
-                // --- 移除了對 global.ItemDatabase 的檢查 ---
-
-
-                if (is_undefined(item_data)) {
-                    show_debug_message("[Drop Anim Prep] 警告: 無法從 obj_item_manager 獲取 ID 為 " + string(item_id) + " 的物品資料。跳過飛行動畫。");
-                    continue; // 雖然加入列表了，但無法播放動畫
-                }
-
-                // --- <<<<<<< 修改開始 >>>>>>> ---
-                // 獲取物品的精靈索引，而不是直接使用 item_data 內可能錯誤的欄位
-                var _sprite_index = -1; // 預設為無效
-                if (_item_manager_exists) {
-                    // *** 新增調試信息：獲取物品精靈調用 ***
-                    show_debug_message("[Get Item Sprite Call] About to call obj_item_manager.get_item_sprite for ID: " + string(item_id));
-                    _sprite_index = obj_item_manager.get_item_sprite(item_id); // 調用正確的函數獲取精靈索引
-                    // *** 新增調試信息：獲取物品精靈結果 ***
-                    show_debug_message("[Get Item Sprite Result] Sprite index for ID " + string(item_id) + " is: " + string(_sprite_index));
-                } else {
-                     show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品精靈。");
-                     // 即使沒有管理器，理論上物品已加入列表，但無法有動畫
-                     // 可以選擇 continue，或允許物品加入列表但無動畫（取決於設計）
+                    // show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品數據。"); // 保留警告
                      continue;
                 }
 
-                // 檢查獲取到的精靈索引是否有效
-                if (sprite_exists(_sprite_index)) { // 只需要檢查 sprite_exists
+                if (is_undefined(item_data)) {
+                    // show_debug_message("[Drop Anim Prep] 警告: 無法從 obj_item_manager 獲取 ID 為 " + string(item_id) + " 的物品資料。跳過飛行動畫。"); // 保留警告
+                    continue;
+                }
+
+                // --- <<<<<<< 修改開始 >>>>>>> ---
+                var _sprite_index = -1;
+                if (_item_manager_exists) {
+                    // *** 新增調試信息：獲取物品精靈調用 ***
+                    // show_debug_message("[Get Item Sprite Call] About to call obj_item_manager.get_item_sprite for ID: " + string(item_id)); // 移除
+                    _sprite_index = obj_item_manager.get_item_sprite(item_id);
+                    // *** 新增調試信息：獲取物品精靈結果 ***
+                    // show_debug_message("[Get Item Sprite Result] Sprite index for ID " + string(item_id) + " is: " + string(_sprite_index)); // 移除
+                } else {
+                     // show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品精靈。"); // 保留警告
+                     continue;
+                }
+
+                if (sprite_exists(_sprite_index)) {
                     var flying_item_info = {
                         item_id: item_id,
                         quantity: quantity_dropped,
-                        sprite_index: _sprite_index, // 使用獲取的精靈索引
+                        sprite_index: _sprite_index,
                         start_world_x: _unit_instance.x,
                         start_world_y: _unit_instance.y
                     };
                     array_push(pending_flying_items, flying_item_info);
-                    show_debug_message("[Drop Anim Prep] 已將物品加入飛行佇列: ID=" + string(item_id) + ", Sprite Index=" + string(_sprite_index));
+                    // show_debug_message("[Drop Anim Prep] 已將物品加入飛行佇列: ID=" + string(item_id) + ", Sprite Index=" + string(_sprite_index)); // 移除
                 } else {
-                    show_debug_message("[Drop Anim Prep] 警告: 無法為物品 ID " + string(item_id) + " 獲取有效的精靈索引 (即使調用了 get_item_sprite)，無法創建飛行動畫。最終索引: " + string(_sprite_index));
-                     // 這裡也可能需要考慮是否 continue
+                    // show_debug_message("[Drop Anim Prep] 警告: 無法為物品 ID " + string(item_id) + " 獲取有效的精靈索引 ..."); // 保留警告
                 }
                 // --- <<<<<<< 修改結束 >>>>>>> ---
-
             } else {
                  // show_debug_message("[Unit Died Drop Calc]       - Drop Failed."); // 之前的訊息更詳細，保留之前的
             }
@@ -473,12 +466,12 @@ function on_unit_died(data) {
         }
     } // 迴圈結束
 
-    show_debug_message("[Unit Died Drop Calc] 處理完畢。 Current battle drops: " + json_stringify(current_battle_drops));
+    // show_debug_message("[Unit Died Drop Calc] 處理完畢。 Current battle drops: " + json_stringify(current_battle_drops)); // 移除
 
     // --- 在迴圈結束後，檢查佇列並觸發 Alarm[1] ---
     if (array_length(pending_flying_items) > 0) {
-        show_debug_message("[Drop Anim Trigger] 飛行道具佇列中有 " + string(array_length(pending_flying_items)) + " 個物品，觸發 Alarm[1]。");
-        alarm[1] = 5; // 設置初始延遲
+        // show_debug_message("[Drop Anim Trigger] 飛行道具佇列中有 " + string(array_length(pending_flying_items)) + " 個物品，觸發 Alarm[1]。"); // 移除
+        alarm[1] = 5;
     }
     // ------------------------------------------
 }

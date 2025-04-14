@@ -1,17 +1,5 @@
 /// @description 根據狀態處理飛行邏輯
 
-// --- Step 除錯訊息 (每 30 幀打印一次，避免洗版) ---
-if ((current_time mod 30) == 0) {
-    show_debug_message("obj_flying_item Step:");
-    show_debug_message("- State: " + string(flight_state));
-    show_debug_message("- Current Pos: (" + string(x) + ", " + string(y) + ")");
-    show_debug_message("- Target: (" + string(target_x) + ", " + string(target_y) + ")");
-    if (flight_state == FLYING_STATE.FLYING_UP) {
-        var dist = point_distance(x, y, target_x, target_y);
-        show_debug_message("- Distance to target: " + string(dist) + ", Threshold: " + string(move_speed));
-    }
-}
-
 // 根據當前狀態處理飛行道具的行為
 switch (flight_state) {
 
@@ -26,7 +14,6 @@ switch (flight_state) {
             y = target_y;
             flight_state = FLYING_STATE.PAUSING;
             pause_timer = 0; // 開始計時
-            show_debug_message("飛行道具已到達目標高度 (" + string(x) + ", " + string(y) + ")，開始停頓");
         } else {
             // 正常向上飛行
             var dir = point_direction(x, y, target_x, target_y);
@@ -52,12 +39,10 @@ switch (flight_state) {
             if (!instance_exists(Player)) {
                 flight_state = FLYING_STATE.FADING_OUT;
                 fade_timer = 0;
-                show_debug_message("飛行道具停頓結束，玩家不存在，直接淡出");
             } else {
                 // 更新玩家目標座標
                 player_target_x = Player.x;
                 player_target_y = Player.y;
-                show_debug_message("飛行道具停頓結束，開始飛向玩家 ("+string(player_target_x)+","+string(player_target_y)+")");
             }
         }
         break;
@@ -65,11 +50,9 @@ switch (flight_state) {
     case FLYING_STATE.FLYING_TO_PLAYER:
         // --- 飛向玩家 ---
 
-        // 確保玩家仍然存在，否則直接淡出
         if (!instance_exists(Player)) {
             flight_state = FLYING_STATE.FADING_OUT;
             fade_timer = 0;
-            show_debug_message("飛向玩家過程中玩家消失，切換到淡出");
             break;
         }
 
@@ -84,7 +67,7 @@ switch (flight_state) {
         if (dist_to_player < to_player_speed) {
             flight_state = FLYING_STATE.FADING_OUT;
             fade_timer = 0;
-            show_debug_message("飛行道具已到達玩家附近，開始淡出");
+            //show_debug_message("飛行道具已到達玩家附近，開始淡出");
         } else {
             // 向玩家方向移動
             var dir = point_direction(x, y, player_target_x, player_target_y);
@@ -93,10 +76,10 @@ switch (flight_state) {
             x += move_x;
             y += move_y;
 
-            // 飛行過程中的視覺效果（保持原有縮放邏輯）
             image_xscale = max(0.5, image_xscale * 0.995);
             image_yscale = image_xscale;
         }
+        // --- 修改結束 ---
         break;
 
     case FLYING_STATE.FADING_OUT:
@@ -112,7 +95,6 @@ switch (flight_state) {
 
         // 淡出完成後銷毀
         if (fade_timer >= fade_duration) {
-            show_debug_message("飛行道具已完全淡出，銷毀");
             instance_destroy();
             exit;
         }
