@@ -270,31 +270,32 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
                     var col = i % items_cols;
                     var row = floor(i / items_cols);
                     
-                    // 計算格子和圖示的繪製位置
-                    var cell_x = items_start_x + col * items_cell_width;
-                    var cell_y = items_start_y + row * items_cell_height;
-                    var icon_x = cell_x + (items_cell_width - items_icon_size) / 2;
-                    var icon_y = cell_y + (items_cell_height - items_icon_size) / 2;
-                    
-                    // --- 新增：使用 draw_ui_item_slot 繪製物品槽 ---
+                    // 修改：使用 slot 尺寸和 padding 計算格子位置
+                    var cell_x = items_start_x + col * (item_slot_width + item_padding_x);
+                    var cell_y = items_start_y + row * (item_slot_height + item_padding_y);
+
+                    // --- 修改：使用 draw_ui_item_slot 並傳遞 slot 尺寸 --- 
                     draw_ui_item_slot(
                         cell_x, 
                         cell_y, 
-                        items_cell_width, 
-                        items_cell_height, 
-                        item_data,        // 傳遞完整的物品資料
-                        quantity,         // 傳遞數量
-                        false             // is_selected 設為 false
+                        item_slot_width,  // 使用 slot 寬度
+                        item_slot_height, // 使用 slot 高度
+                        item_data,        
+                        quantity,         
+                        (i == selected_reward_item_index) 
                     );
-                    // --- 結束新增 ---
+                    // --- 結束修改 ---
                     
-                    // (可選) 繪製懸停高亮
+                    // --- 移除舊的懸停高亮 ---
+                    /*
                     if (hovered_reward_item_index == i) {
                         draw_set_alpha(0.3);
                         draw_set_color(c_yellow);
-                        draw_rectangle(cell_x, cell_y, cell_x + items_cell_width - 1, cell_y + items_cell_height - 1, false); // 畫一個高亮框
+                        draw_rectangle(cell_x, cell_y, cell_x + items_cell_width - 1, cell_y + items_cell_height - 1, false); 
                         draw_set_alpha(1.0);
                     }
+                    */
+                    // --- 結束移除舊的懸停高亮 ---
                 }
                 // 重置繪製對齊和顏色
                 draw_set_halign(fa_center);

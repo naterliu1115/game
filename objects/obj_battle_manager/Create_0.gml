@@ -339,94 +339,148 @@ function on_unit_died(data) {
     
     // 解析 loot_table (假設格式為 itemID:chance:minQty-maxQty;...)    
     var drop_entries = string_split(loot_table_string, ";");
-    var _item_manager_exists = instance_exists(obj_item_manager); // 檢查物品管理器是否存在 (可選)
-    
+    var _item_manager_exists = instance_exists(obj_item_manager);
+
+    // pending_flying_items = []; // 清空佇列 (如果需要)
+
     for (var j = 0; j < array_length(drop_entries); j++) {
         var entry = drop_entries[j];
-        if (entry == "") continue; // 跳過空條目
-        
-        show_debug_message("[Unit Died Drop Calc]   - Parsing entry: " + entry);
-        
+        if (entry == "") continue;
+
+        // *** 新增調試信息：迴圈檢查 ***
+        show_debug_message("[Loop Check] Processing entry: " + entry);
+
         var details = string_split(entry, ":");
-        
+
         if (array_length(details) == 3) {
             var item_id_str = details[0];
             var chance_str = details[1];
             var range_str = details[2];
-            var item_id, chance, min_qty, max_qty;
+            var item_id, chance, min_qty, max_qty, quantity_dropped;
 
             // 安全地解析 Item ID
-            if (is_numeric_safe(item_id_str)) {
-                item_id = real(item_id_str);
-            } else {
-                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 item_id: " + item_id_str);
+            if (!is_numeric_safe(item_id_str)) {
+                show_debug_message("[Unit Died Drop Calc]   ! 無效的物品ID格式: '" + item_id_str + "'");
                 continue;
             }
+            item_id = real(item_id_str);
 
-            /* // --- REMOVE/COMMENT OUT Optional Item ID Validation ---
-            // (可選) 驗證 Item ID 是否存在於物品管理器
-            if (_item_manager_exists && is_undefined(obj_item_manager.get_item(item_id))) { // <-- 使用 get_item 修正後的版本 (但也註解掉)
-                 show_debug_message("    - 警告: Loot table entry '" + entry + "' - 物品 ID " + string(item_id) + " 在 obj_item_manager 中不存在");
-                 // 根據需要決定是否 continue
-                 // continue;
-            }
-            */ // --- End REMOVE/COMMENT OUT ---
-            
             // 安全地解析 Chance
-            if (is_numeric_safe(chance_str)) {
-                chance = clamp(real(chance_str), 0, 1);
+            if (!is_numeric_safe(chance_str)) {
+                show_debug_message("[Unit Died Drop Calc]   ! 無效的機率格式: '" + chance_str + "'");
+                continue;
+            }
+            chance = real(chance_str);
+
+            // 安全地解析數量範圍
+            var range_parts = string_split(range_str, "-");
+            if (array_length(range_parts) == 2 && is_numeric_safe(range_parts[0]) && is_numeric_safe(range_parts[1])) {
+                min_qty = real(range_parts[0]);
+                max_qty = real(range_parts[1]);
+                if (min_qty > max_qty) { // 修正順序錯誤
+                    var temp = min_qty;
+                    min_qty = max_qty;
+                    max_qty = temp;
+                }
             } else {
-                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 chance: " + chance_str);
+                show_debug_message("[Unit Died Drop Calc]   ! 無效的數量範圍格式: '" + range_str + "'");
                 continue;
             }
 
-            // 安全地解析 Min-Max Range
-            min_qty = 1;
-            max_qty = 1;
-            var range_parts = string_split(range_str, "-");
-            if (array_length(range_parts) == 1) {
-                if (is_numeric_safe(range_parts[0])) {
-                    min_qty = max(1, floor(real(range_parts[0]))); // 確保至少為1且為整數
-                    max_qty = min_qty;
-                } else {
-                    show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 quantity: " + range_parts[0]);
-                    continue;
-                }
-            } else if (array_length(range_parts) == 2) {
-                if (is_numeric_safe(range_parts[0]) && is_numeric_safe(range_parts[1])) {
-                    min_qty = max(1, floor(real(range_parts[0])));
-                    max_qty = max(min_qty, floor(real(range_parts[1]))); // 確保 max >= min >= 1
-                } else {
-                    show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range: " + range_str);
-                    continue;
-                }
-            } else {
-                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range 格式: " + range_str);
-                continue;
-            }
-            
             show_debug_message("[Unit Died Drop Calc]     Parsed: ItemID=" + string(item_id) + ", Chance=" + string(chance) + ", MinQty=" + string(min_qty) + ", MaxQty=" + string(max_qty));
 
-            // 掉落判定
+            // *** 新增調試信息：掉落檢查 ***
+            show_debug_message("[Drop Check] About to roll for Item ID: " + string(item_id) + " (Chance: " + string(chance) + ")");
             var roll = random(1);
-            if (roll < chance) {
-                var quantity_dropped = irandom_range(min_qty, max_qty);
-                show_debug_message("[Unit Died Drop Calc]       * Drop Success! Rolled " + string(roll) + " vs Chance " + string(chance) + ", Quantity: " + string(quantity_dropped));
-                
-                // 添加到當前戰鬥掉落列表
-                var drop_data = { item_id: item_id, quantity: quantity_dropped };
-                array_push(current_battle_drops, drop_data);
-                show_debug_message("[Unit Died Drop Calc] Added drop to list: " + json_stringify(drop_data));
+            var drop_success = (roll <= chance);
+            show_debug_message("[Drop Check Result] Roll: " + string(roll) + ", Success: " + string(drop_success));
+
+
+            // --- 執行掉落判定 ---
+            if (drop_success) {
+                // 掉落成功
+                if (min_qty == max_qty) {
+                    quantity_dropped = min_qty;
+                } else {
+                    quantity_dropped = irandom_range(min_qty, max_qty);
+                }
+                show_debug_message("[Unit Died Drop Calc]       * Drop Success! Quantity: " + string(quantity_dropped));
+
+                // 添加到戰鬥結果列表
+                array_push(current_battle_drops, { item_id: item_id, quantity: quantity_dropped });
+                show_debug_message("[Unit Died Drop Calc] Added drop to list: " + json_stringify({ item_id: item_id, quantity: quantity_dropped }));
+
+
+                // --- 修正：獲取物品數據並準備飛行道具 ---
+                var item_data = undefined;
+                if (_item_manager_exists) {
+                    // *** 新增調試信息：獲取物品數據調用 ***
+                    show_debug_message("[Get Item Call] About to call obj_item_manager.get_item for ID: " + string(item_id));
+                    item_data = obj_item_manager.get_item(item_id); // 使用正確的函數名
+                    // *** 新增調試信息：獲取物品數據結果 ***
+                    show_debug_message("[Get Item Result] Item data for ID " + string(item_id) + " is: " + (is_undefined(item_data) ? "undefined" : "found"));
+                } else {
+                    show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品數據。");
+                     // 如果沒有 item_manager，我們無法獲取 sprite_index，所以這裡可以考慮 continue 或有其他處理
+                     continue; // 跳過此物品的動畫處理
+                }
+                // --- 移除了對 global.ItemDatabase 的檢查 ---
+
+
+                if (is_undefined(item_data)) {
+                    show_debug_message("[Drop Anim Prep] 警告: 無法從 obj_item_manager 獲取 ID 為 " + string(item_id) + " 的物品資料。跳過飛行動畫。");
+                    continue; // 雖然加入列表了，但無法播放動畫
+                }
+
+                // --- <<<<<<< 修改開始 >>>>>>> ---
+                // 獲取物品的精靈索引，而不是直接使用 item_data 內可能錯誤的欄位
+                var _sprite_index = -1; // 預設為無效
+                if (_item_manager_exists) {
+                    // *** 新增調試信息：獲取物品精靈調用 ***
+                    show_debug_message("[Get Item Sprite Call] About to call obj_item_manager.get_item_sprite for ID: " + string(item_id));
+                    _sprite_index = obj_item_manager.get_item_sprite(item_id); // 調用正確的函數獲取精靈索引
+                    // *** 新增調試信息：獲取物品精靈結果 ***
+                    show_debug_message("[Get Item Sprite Result] Sprite index for ID " + string(item_id) + " is: " + string(_sprite_index));
+                } else {
+                     show_debug_message("[Drop Anim Prep] 警告: obj_item_manager 不存在，無法獲取物品精靈。");
+                     // 即使沒有管理器，理論上物品已加入列表，但無法有動畫
+                     // 可以選擇 continue，或允許物品加入列表但無動畫（取決於設計）
+                     continue;
+                }
+
+                // 檢查獲取到的精靈索引是否有效
+                if (sprite_exists(_sprite_index)) { // 只需要檢查 sprite_exists
+                    var flying_item_info = {
+                        item_id: item_id,
+                        quantity: quantity_dropped,
+                        sprite_index: _sprite_index, // 使用獲取的精靈索引
+                        start_world_x: _unit_instance.x,
+                        start_world_y: _unit_instance.y
+                    };
+                    array_push(pending_flying_items, flying_item_info);
+                    show_debug_message("[Drop Anim Prep] 已將物品加入飛行佇列: ID=" + string(item_id) + ", Sprite Index=" + string(_sprite_index));
+                } else {
+                    show_debug_message("[Drop Anim Prep] 警告: 無法為物品 ID " + string(item_id) + " 獲取有效的精靈索引 (即使調用了 get_item_sprite)，無法創建飛行動畫。最終索引: " + string(_sprite_index));
+                     // 這裡也可能需要考慮是否 continue
+                }
+                // --- <<<<<<< 修改結束 >>>>>>> ---
+
             } else {
-                show_debug_message("[Unit Died Drop Calc]       * Drop Failed. Rolled " + string(roll) + " vs Chance " + string(chance));
+                 // show_debug_message("[Unit Died Drop Calc]       - Drop Failed."); // 之前的訊息更詳細，保留之前的
             }
-            
         } else {
-            show_debug_message("    - 警告: Loot table entry '" + entry + "' 格式錯誤 (需要3個部分，用':'分割)");
+            show_debug_message("[Unit Died Drop Calc]   ! 格式錯誤: '" + entry + "'");
         }
-    }
-    
+    } // 迴圈結束
+
     show_debug_message("[Unit Died Drop Calc] 處理完畢。 Current battle drops: " + json_stringify(current_battle_drops));
+
+    // --- 在迴圈結束後，檢查佇列並觸發 Alarm[1] ---
+    if (array_length(pending_flying_items) > 0) {
+        show_debug_message("[Drop Anim Trigger] 飛行道具佇列中有 " + string(array_length(pending_flying_items)) + " 個物品，觸發 Alarm[1]。");
+        alarm[1] = 5; // 設置初始延遲
+    }
+    // ------------------------------------------
 }
 
 // 處理單位統計更新事件
@@ -1009,3 +1063,5 @@ start_factory_battle = function(enemy_template_id, center_x, center_y) {
 
 // 初始化
 initialize_battle_manager();
+
+pending_flying_items = [];

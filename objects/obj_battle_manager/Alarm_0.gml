@@ -1,4 +1,4 @@
-/// @description 延遲創建飛行道具 (使用座標轉換函數)
+/// @description 延遲創建飛行道具
 
 // 檢查全局變數是否存在
 if (!variable_global_exists("create_flying_item_info")) {
@@ -7,23 +7,11 @@ if (!variable_global_exists("create_flying_item_info")) {
 }
 
 var info = global.create_flying_item_info;
-var gui_layer_name = "GUI"; // 目標 GUI 圖層名稱
+var gui_layer_name = "GUI"; // 使用 GUI 圖層
 
 show_debug_message("Alarm 0 executing. World Pos: (" + string(info.start_world_x) + "," + string(info.start_world_y) + ")");
 
-// --- 使用座標轉換函數獲取 GUI 座標 ---
-show_debug_message("原始世界座標: (" + string(info.start_world_x) + "," + string(info.start_world_y) + ")");
-
-// 確保世界座標有效
-if (info.start_world_x == 0 && info.start_world_y == 0) {
-    show_debug_message("警告: 世界座標為 (0,0)，可能是無效值。使用備用座標。");
-    // 如果座標無效，使用備用座標
-    info.start_world_x = x;
-    info.start_world_y = y;
-}
-
 // 使用座標轉換函數
-// 先嘗試使用座標轉換函數
 var coords = world_to_gui_coords(info.start_world_x, info.start_world_y);
 var start_gui_x = coords.x;
 var start_gui_y = coords.y;
@@ -44,7 +32,6 @@ if (!layer_exists(gui_layer_name)) {
     layer_create(-9700, gui_layer_name);
     show_debug_message("創建缺失的 GUI 圖層: '" + gui_layer_name + "'");
 }
-// --- 座標轉換結束 ---
 
 // 檢查精靈索引是否有效
 if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
@@ -60,31 +47,29 @@ if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
     show_debug_message("在座標 (" + string(start_gui_x) + ", " + string(start_gui_y) + ") 創建飛行物品");
 
     with (instance_create_layer(start_gui_x, start_gui_y, gui_layer_name, obj_flying_item)) {
-         // --- 設置基本屬性 ---
-         sprite_index = info.sprite_index;
-         quantity = 1;
-
-         // --- 設置飛行狀態 ---
-         flight_state = FLYING_STATE.FLYING_UP;
-
-         // 注意：飛行高度已在 obj_flying_item 的 Create_0.gml 中設置為 100 像素
-         // 如果需要特殊高度，可以取消下面的註釋並設置值
-         // fly_up_distance = 150; // 設置特殊高度
-
-         // --- 設置飛行目標 ---
-         target_x = x;            // 水平位置保持不變
-         target_y = y - fly_up_distance; // 目標是當前位置向上移動
-
-         // 設置玩家目標座標（如果玩家存在）
-         if (instance_exists(Player)) {
-            player_target_x = Player.x;
-            player_target_y = Player.y;
-            show_debug_message("玩家目標座標設置為: (" + string(player_target_x) + ", " + string(player_target_y) + ")");
-         } else {
-            show_debug_message("警告: 玩家不存在，飛行物品將不會飛向玩家。");
-         }
-
-         show_debug_message("飛行物品初始化完成，將向上飛行 " + string(fly_up_distance) + " 像素至 (" + string(target_x) + ", " + string(target_y) + ")");
+        // 設置基本屬性
+        sprite_index = info.sprite_index;
+        quantity = info.quantity;
+        image_xscale = 0.8;
+        image_yscale = 0.8;
+        
+        // 設置飛行狀態
+        flight_state = FLYING_STATE.FLYING_UP;
+        fly_up_distance = 30; // 設置上升高度
+        
+        // 設置玩家目標座標（如果玩家存在）
+        if (instance_exists(Player)) {
+            target_x = Player.x;
+            target_y = Player.y;
+            show_debug_message("設置飛向玩家位置：(" + string(target_x) + ", " + string(target_y) + ")");
+        } else {
+            // 如果找不到玩家，就飛向原地
+            target_x = x;
+            target_y = y;
+            show_debug_message("警告：找不到玩家，物品將原地淡出");
+        }
+        
+        show_debug_message("飛行物品初始化完成，將先上升後飛向玩家");
     }
 } else {
     show_debug_message("警告: 無效的 sprite_index (" + string(info.sprite_index) + ") 或精靈不存在，無法創建飛行道具。");
@@ -92,4 +77,4 @@ if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
 
 // 清理臨時全局變數
 variable_global_set("create_flying_item_info", undefined);
-show_debug_message("Cleaned up global.create_flying_item_info.");
+show_debug_message("Cleaned up global.create_flying_item_info."); 
