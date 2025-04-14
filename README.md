@@ -122,11 +122,22 @@ if (instance_exists(obj_event_manager)) {
 - 回合管理
 - 勝負判定
 - **獎勵與結果流程 (重構):**
-  - 戰鬥結束時 (`ENDING` 狀態末尾)，`obj_battle_manager` 廣播 `finalize_battle_results` 事件，包含**最終戰鬥持續時間(秒)** 和**擊敗敵人ID列表**。
-  - `obj_reward_system` 監聽此事件，根據傳入的擊敗敵人列表和 `enemies.csv` 中的 `exp_reward`/`gold_reward` 計算總獎勵，並更新內部 `battle_result` 結構體 (包含經驗、金幣、掉落物、持續時間等)。
-  - `obj_reward_system` 計算完成後廣播 `rewards_calculated` 事件，包含完整的 `battle_result`。
-  - `obj_battle_manager` 監聽 `rewards_calculated`，更新自身狀態後，最終廣播 `show_battle_result` 事件給 UI。
-  - `obj_battle_ui` 監聽 `show_battle_result`，使用收到的完整數據更新結果畫面。
+  - **事件流程**:
+    - 戰鬥結束時 (`ENDING` 狀態末尾)，`obj_battle_manager` 廣播 `finalize_battle_results` 事件。此事件數據包含**最終戰鬥持續時間(秒)**、**擊敗敵人模板ID列表 (`defeated_enemy_ids`)** 以及**本場戰鬥的實際物品掉落列表 (`item_drops`)**。
+    - `obj_reward_system` 監聽 `finalize_battle_results` 事件。
+    - `obj_reward_system` 的 `on_finalize_battle_results` 方法會處理收到的數據：
+        - 它會直接使用傳入的 `defeated_enemy_ids` 列表，結合從 `obj_enemy_factory` 獲取的模板數據中的 `exp_reward` 和 `gold_reward`，來調用 `calculate_victory_rewards` 計算總經驗和金幣。
+        - 它會直接使用傳入的 `item_drops` 列表（由 `obj_battle_manager` 預先計算好）。
+        - `obj_reward_system` **不再負責解析 `loot_table` 字串**。
+    - `obj_reward_system` 計算完成後，更新其內部的 `battle_result` 結構體，然後廣播 `rewards_calculated` 事件，包含完整的 `battle_result`。
+    - `obj_battle_manager` 監聽 `rewards_calculated`，更新自身狀態後，最終廣播 `show_battle_result` 事件給 UI。
+    - `obj_battle_ui` 監聽 `show_battle_result`，使用收到的完整數據更新結果畫面。
+  - **物品掉落計算 (核心重構):**
+    - 物品掉落的計算現在**完全由 `obj_battle_manager`** 在處理 `unit_died` 事件時執行（在其 `on_unit_died` 方法內部）。
+    - `on_unit_died` 會從死去的敵人模板 (`template`) 中獲取 `loot_table` **原始字串** (例如 `"1001:1:1-1;1002:0.5:1"`）。
+    - `on_unit_died` 會解析這個字串，根據每個條目的機率 (`chance`) 和數量範圍 (`min-max`) 進行判定。
+    - 如果掉落成功，會創建一個包含 `{ item_id: ..., quantity: ... }` 的結構體，並添加到 `obj_battle_manager` 的 `current_battle_drops` 陣列變數中。這個變數在戰鬥開始時會被清空。
+    - 這個 `current_battle_drops` 陣列最終會作為 `item_drops` 包含在 `finalize_battle_results` 事件中發送出去。
 - **經驗與升級系統 (重構):**
   - **經驗獲取**: 敵人經驗值 (`exp_reward`) 由 `enemies.csv` 定義。
   - **經驗記錄**: `obj_battle_manager` 在單位死亡時 (`on_unit_died` 事件處理中) 記錄被擊敗敵人的經驗值。
@@ -142,6 +153,12 @@ if (instance_exists(obj_event_manager)) {
 - **運行時錯誤修復**:
     - 解決了因內建函數 `string_is_numeric` 行為異常導致的 CSV 加載崩潰問題（影響 `obj_skill_manager`, `obj_level_manager` 等）。通過創建並使用自定義輔助函數 `is_numeric_safe` 替代了有問題的內建函數。
     - 修復了 `obj_battle_manager` 中 `add_battle_log` 函數因錯誤地對 `ds_list` 使用 `array_*` 函數而導致的崩潰問題，已改用正確的 `ds_list_*` 函數。
+    - 修復了 `obj_reward_system` 錯誤判斷戰鬥結果的問題（通過修正事件處理邏輯和數據流）。
+    - 修復了 `obj_event_manager` 回調機制與函數變數不兼容導致的多個事件訂閱失敗問題（通過將回調改為方法）。
+    - 修復了因 `loot_table` 數據格式在 `obj_enemy_factory` 和 `obj_battle_manager` 之間不一致導致的掉落失敗問題（統一由 `obj_battle_manager` 解析原始字串）。
+    - 修復了因 `unit_died` 事件數據鍵名不一致導致的 `obj_unit_manager` 錯誤。
+    - 移除了 `obj_battle_unit_parent` 中重複的經驗記錄邏輯。
+    - 移除了 `obj_test_enemy` 中冗餘的 `loot_table` 處理邏輯。
 - **獎勵系統重構 (金幣與掉落物)**:
     - `obj_battle_manager` 現在會記錄並在 `finalize_battle_results` 事件中傳遞被擊敗敵人的模板 ID 列表 (`defeated_enemy_ids`)。
     - `obj_reward_system` 的 `calculate_victory_rewards` 函數已重構，現在會根據傳入的 `defeated_enemy_ids` 列表和 `enemies.csv` 中對應的 `gold_reward`（金幣）欄位計算總金幣獎勵。
@@ -187,7 +204,7 @@ if (instance_exists(obj_event_manager)) {
         *   基礎屬性與成長率 (level, hp_base, attack_base, ..., hp_growth, ...)
         *   視覺資源 (sprite_idle, sprite_move, sprite_attack)
         *   群組行為 (is_pack_leader, pack_min/max, pack_pattern, companions)
-        *   戰利品與獎勵 (loot_table, exp_reward, gold_reward)
+        *   戰利品與獎勵 (**`loot_table`**, `exp_reward`, `gold_reward`)
         *   戰鬥 AI (ai_type, attack_range, aggro_range, attack_interval)
         *   捕獲相關 (capturable, capture_rate_base)
         *   技能 (skills, skill_unlock_levels)
@@ -232,6 +249,7 @@ if (instance_exists(obj_event_manager)) {
         *   **更新**: **根據獲取的模板數據和自身的 `level`，計算並設置所有詳細屬性** (HP, 攻防速，基於基礎值和成長率；AI 模式；掉落物；視覺效果等)。
         *   **更新**: 在此階段，會調用 `add_skill` 將達到當前等級的技能（從模板獲取 ID，通過 `copy_skill` 獲取數據）添加到自身的技能列表中。
         *   處理模板獲取失敗的情況。
+        *   **更新**: **不再**處理模板中的 `loot_table` 數據或維護 `drop_items` 變數，相關邏輯已移除。
 
 7.  **編輯器放置器 (`obj_enemy_placer`)**: 
     *   用於在房間編輯器中方便地放置敵人。
@@ -654,16 +672,43 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
 
 - **進行中/待辦**:
     - **採集系統擴展**: (保留)
-    - 實現更多種類的物品和技能
-    - 完善具體的單位 AI
-    - 實現裝備系統的效果
-    - 實現捕捉系統的邏輯
-    - 設計更多種類的敵人、物品和技能
     - **快捷欄持久化**: 在實現存檔系統時，需要保存和加載 `global.player_hotbar`。
     - **互動提示位置 (UX)**: 根據測試反饋，考慮是否將互動提示移到遊戲世界中的互動目標附近。
     - 優化性能
     - 添加音效和音樂
     - 設計遊戲關卡和流程
+    - **敵人死亡演出與獎勵流程優化**:
+        - 在敵人死亡時 (`on_unit_died`) 計算並觸發物品掉落 (`obj_flying_item`) 演出。
+        - 將實際掉落物品列表記錄在 `obj_battle_manager` 中，並通過 `finalize_battle_results` 事件傳遞。
+        - 修改 `obj_reward_system` 以接收預先計算好的掉落列表，不再自行解析 `loot_table`。
+        - **戰鬥結果 UI**: 更新 `obj_battle_ui` 以顯示掉落的物品圖示和數量。
+        - **戰鬥結果分層**: 重構 `obj_battle_manager` 狀態機，加入等待掉落動畫和升級動畫完成的狀態，確保結果 UI 在演出結束後才顯示。
+    - **Battle Log 功能**:
+        - 在主 HUD 添加按鈕。
+        - 創建 `obj_battle_log_ui` 面板。
+        - 改進 `obj_battle_manager` 的 `battle_log` 數據結構，記錄詳細事件 (傷害、掉落、經驗等)。
+        - 實現日誌顯示、格式化和滾動。
+    - **深化戰鬥系統**: (保留詳細點)
+        - 設計更多狀態效果、增益/減益、屬性克制、範圍攻擊等技能。
+        - 根據敵人 `ai_type` 強化 AI 行為模式。
+        - 細化 ATB/回合制融合，考慮行動順序顯示與影響機制。
+    - **豐富物品與裝備**: (保留詳細點)
+        - 擴展消耗品種類 (MP恢復、狀態治療、復活等)。
+        - 增加防具、飾品等裝備部位。
+        - 為裝備設計特殊效果 (而不僅是屬性加成)。
+    - **完善捕捉與養成**: (保留詳細點)
+        - 細化捕捉機制 (受 HP、狀態影響)。
+        - 增加怪物養成深度 (技能學習/遺忘、進化、親密度/潛力)。
+    - **加入製作/合成系統**: (保留詳細點)
+        - 利用現有材料設計製作系統，產出裝備、消耗品、道具等。
+    - **擴展世界互動與內容**: (保留詳細點)
+        - 設計更多 NPC、任務、商店。
+        - 增加地圖探索元素 (寶箱、採集點、隱藏區域)。
+        - 考慮加入小遊戲/活動。
+    - **UI/UX 優化**: (保留詳細點)
+        - 提升戰鬥信息顯示清晰度 (狀態、Buff/Debuff、行動順序)。
+        - 優化物品/怪物管理界面 (排序、篩選、比較)。
+        - 考慮快捷欄在非戰鬥狀態下的使用。
 
 - **已知問題**:
     - (清空或更新已知問題列表)

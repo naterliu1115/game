@@ -274,7 +274,7 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
         if (reward_exp > 0) {
             draw_set_color(c_yellow);
             // *** 添加繪製前日誌 ***
-            show_debug_message("[Draw GUI] Drawing defeat exp: " + string(reward_exp));
+            //show_debug_message("[Draw GUI] Drawing defeat exp: " + string(reward_exp));
             draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "獲得經驗: " + string(reward_exp), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
         }
         // 顯示金幣損失 (使用 defeat_penalty_text)

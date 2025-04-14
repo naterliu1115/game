@@ -388,8 +388,9 @@ load_enemies_from_csv = function(file_name) {
         
         // 讀取掉落表
         var loot_str = csv_grid_get(grid, "loot_table", i);
-        enemy_data.loot_table = [];
+        // enemy_data.loot_table = []; // <-- REMOVE: No longer initializing as array
         
+        /* // <-- REMOVE/COMMENT OUT: No longer parsing here in factory
         if (loot_str != "") {
             var loot_array = string_split(loot_str, ";");
             for (var l = 0; l < array_length(loot_array); l++) {
@@ -414,6 +415,10 @@ load_enemies_from_csv = function(file_name) {
                 }
             }
         }
+        */
+        
+        // <-- ADD: Store the raw string directly
+        enemy_data.loot_table = loot_str; 
         
         // 讀取AI和戰鬥屬性
         enemy_data.ai_type = real(csv_grid_get(grid, "ai_type", i));

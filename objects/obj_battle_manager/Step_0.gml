@@ -16,7 +16,8 @@ switch (battle_state) {
             // 在此狀態的第一幀重置計數器和列表
             enemies_defeated_this_battle = 0;
             defeated_enemy_ids_this_battle = []; // <--- 重置ID列表
-            show_debug_message("[Battle Manager] 戰鬥開始，重置擊敗計數和ID列表。");
+            current_battle_drops = []; // <--- 重置掉落物列表
+            show_debug_message("[Battle Manager] 戰鬥開始，重置擊敗計數、ID列表和掉落物列表。"); // 更新調試信息
         }
         
         battle_timer++;
@@ -241,10 +242,11 @@ switch (battle_state) {
                 // 發送事件以觸發最終的獎勵計算
                 _event_broadcaster("finalize_battle_results", {
                     defeated_enemies: enemies_defeated_this_battle,
-                    defeated_enemy_ids: defeated_enemy_ids_this_battle, // <--- 添加ID列表
+                    defeated_enemy_ids: defeated_enemy_ids_this_battle, 
+                    item_drops: current_battle_drops, // <--- 傳遞實際掉落物列表
                     duration: _duration_to_broadcast
                 });
-                show_debug_message("[Battle Manager] Broadcasted finalize_battle_results with duration: " + string(_duration_to_broadcast) + " and defeated_enemies: " + string(enemies_defeated_this_battle) + " IDs: " + json_stringify(defeated_enemy_ids_this_battle)); // 更新調試信息
+                show_debug_message("[Battle Manager] Broadcasted finalize_battle_results with duration: " + string(_duration_to_broadcast) + ", defeated_enemies: " + string(enemies_defeated_this_battle) + ", IDs: " + json_stringify(defeated_enemy_ids_this_battle) + ", Drops: " + json_stringify(current_battle_drops)); // 更新調試信息
             }
         } else {
             show_debug_message("警告：單位管理器不存在，直接轉換到 RESULT 狀態");

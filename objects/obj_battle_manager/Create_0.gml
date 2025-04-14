@@ -75,6 +75,7 @@ surface_needs_update = ui_data.surface_needs_update;
 battle_log = ds_list_create();
 enemies_defeated_this_battle = 0; // <--- 新增：本場戰鬥擊敗敵人數
 defeated_enemy_ids_this_battle = []; // <--- 新增：記錄本場戰鬥擊敗敵人的模板ID列表
+current_battle_drops = []; // <--- 新增：記錄本場戰鬥的實際掉落物
 
 // 戰鬥邊界和動畫
 border_target_scale = 0;
@@ -230,8 +231,8 @@ subscribe_to_events = function() {
             
             show_debug_message("正在訂閱單位相關事件...");
             // 單位相關事件
-            subscribe_to_event("unit_died", other.id, "on_unit_died");
             subscribe_to_event("unit_stats_updated", other.id, "on_unit_stats_updated");
+            subscribe_to_event("unit_died", other.id, "on_unit_died");
             
             show_debug_message("正在訂閱戰鬥階段相關事件...");
             // 戰鬥階段相關事件
@@ -245,80 +246,191 @@ subscribe_to_events = function() {
     }
 };
 
-// 處理單位死亡事件
-on_unit_died = function(data) {
-    show_debug_message("===== 單位死亡事件處理 =====");
+// 處理單位死亡事件 (包含掉落物計算)
+function on_unit_died(data) {
+    show_debug_message(">>>>>>>>>> on_unit_died METHOD EXECUTING! <<<<<<<<<<"); // 增加執行標記
     
-    // 安全檢查
-    if (!is_struct(data) || !variable_struct_exists(data, "unit_id") || !variable_struct_exists(data, "team")) {
-        show_debug_message("錯誤：單位死亡事件數據無效");
+    // 檢查事件數據是否包含必要的 unit_instance
+    if (!variable_struct_exists(data, "unit_instance")) {
+        show_debug_message("[on_unit_died] 錯誤：事件數據缺少 'unit_instance'！");
         return;
     }
     
-    var _unit_id = data.unit_id;
-    var _team = data.team;
+    var _unit_instance = data.unit_instance;
     
-    show_debug_message("死亡單位ID: " + string(_unit_id));
-    show_debug_message("單位隊伍: " + string(_team));
+    // 再次確認實例存在 (雖然事件發出時應該存在)
+    if (!instance_exists(_unit_instance)) {
+        show_debug_message("[on_unit_died] 警告：傳入的 unit_instance (ID: " + string(_unit_instance) + ") 已不存在。");
+        return; 
+    }
     
-    // 更新戰鬥日誌
-    add_battle_log("單位 " + string(_unit_id) + " 已陣亡");
+    // 檢查單位是否屬於敵方 (team == 1)
+    if (!variable_instance_exists(_unit_instance, "team") || _unit_instance.team != 1) {
+        show_debug_message("[on_unit_died] 死亡單位非敵方 (Team: " + (variable_instance_exists(_unit_instance, "team") ? string(_unit_instance.team) : "未知") + ")，忽略掉落計算。");
+        return; // 非敵方單位死亡，不處理掉落
+    }
     
-    // 增加擊敗計數器並記錄ID
-    if (_team == 1) { // 假設 1 代表敵方隊伍
-        enemies_defeated_this_battle++;
-        show_debug_message("[Battle Manager] 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+    // --- 記錄擊敗信息 (移到前面確保執行) ---
+    enemies_defeated_this_battle += 1;
+            show_debug_message("[Battle Manager] 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+    
+    if (variable_instance_exists(_unit_instance, "template_id")) {
+        array_push(defeated_enemy_ids_this_battle, _unit_instance.template_id);
+        show_debug_message("[Battle Manager] 記錄被擊敗敵人的 Template ID: " + string(_unit_instance.template_id));
+    } else {
+        show_debug_message("[Battle Manager] 警告：死亡單位缺少 template_id，無法記錄。");
+    }
+    
+    // --- 經驗值記錄 (如果需要，也移到前面) ---
+     // 獲取經驗值 (假設 template 中有 exp_reward)
+     // 這裡需要先獲取模板
+     var _template_id = variable_instance_exists(_unit_instance, "template_id") ? _unit_instance.template_id : undefined;
+     if (!is_undefined(_template_id) && instance_exists(obj_enemy_factory)) {
+         var _template = obj_enemy_factory.get_enemy_template(_template_id);
+         if (is_struct(_template) && variable_struct_exists(_template, "exp_reward") && is_real(_template.exp_reward)) {
+             record_defeated_enemy_exp(_template.exp_reward); // 調用記錄經驗的函數
+         } else {
+              show_debug_message("[on_unit_died] 無法從模板 ID " + string(_template_id) + " 獲取有效的 exp_reward 來記錄。");
+         }
+     } else {
+         show_debug_message("[on_unit_died] 無法獲取 template_id 或 obj_enemy_factory 不存在，無法記錄經驗。");
+     }
+     // --- 經驗值記錄結束 ---
+
+
+    // --- 掉落物計算邏輯開始 ---
+    show_debug_message("[Unit Died Drop Calc] 開始處理掉落物，單位模板 ID: " + string(_template_id));
+    
+    // 檢查 template_id 是否有效，以及敵人工廠是否存在
+    if (is_undefined(_template_id)) {
+        show_debug_message("[Unit Died Drop Calc] 錯誤：單位缺少 template_id，無法處理掉落。");
+        return;
+    }
+    if (!instance_exists(obj_enemy_factory)) {
+        show_debug_message("[Unit Died Drop Calc] 錯誤：obj_enemy_factory 不存在，無法獲取模板。");
+        return;
+    }
+    
+    // 從工廠獲取敵人模板
+    var template = obj_enemy_factory.get_enemy_template(_template_id);
+    
+    // === 新增除錯：檢查從工廠獲取的模板中的 loot_table ===
+    if (is_struct(template)) {
+        var _loot_table_value = variable_struct_exists(template, "loot_table") ? template.loot_table : "<未定義>";
+        show_debug_message("[Check Template Data] Template ID " + string(_template_id) + ", loot_table value: '" + string(_loot_table_value) + "'");
+    } else {
+        show_debug_message("[Check Template Data] Template ID " + string(_template_id) + ", 無法獲取模板結構體。");
+    }
+    // === 除錯結束 ===
+
+    // 檢查模板是否有效且包含 loot_table
+    if (!is_struct(template)) {
+        show_debug_message("[Unit Died Drop Calc] 錯誤：無法獲取 ID 為 " + string(_template_id) + " 的敵人模板。");
+        return;
+    }
+    
+    if (!variable_struct_exists(template, "loot_table") || !is_string(template.loot_table) || template.loot_table == "") {
+        show_debug_message("[Unit Died Drop Calc] 模板 ID " + string(_template_id) + " 沒有有效的 loot_table，不掉落物品。");
+        return; // 沒有 loot_table 或為空，直接返回
+    }
+    
+    var loot_table_string = template.loot_table;
+    show_debug_message("[Unit Died Drop Calc] Loot Table Found: " + loot_table_string);
+    
+    // 解析 loot_table (假設格式為 itemID:chance:minQty-maxQty;...)    
+    var drop_entries = string_split(loot_table_string, ";");
+    var _item_manager_exists = instance_exists(obj_item_manager); // 檢查物品管理器是否存在 (可選)
+    
+    for (var j = 0; j < array_length(drop_entries); j++) {
+        var entry = drop_entries[j];
+        if (entry == "") continue; // 跳過空條目
         
-        // 檢查實例是否存在且是否有 template_id
-        if (instance_exists(_unit_id) && variable_instance_exists(_unit_id, "template_id")) {
-            var _template_id = _unit_id.template_id;
-            array_push(defeated_enemy_ids_this_battle, _template_id);
-            show_debug_message("[Battle Manager] 記錄被擊敗敵人的 Template ID: " + string(_template_id));
+        show_debug_message("[Unit Died Drop Calc]   - Parsing entry: " + entry);
+        
+        var details = string_split(entry, ":");
+        
+        if (array_length(details) == 3) {
+            var item_id_str = details[0];
+            var chance_str = details[1];
+            var range_str = details[2];
+            var item_id, chance, min_qty, max_qty;
+
+            // 安全地解析 Item ID
+            if (is_numeric_safe(item_id_str)) {
+                item_id = real(item_id_str);
+            } else {
+                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 item_id: " + item_id_str);
+                continue;
+            }
+
+            /* // --- REMOVE/COMMENT OUT Optional Item ID Validation ---
+            // (可選) 驗證 Item ID 是否存在於物品管理器
+            if (_item_manager_exists && is_undefined(obj_item_manager.get_item(item_id))) { // <-- 使用 get_item 修正後的版本 (但也註解掉)
+                 show_debug_message("    - 警告: Loot table entry '" + entry + "' - 物品 ID " + string(item_id) + " 在 obj_item_manager 中不存在");
+                 // 根據需要決定是否 continue
+                 // continue;
+            }
+            */ // --- End REMOVE/COMMENT OUT ---
+            
+            // 安全地解析 Chance
+            if (is_numeric_safe(chance_str)) {
+                chance = clamp(real(chance_str), 0, 1);
+            } else {
+                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 chance: " + chance_str);
+                continue;
+            }
+
+            // 安全地解析 Min-Max Range
+            min_qty = 1;
+            max_qty = 1;
+            var range_parts = string_split(range_str, "-");
+            if (array_length(range_parts) == 1) {
+                if (is_numeric_safe(range_parts[0])) {
+                    min_qty = max(1, floor(real(range_parts[0]))); // 確保至少為1且為整數
+                    max_qty = min_qty;
+                } else {
+                    show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 quantity: " + range_parts[0]);
+                    continue;
+                }
+            } else if (array_length(range_parts) == 2) {
+                if (is_numeric_safe(range_parts[0]) && is_numeric_safe(range_parts[1])) {
+                    min_qty = max(1, floor(real(range_parts[0])));
+                    max_qty = max(min_qty, floor(real(range_parts[1]))); // 確保 max >= min >= 1
+                } else {
+                    show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range: " + range_str);
+                    continue;
+                }
+            } else {
+                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range 格式: " + range_str);
+                continue;
+            }
+            
+            show_debug_message("[Unit Died Drop Calc]     Parsed: ItemID=" + string(item_id) + ", Chance=" + string(chance) + ", MinQty=" + string(min_qty) + ", MaxQty=" + string(max_qty));
+
+            // 掉落判定
+            var roll = random(1);
+            if (roll < chance) {
+                var quantity_dropped = irandom_range(min_qty, max_qty);
+                show_debug_message("[Unit Died Drop Calc]       * Drop Success! Rolled " + string(roll) + " vs Chance " + string(chance) + ", Quantity: " + string(quantity_dropped));
+                
+                // 添加到當前戰鬥掉落列表
+                var drop_data = { item_id: item_id, quantity: quantity_dropped };
+                array_push(current_battle_drops, drop_data);
+                show_debug_message("[Unit Died Drop Calc] Added drop to list: " + json_stringify(drop_data));
+            } else {
+                show_debug_message("[Unit Died Drop Calc]       * Drop Failed. Rolled " + string(roll) + " vs Chance " + string(chance));
+            }
+            
         } else {
-            show_debug_message("警告：死亡的敵方單位實例不存在或缺少 template_id，無法記錄其 ID。");
+            show_debug_message("    - 警告: Loot table entry '" + entry + "' 格式錯誤 (需要3個部分，用':'分割)");
         }
     }
     
-    // 只在戰鬥進行中時檢查勝負
-    if (battle_state == BATTLE_STATE.ACTIVE) {
-        // 檢查單位數量
-        if (instance_exists(obj_unit_manager)) {
-            var enemy_count = ds_list_size(obj_unit_manager.enemy_units);
-            var player_count = ds_list_size(obj_unit_manager.player_units);
-            
-            show_debug_message("單位死亡後檢查 - 敵人數量: " + string(enemy_count) + ", 玩家單位數量: " + string(player_count));
-            
-            // 更新單位統計
-            _event_broadcaster("unit_stats_updated", {
-                enemy_units: enemy_count,
-                player_units: player_count
-            });
-            
-            // 檢查是否所有敵人都被擊敗
-            if (enemy_count <= 0) {
-                show_debug_message("檢測到所有敵人被擊敗");
-                _event_broadcaster("all_enemies_defeated", {
-                    reason: "unit_died_check",
-                    source: "unit_died_event"
-                });
-                return; // 提前返回，避免重複檢查
-            }
-            
-            // 檢查是否所有玩家單位都被擊敗
-            if (player_count <= 0) {
-                show_debug_message("檢測到所有玩家單位被擊敗");
-                _event_broadcaster("all_player_units_defeated", {
-                    reason: "unit_died_check",
-                    source: "unit_died_event"
-                });
-                return; // 提前返回，避免重複檢查
-            }
-        }
-    }
-};
+    show_debug_message("[Unit Died Drop Calc] 處理完畢。 Current battle drops: " + json_stringify(current_battle_drops));
+}
 
 // 處理單位統計更新事件
-on_unit_stats_updated = function(data) {
+function on_unit_stats_updated(data) {
     // 加入詳細調試訊息，查看收到的原始數據
     show_debug_message("[on_unit_stats_updated] Received data: " + json_stringify(data)); 
     
@@ -346,10 +458,10 @@ on_unit_stats_updated = function(data) {
         show_debug_message("統計更新原因 (額外欄位): " + string(_reason));
         // 可以在這裡根據 reason 做額外處理
     }
-};
+}
 
 // 處理戰鬥結束事件
-on_battle_ending = function(data) {
+function on_battle_ending(data) {
     show_debug_message("===== 收到戰鬥結束事件 =====");
     // 加入檢查並設置預設值
     var _reason = "unknown";
@@ -375,7 +487,7 @@ on_battle_ending = function(data) {
     if (instance_exists(obj_battle_ui)) {
         obj_battle_ui.show_info(_victory ? "戰鬥勝利!" : "戰鬥失敗!");
     }
-};
+}
 
 // 處理戰鬥結果確認事件
 on_battle_result_confirmed = function(data) {

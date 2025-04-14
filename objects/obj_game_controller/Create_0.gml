@@ -193,7 +193,7 @@ if (array_length(global.player_monsters) == 0) {
     } else {
         // 定義要添加的初始怪物 (模板ID 和 等級)
         var initial_monster_setup = [
-            { template_id: 4001, level: 1 } // 測試怪物 (ID 4001, Lv 1)
+            { template_id: 4001, level: 5 } // 測試怪物 (ID 4001, Lv 1)
             // 如果需要，可以在這裡添加更多初始怪物
             // { template_id: 1001, level: 5 }, // 假設的火焰龍
         ];

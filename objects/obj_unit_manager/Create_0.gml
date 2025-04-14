@@ -82,9 +82,9 @@ initialize = function() {
 
 // 添加battle_area_updated事件處理函數
 on_battle_area_updated = function(data) {
-    show_debug_message("收到戰鬥區域更新事件：");
-    show_debug_message("- 中心點: (" + string(data.center_x) + ", " + string(data.center_y) + ")");
-    show_debug_message("- 半徑: " + string(data.radius));
+    //show_debug_message("收到戰鬥區域更新事件：");
+    //show_debug_message("- 中心點: (" + string(data.center_x) + ", " + string(data.center_y) + ")");
+    //show_debug_message("- 半徑: " + string(data.radius));
     
     // 更新本地戰鬥區域數據
     battle_center_x = data.center_x;
@@ -331,7 +331,7 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
 
 // 處理單位死亡
 handle_unit_death = function(data) {
-    var unit_id = data.unit_id;
+    var unit_id = data.unit_instance;
     var unit_team = data.team;
     
     // 判斷單位類型並從相應列表中移除

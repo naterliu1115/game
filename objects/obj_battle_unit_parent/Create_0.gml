@@ -1083,7 +1083,7 @@ die = function() {
         
         // 發送死亡事件
         broadcast_event("unit_died", {
-            unit_id: id,
+            unit_instance: id,
             team: team,
             position: {x: x, y: y},
             unit_type: object_index
@@ -1091,18 +1091,6 @@ die = function() {
         
         // 創建死亡特效
         instance_create_layer(x, y, "Instances", obj_death_effect);
-        
-        // --- 新增：記錄擊敗經驗值 --- 
-        // 只有敵方單位 (team == 1) 死亡時才記錄經驗值給 Battle Manager
-        if (team == 1 && instance_exists(obj_battle_manager)) {
-            // 檢查自身是否存在 exp_reward 變數
-            if (variable_instance_exists(id, "exp_reward")) {
-                obj_battle_manager.record_defeated_enemy_exp(exp_reward);
-            } else {
-                show_debug_message("警告：死亡的敵人 " + object_get_name(object_index) + " 沒有 exp_reward 變數。");
-            }
-        }
-        // --- 經驗記錄結束 --- 
         
         // 設置自我銷毀延遲 (使用新的計時器系統)
         set_timer(TIMER_TYPE.DEATH, 15);

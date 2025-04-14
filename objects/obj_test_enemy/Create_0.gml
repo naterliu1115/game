@@ -130,12 +130,6 @@ initialize = function() {
         }
     }
     
-    // 設置掉落物
-    if (variable_struct_exists(_template, "loot_table")) {
-        drop_items = array_create(array_length(_template.loot_table));
-        array_copy(drop_items, 0, _template.loot_table, 0, array_length(_template.loot_table));
-    }
-    
     // 設置獎勵
     exp_reward = _template.exp_reward;
     gold_reward = _template.gold_reward;

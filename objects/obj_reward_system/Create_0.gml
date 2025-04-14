@@ -78,13 +78,14 @@ on_battle_end = function(data) {
 
 // 新增：處理最終計算獎勵事件
 on_finalize_battle_results = function(event_data) {
-    show_debug_message("===== 收到 finalize_battle_results 事件 ======"); // 增加調試信息
-    show_debug_message("Received data: " + json_stringify(event_data)); // 增加調試信息
+    show_debug_message("===== 收到 finalize_battle_results 事件 ======");
+    show_debug_message("Received data: " + json_stringify(event_data));
     
     // --- 從事件數據中獲取必要數據 ---
     var _defeated_count = variable_struct_get(event_data, "defeated_enemies");
     var _battle_duration = variable_struct_get(event_data, "duration");
-    var _defeated_ids = variable_struct_get(event_data, "defeated_enemy_ids"); // <-- 獲取 ID 列表
+    var _defeated_ids = variable_struct_get(event_data, "defeated_enemy_ids"); 
+    var _actual_drops = variable_struct_get(event_data, "item_drops"); // <-- 獲取實際掉落物列表
 
     // --- 檢查並更新 battle_result 結構體 --- 
     if (!is_undefined(_defeated_count)) {
@@ -101,22 +102,31 @@ on_finalize_battle_results = function(event_data) {
         show_debug_message("警告 (finalize_battle_results): 未收到 duration，battle_result.duration 設為 0。");
     }
     
-    // 檢查 ID 列表是否有效
+    // 檢查 ID 列表是否有效 (用於經驗和金幣計算)
     if (!is_array(_defeated_ids)) {
-        show_debug_message("警告 (finalize_battle_results): 未收到有效的 defeated_enemy_ids 列表。將使用空列表計算獎勵。");
-        _defeated_ids = []; // 使用空列表避免錯誤
+        show_debug_message("警告 (finalize_battle_results): 未收到有效的 defeated_enemy_ids 列表。將使用空列表計算經驗/金幣。");
+        _defeated_ids = []; 
     }
-
-    // 根據戰鬥結果（儲存在 reward_system 內部）計算獎勵或懲罰
-    if (battle_result.victory) {
-        calculate_victory_rewards(_defeated_ids); // <-- 傳遞 ID 列表
+    
+    // 檢查實際掉落物列表是否有效
+    if (is_array(_actual_drops)) {
+        battle_result.item_drops = _actual_drops; // <-- 直接使用傳入的列表
+        show_debug_message("  [Reward System] Received item drops: " + json_stringify(_actual_drops));
     } else {
-        calculate_defeat_penalties(); // 失敗邏輯保持不變
+        show_debug_message("警告 (finalize_battle_results): 未收到有效的 item_drops 列表。掉落物將為空。");
+        battle_result.item_drops = []; // 使用空列表
     }
 
-    // 發送獎勵已計算事件 (現在 battle_result 應該是正確的)
+    // 根據戰鬥結果計算獎勵或懲罰
+    if (battle_result.victory) {
+        calculate_victory_rewards(_defeated_ids); // <-- 仍然傳遞 ID 列表用於計算經驗和金幣
+    } else {
+        calculate_defeat_penalties();
+    }
+
+    // 發送獎勵已計算事件 (現在 battle_result 包含正確的 item_drops)
     _event_broadcaster("rewards_calculated", battle_result);
-    show_debug_message("[Reward System] Broadcasted rewards_calculated event with data: " + json_stringify(battle_result)); // 保留關鍵信息
+    show_debug_message("[Reward System] Broadcasted rewards_calculated event with data: " + json_stringify(battle_result)); 
 };
 
 // 處理所有敵人被擊敗事件
@@ -132,151 +142,58 @@ on_all_player_units_defeated = function(data) {
 };
 
 // 計算勝利獎勵 (重構)
-calculate_victory_rewards = function(defeated_enemy_ids) { // <-- 接收 ID 列表
-    show_debug_message("[Reward Calc] 開始計算勝利獎勵，基於 ID 列表: " + json_stringify(defeated_enemy_ids));
+calculate_victory_rewards = function(defeated_enemy_ids) { 
+    show_debug_message("[Reward Calc] 開始計算勝利獎勵 (經驗/金幣)，基於 ID 列表: " + json_stringify(defeated_enemy_ids)); // 更新說明
 
-    // 初始化獎勵
+    // 初始化經驗/金幣 (物品列表由 on_finalize_battle_results 設置)
     battle_result.exp_gained = 0;
     battle_result.gold_gained = 0;
-    battle_result.item_drops = []; // 重置物品掉落列表
+    // battle_result.item_drops = []; // <-- 不再需要在此重置
 
-    // 檢查敵人工廠是否存在
-    if (!instance_exists(obj_enemy_factory)) {
+    // ... (檢查敵人工廠是否存在) ...
+     if (!instance_exists(obj_enemy_factory)) {
         show_debug_message("錯誤：無法計算獎勵，obj_enemy_factory 不存在！");
         return;
     }
-    
-    // 檢查物品管理器是否存在 (用於驗證物品ID，可選)
-    var _item_manager_exists = instance_exists(obj_item_manager);
 
-    // 遍歷被擊敗的敵人ID
+    // 遍歷被擊敗的敵人ID (僅用於計算經驗和金幣)
     for (var i = 0; i < array_length(defeated_enemy_ids); i++) {
         var enemy_id = defeated_enemy_ids[i];
-        // show_debug_message("[Reward Calc] Processing enemy ID: " + string(enemy_id)); // <-- 可以註解掉
-
-        // 從工廠獲取敵人模板
         var template = obj_enemy_factory.get_enemy_template(enemy_id);
-        // === 新增除錯：打印在 Reward System 中實際收到的模板 ===
-        // show_debug_message("  [Reward Calc IN FUNCTION] Template received for ID " + string(enemy_id) + ": " + json_stringify(template)); // <-- 註解掉
-        // === 除錯結束 ===
 
         if (is_struct(template)) {
-            // show_debug_message("[Reward Calc] Fetched template for ID: " + string(enemy_id)); // <-- 可以註解掉
-
-            // --- 恢復簡潔檢查，使用 is_real --- 
-            // 累加經驗值 (確保是數字)
+            // --- 累加經驗值 --- 
             if (variable_struct_exists(template, "exp_reward") && is_real(template.exp_reward)) {
-                battle_result.exp_gained += template.exp_reward; // 直接使用，因為它已經是數字
-                // show_debug_message("  - EXP Reward Added: " + string(template.exp_reward)); // <-- 可以註解掉
+                battle_result.exp_gained += template.exp_reward;
             } else {
-                 // show_debug_message("  - 警告: 模板 exp_reward 無效、不存在或不是數字"); // <-- 保留警告
+                 // show_debug_message("  - 警告: 模板 exp_reward 無效、不存在或不是數字"); 
             }
 
-            // 累加金幣 (確保是數字)
+            // --- 累加金幣 --- 
             if (variable_struct_exists(template, "gold_reward") && is_real(template.gold_reward)) {
-                battle_result.gold_gained += template.gold_reward; // 直接使用
-                // show_debug_message("  - Gold Reward Added: " + string(template.gold_reward)); // <-- 可以註解掉
+                battle_result.gold_gained += template.gold_reward;
             } else {
-                 // show_debug_message("  - 警告: 模板 gold_reward 無效、不存在或不是數字"); // <-- 保留警告
+                 // show_debug_message("  - 警告: 模板 gold_reward 無效、不存在或不是數字");
             }
-            // --- 檢查結束 ---
-
-            // 處理物品掉落 (loot_table)
+            
+            // --- 移除物品掉落計算邏輯 --- 
+            /* // 這整段解析 loot_table 的代碼現在不需要了
             if (variable_struct_exists(template, "loot_table") && is_string(template.loot_table) && template.loot_table != "") {
                 var loot_table_string = template.loot_table;
-                // show_debug_message("  - Loot Table: " + loot_table_string); // <-- 可以註解掉
-                
-                // 按分號分割掉落項
                 var drop_entries = string_split(loot_table_string, ";"); 
-                
+                var _item_manager_exists = instance_exists(obj_item_manager);
                 for (var j = 0; j < array_length(drop_entries); j++) {
-                    var entry = drop_entries[j];
-                    if (entry == "") continue; // 跳過空條目
-                    
-                    // 按冒號分割掉落項的細節
-                    var details = string_split(entry, ":");
-                    
-                    if (array_length(details) == 3) {
-                        var item_id_str = details[0];
-                        var chance_str = details[1];
-                        var range_str = details[2];
-                        
-                        // 解析 Item ID
-                        if (!is_numeric_safe(item_id_str)) {
-                            show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 item_id: " + item_id_str);
-                            continue;
-                        }
-                        var item_id = real(item_id_str);
-                        
-                        // (可選) 驗證 Item ID
-                        if (_item_manager_exists && !obj_item_manager.item_exists(item_id)) {
-                             show_debug_message("    - 警告: Loot table entry '" + entry + "' - 物品 ID " + string(item_id) + " 在 obj_item_manager 中不存在");
-                             // 根據遊戲設計決定是否 continue 或允許掉落不存在的物品
-                             // continue; 
-                        }
-
-                        // 解析 Chance (機率)
-                        if (!is_numeric_safe(chance_str)) {
-                            show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 chance: " + chance_str);
-                            continue;
-                        }
-                        var chance = clamp(real(chance_str), 0, 1); // 確保機率在 0 到 1 之間
-
-                        // 解析 Min-Max Range (數量範圍)
-                        var min_qty = 1;
-                        var max_qty = 1;
-                        var range_parts = string_split(range_str, "-");
-                        
-                        if (array_length(range_parts) == 1) {
-                            if (is_numeric_safe(range_parts[0])) {
-                                min_qty = max(1, real(range_parts[0])); // 確保至少為 1
-                                max_qty = min_qty;
-                            } else {
-                                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 quantity: " + range_parts[0]);
-                                continue;
-                            }
-                        } else if (array_length(range_parts) == 2) {
-                            if (is_numeric_safe(range_parts[0]) && is_numeric_safe(range_parts[1])) {
-                                min_qty = max(1, real(range_parts[0]));
-                                max_qty = max(min_qty, real(range_parts[1])); // 確保 max >= min >= 1
-                            } else {
-                                show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range: " + range_str);
-                                continue;
-                            }
-                        } else {
-                            show_debug_message("    - 警告: Loot table entry '" + entry + "' - 無效的 range 格式: " + range_str);
-                            continue;
-                        }
-
-                        // show_debug_message("    - Parsed Entry: ItemID=" + string(item_id) + ", Chance=" + string(chance) + ", MinQty=" + string(min_qty) + ", MaxQty=" + string(max_qty)); // <-- 可以註解掉
-
-                        // 進行掉落判定
-                        if (random(1) < chance) {
-                            var quantity_dropped = irandom_range(min_qty, max_qty);
-                            // show_debug_message("      * Drop Success! Quantity: " + string(quantity_dropped)); // <-- 可以註解掉
-                            
-                            array_push(battle_result.item_drops, { item_id: item_id, quantity: quantity_dropped });
-
-                        } else {
-                             // show_debug_message("      * Drop Failed (Chance: " + string(chance) + ")"); // <-- 可以註解掉
-                        }
-                        
-                    } else {
-                        show_debug_message("    - 警告: Loot table entry '" + entry + "' 格式錯誤 (需要3個部分，用':'分割)"); // <-- 保留警告
-                    }
+                    // ... (詳細解析和判定邏輯) ...
                 }
-            } else {
-                 // show_debug_message("  - 該敵人沒有 loot_table 或為空"); // 可以移除
             }
-
+            */
         } else {
-            show_debug_message("警告: 未找到 ID 為 " + string(enemy_id) + " 的敵人模板，無法計算其獎勵"); // <-- 保留警告
+            show_debug_message("警告: 未找到 ID 為 " + string(enemy_id) + " 的敵人模板，無法計算其經驗/金幣");
         }
-        
-        // show_debug_message("[Reward Calc] Total after enemy " + string(enemy_id) + ": EXP=" + string(battle_result.exp_gained) + ", Gold=" + string(battle_result.gold_gained) + ", Items=" + json_stringify(battle_result.item_drops)); // <-- 可以註解掉
     }
     
-    show_debug_message("獎勵計算完成: 經驗=" + string(battle_result.exp_gained) + ", 金幣=" + string(battle_result.gold_gained) + ", 物品=" + string(array_length(battle_result.item_drops)) + " 種"); // <-- 保留最終結果
+    // 物品數量現在由 on_finalize_battle_results 直接賦值，這裡只需顯示最終結果
+    show_debug_message("獎勵計算完成 (經驗/金幣): 經驗=" + string(battle_result.exp_gained) + ", 金幣=" + string(battle_result.gold_gained) + ", 物品=" + string(array_length(battle_result.item_drops)) + " 種 (已預先計算)"); 
 };
 
 // 計算失敗懲罰
