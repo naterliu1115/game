@@ -251,7 +251,7 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
                 draw_set_valign(fa_top);
                 draw_set_font(fnt_dialogue);
                 draw_set_color(c_white);
-                draw_text(items_start_x, items_start_y - 20, "獲得物品:");
+                draw_text(items_start_x, items_start_y - 30, "獲得物品:");
                 
                 for (var i = 0; i < list_size; i++) {
                     var item_struct = reward_items_list[| i];

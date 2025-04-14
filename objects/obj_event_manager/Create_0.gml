@@ -69,7 +69,7 @@ function subscribe_to_event(event_name, instance_id, callback) {
     });
     
     if (event_debug_mode) {
-        // show_debug_message("事件系統: 實例 " + string(instance_id) + " 訂閱了事件 " + event_name + " (回調類型: " + callback_type + ")"); // <-- 註解掉
+        show_debug_message("事件系統: 實例 " + string(instance_id) + " 訂閱了事件 " + event_name + " (回調類型: " + callback_type + ")");
     }
 }
 
@@ -85,7 +85,7 @@ function unsubscribe_from_event(event_name, instance_id) {
             ds_list_delete(subscriber_list, i);
             
             if (event_debug_mode) {
-                // show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消訂閱事件 " + event_name); // <-- 註解掉
+                show_debug_message("事件系統: 實例 " + string(instance_id) + " 取消訂閱事件 " + event_name);
             }
         }
     }
