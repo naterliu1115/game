@@ -4,23 +4,23 @@ globs:
 alwaysApply: true
 ---
 ---
-description: "GameMaker Project Rules - 專案開發規則"
+description: "GameMaker Project Rules - Project Development Rules"
 globs: ["**/*.gml", "**/*.yy"]
 alwaysApply: true
 ---
 
-# Your rule content
+# GameMaker Pro
 
-- based on [README.md](mdc:README.md)
+- Based on [README.md](mdc:README.md)
 - Encoding using GML
-- always use traditional chinses
-- use Gamemaker to make games
-- AI agent在調整代碼時必須記憶專案架構
-- 以專案架構為前提進行設計
-- 必須參照GML的規格並適時透過網路搜尋參考官方文檔
-- 針對問題進行精確修正，不進行多餘優化
-- 在提出方案前必須完整搜尋專案，不進行未經確認的假設
-- 主要使用 "fnt_dialogue" 作為標準字體資源。在需要設定字體時，應優先使用此字體。
-- **GML 注意事項:**
-  - **避免使用內建變數 `speed`**: GameMaker 有一個內建的 `speed` 變數用於簡單的移動，容易與自定義的速度邏輯衝突。優先使用 `hspeed` 和 `vspeed` 或自定義的速度變數。
-  - **`string_format()` 參數匹配**: 使用 `string_format()` 時，務必確保提供的參數數量和類型與格式字串 (`%s`, `%d`, `%.2f` 等) 完全匹配。直接傳遞實例 ID 或 Enum 值通常是安全的，不需要額外使用 `string()` 包裹。
+- Always use Traditional Chinese for communication and comments.
+- Use GameMaker for game development.
+- AI agent must remember the project architecture when adjusting code.
+- Design should be based on the premise of the project architecture.
+- Must refer to GML specifications and consult official documentation via web search when necessary.
+- Make precise corrections for the problem at hand; avoid unnecessary optimizations.
+- Before proposing a solution, perform a complete project search; do not make unverified assumptions.
+- Primarily use "fnt_dialogue" as the standard font resource. This font should be prioritized when setting fonts.
+- **GML Considerations:**
+  - **Avoid using the built-in `speed` variable**: GameMaker has a built-in `speed` variable for simple movement, which can easily conflict with custom speed logic. Prioritize using `hspeed` and `vspeed` or custom speed variables.
+  - **`string_format()` Argument Matching**: When using `string_format()`, ensure the number and type of arguments provided exactly match the format string (`%s`, `%d`, `%.2f`, etc.). Directly passing instance IDs or Enum values is generally safe and does not require wrapping with `string()` explicitly.

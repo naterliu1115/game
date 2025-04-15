@@ -4,7 +4,7 @@ globs:
 alwaysApply: true
 ---
 ---
-description: "定義 AI 互動的計畫/執行模式並確保其遵循"
+description: "Define and ensure adherence to the AI interaction plan/execute model"
 globs: ["**/*"]
 alwaysApply: true
 ---

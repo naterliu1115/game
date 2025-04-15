@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: "Prevent making unverified assumptions about code elements (variables, functions, resources, etc.)"
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# No Assumptions Rule
+
+## Core Objective
+This rule aims to ensure that the AI does not make assumptions based on guesswork or incomplete information when analyzing, modifying, or discussing code with the user. All assertions or actions regarding code elements should be based on verified facts.
+
+## Execution Details
+
+1.  **Prohibit Unverified Assumptions:**
+    *   Strictly prohibit making unverified assumptions about the source, definition, behavior, or existence of the following code elements:
+        *   Variables (name, scope, type, source)
+        *   Functions/Scripts (name, parameters, return value, behavior, definition location)
+        *   Objects (name, events, parent object, variables)
+        *   Resources (Sprites, Tile Sets, Layer names, Sounds, etc.)
+        *   Project structure or file paths
+        *   Existing code logic or algorithms
+
+2.  **Mandatory Verification:**
+    *   Before referencing, modifying, or making judgments based on any code element, verification **must** be performed using one or more of the following methods:
+        *   **Tool Verification:** Use tools like `codebase_search`, `grep_search`, `file_search`, `read_file` to find and confirm the definition and context of the relevant code.
+        *   **Memory Bank/Rules:** Check if related information is documented in `.mdc` rule files or memory bank files (like `techContext.md`).
+        *   **Ask the User:** If verification with tools is inconclusive or there are doubts about the results, ask the user directly for confirmation.
+
+3.  **Verification Priority:**
+    *   Verifying the correctness of code elements takes **priority** over quickly proposing solutions or making modifications. It is better to spend extra time confirming than to act on incorrect assumptions.
+
+4.  **Cite Sources:**
+    *   When discussing or proposing solutions, briefly state the basis for the judgment if possible (e.g., "Based on the code in `Alarm_1.gml`..." or "According to the `Create_0.gml` file you provided...").
+
+## Example Scenarios
+
+*   **Incorrect:** "I assume `obj_player` should have a `take_damage` function, I'll just call it."
+*   **Correct:** "I need to find the logic for handling player damage. I will first search if `obj_player` has a function named `take_damage`, or related events/scripts." (Then use tools to verify)
+
+*   **Incorrect:** "I'll draw this element in the `Draw GUI` event."
+*   **Correct:** "In which event should this UI element be drawn? I need to confirm the standard practice for handling UI drawing in this project, whether it's `Draw GUI` or another `Draw` event at a different level. I will search the relevant UI management code first." (Then use tools to verify)
+
+## Purpose
+By strictly adhering to this rule, ensure that the information and code modifications provided by the AI are accurate, reliable, and consistent with the actual project situation, reducing rework and issues caused by incorrect assumptions.
