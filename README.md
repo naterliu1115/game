@@ -476,7 +476,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
 **主要組件:**
 - `obj_stone`: 可挖掘的礦石物件，玩家可以使用礦鎬挖掘獲取礦石資源
 - `obj_flying_item`: 顯示獲得物品的飛行動畫效果
-- `scr_coordinate_utils`: 座標轉換工具函數，用於世界座標和 GUI 座標的轉換
+- `scr_coordinate_utils`: 座標轉換工具函數，用於世界座標和 GUI 座標的轉換 (注意：目前飛行道具創建和飛行目標可能未使用此工具，存在潛在座標問題)
 
 **礦石物件 (`obj_stone`) 特性:**
 - **耐久度系統**: 每個礦石有 `durability` 屬性，每次挖掘進度完成會減少1點，歸零時礦石被破壞並產生獎勵
@@ -494,20 +494,30 @@ UI 系統管理遊戲中的各種用戶界面元素。
   - 礦石被破壞時，將指定的物品 (`ore_item_id`) 添加到玩家背包
   - 創建 `obj_flying_item` 顯示獲得物品的視覺效果
 
-**飛行物品 (`obj_flying_item`) 特性:**
-- **狀態機設計**: 具有四個狀態：向上飛行 (`FLYING_UP`)、停頓 (`PAUSING`)、飛向玩家 (`FLYING_TO_PLAYER`)、淡出 (`FADING_OUT`)
+**飛行物品 (`obj_flying_item`) 特性 (更新):**
+- **狀態機設計**: 具有多個狀態，包括：
+    - `FLYING_UP`: 向上飛行 (用於採集等)
+    - `PAUSING`: 短暫停頓
+    - `FLYING_TO_PLAYER`: 飛向玩家
+    - `FADING_OUT`: 淡出消失
+    - `SCATTERING`: **(已重構)** 拋灑/彈跳 (用於怪物掉落等)
+        - **Z 軸物理模擬**: 使用 `z` (高度) 和 `zspeed` (垂直速度) 變數，以及 `gravity_z` 來模擬拋物線運動。
+        - **落地檢測**: 當 `z <= 0` 且 `zspeed < 0` 時觸發落地。
+        - **反彈**: 根據 `bounce_count_max` (在 Create 事件設定，目前為 2) 和落地時的 `zspeed` 決定是否反彈。
+        - **已取代**舊的基於 `vspeed` 和 Tilemap 碰撞的邏輯。
+    - `WAIT_ON_GROUND`: 落地後等待，執行上下浮動效果。**(已修正)** 確保此狀態下 `hspeed` 和 `vspeed` 都歸零，防止意外漂移。
 - **飛行參數**:
-  - `fly_up_distance`: 向上飛行的距離，預設為 100 像素
-  - `move_speed`: 向上飛行的速度，預設為 5 像素/幀
-  - `to_player_speed`: 飛向玩家的速度，預設為 8 像素/幀
-  - `pause_duration`: 停頓時間，預設為 0.5 秒
-  - `fade_duration`: 淡出時間，預設為 0.5 秒
+  - 初始 XY 速度 (`hspeed`, `vspeed`) 在 `SCATTERING` 狀態下由創建者 (如 `obj_battle_manager`) 設定 (`scatter_speed_min/max`)。**(已調整)** 減小了速度範圍 (1-3) 以使掉落物更集中。
+  - 初始 Z 速度 (`zspeed`) 在 `SCATTERING` 狀態下由創建者設定 (`random_range(3, 5)` in `obj_battle_manager`)，用於產生拋物線效果。
+  - 其他狀態速度 (`move_speed`, `to_player_speed`) 和持續時間 (`pause_duration`, `fade_duration`, `wait_duration`) 在 Create 事件定義。
 - **視覺效果**:
-  - 使用 `bm_add` 混合模式創建外框發光效果
-  - 在飛行過程中會縮小，淡出過程中會進一步縮小並降低透明度
-- **座標轉換**:
-  - 使用 `world_to_gui_coords` 函數將世界座標轉換為 GUI 座標
-  - 確保飛行物品在正確的 GUI 位置顯示
+  - **外框效果**: 使用 `bm_add` 混合模式和 `outline_color` (Create事件定義) 創建發光外框。**(已恢復)**
+  - **數量顯示**: 如果 `quantity > 1`，在物品右下角顯示數量。
+      - **(已修正)** 文字 Y 座標現在使用 `draw_y` (考慮了 Z 軸高度和浮動)。
+      - **(已修正)** 文字大小使用 `draw_text_transformed` 和 `quantity_scale` 變數進行獨立縮放 (可在 Draw 事件調整)。
+  - 在飛行過程中會縮小，淡出過程中會進一步縮小並降低透明度。
+- **粒子系統**: 在拋灑、落地、吸收時觸發粒子效果。
+- **座標問題**: (保留已知問題) 創建和飛向玩家的座標可能仍存在世界/GUI 轉換問題。
 
 **粒子系統:**
 - 使用 GameMaker 的粒子系統創建挖掘效果
@@ -683,8 +693,9 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
         - **已實現**: 將實際掉落物品列表記錄在 `obj_battle_manager` 的 `current_battle_drops` 中，並通過 `finalize_battle_results` 事件傳遞。
         - **已確認**: `obj_reward_system` 現在能正確接收預先計算好的掉落列表。
         - **已解決**: `obj_flying_item` 的視覺動畫問題。
-        - **戰鬥結果 UI**: 需要確認 `obj_battle_ui` 是否正確顯示佇列處理後的所有掉落物品圖示和數量（目前邏輯數據似乎正確）。
+        - **戰鬥結果 UI**: 需要確認 `obj_battle_ui` 是否正確顯示佇列處理後的所有掉落物品圖示和數量。
         - **戰鬥結果分層**: (保留) 重構 `obj_battle_manager` 狀態機，加入等待掉落動畫和升級動畫完成的狀態，確保結果 UI 在演出結束後才顯示。
+    - **新增**: **根據物品稀有度改變飛行道具 (`obj_flying_item`) 的外框顏色。**
     - **Battle Log 功能**:
         - 在主 HUD 添加按鈕。
         - 創建 `obj_battle_log_ui` 面板。
@@ -713,5 +724,4 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
         - 考慮快捷欄在非戰鬥狀態下的使用。
 
 - **已知問題**:
-    - 飛行道具 (`obj_flying_item`) 的起始座標轉換 (`world_to_gui_coords`) 可能不準確，尤其在攝像機移動或縮放時。
-    - 飛行道具 (`obj_flying_item`) 飛向玩家的目標座標計算可能不準確，因直接使用世界座標作為 GUI 層目標。
+    - 飛行道具 (`obj_flying_item`) 的起始座標轉換和飛向玩家目標座標計算可能不準確，尤其在攝像機移動或縮放時，因混合使用世界座標和 GUI 層繪製導致。

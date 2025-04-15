@@ -32,11 +32,26 @@
 - 在 `obj_flying_item` 從 `WAIT_ON_GROUND` 切換到 `FLYING_TO_PLAYER` 前加入了速度重置。
 - 在 `obj_stone` 創建飛行道具時加入了詳細除錯。
 - 縮短了 `obj_battle_manager` 創建多個掉落物之間的延遲。
+- **重構 `obj_flying_item` 物理邏輯：**
+  - 移除了舊的 `gravity` 和基於 Tilemap 的落地檢測。
+  - **引入 Z 軸模擬 (`z`, `zspeed`, `gravity_z`)** 用於 `SCATTERING` 狀態，實現拋物線和反彈效果。
+  - 在 `Draw` 事件中根據 `z` 調整 `draw_y`，並處理 `WAIT_ON_GROUND` 的浮動效果。
+- **修正 `obj_flying_item` 渲染問題：**
+  - 恢復了 `Draw` 事件中使用 `bm_add` 的外框繪製，使其效果與原始一致。
+  - 修正了數量文字的 Y 座標計算，使用 `draw_y` 使其跟隨 Z 軸移動。
+  - 使用 `draw_text_transformed` 和 `quantity_scale` 變數，允許獨立調整數量文字的大小。
+- **修正 `obj_flying_item` 狀態切換 Bug：**
+  - 在 `SCATTERING` 切換到 `WAIT_ON_GROUND` 時，**加入了 `vspeed = 0;`**，解決了等待時的垂直漂移問題。
+- **調整掉落效果參數：**
+  - 在 `obj_battle_manager` 的 `Alarm 1` 中，為 `SCATTERING` 狀態的 `obj_flying_item` **賦予了初始 `zspeed`** (random_range(3, 5))，以產生拋物線。
+  - 在 `obj_flying_item` 的 `Create` 事件中，**降低了 `scatter_speed_min/max`** (1-3)，以減小水平散開範圍。
+  - （確認 `bounce_count_max = 2` 已滿足 "最少彈1次，最多彈2次" 的需求，未修改）。
 
 ## 下一步行動
-- 完成礦石掉落 quantity 傳遞修正
-- 記錄所有掉落來源，規劃掉落工廠設計
-- 優化戰鬥結果 UI 與掉落顯示
+- ~~完成礦石掉落 quantity 傳遞修正~~ (似乎已包含在飛行道具重構中)
+- ~~記錄所有掉落來源，規劃掉落工廠設計~~ (掉落已由 `obj_battle_manager` 在 `on_unit_died` 中計算)
+- 優化戰鬥結果 UI 與掉落顯示 (確認是否正確顯示所有掉落物)
+- **新增功能**: 規劃並實作根據物品稀有度改變飛行道具 (`obj_flying_item`) 外框顏色的功能。
 
 ## 已知技術債
 - 採集系統掉落尚未工廠化

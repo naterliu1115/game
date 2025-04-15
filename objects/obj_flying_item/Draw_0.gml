@@ -62,17 +62,16 @@ draw_text(x + 10, draw_y     , "Y: " + string(round(y)) + " DrY: " + string(roun
 // 繪製數量（如果大於1）
 // (保留這一段程式碼)
 if (quantity > 1) {
-    // 設置字體和顏色
-    draw_set_font(fnt_dialogue);
-    draw_set_color(c_white);
-    
-    // 計算文字位置（在物品右下角）
-    // 確保 sprite_width/height 在 sprite 有效時才讀取
+    // 計算文字位置（在物品右下角，使用 draw_y）
     if (sprite_exists(sprite_index)) {
         var text_x = x + sprite_get_width(sprite_index)/2 - 4;
-        var text_y = y + sprite_get_height(sprite_index)/2 - 4;
-        // 繪製數量文字
-        draw_text(text_x, text_y, string(quantity));
+        var text_y = draw_y + sprite_get_height(sprite_index)/2 - 4; // <--- 使用 draw_y
+
+        // 定義數量文字的縮放比例 (可調整)
+        var quantity_scale = 0.5; // <--- 在這裡調整大小 (例如 0.7 = 70%)
+
+        // 繪製經過縮放的數量文字
+        draw_text_transformed(text_x, text_y, string(quantity), quantity_scale, quantity_scale, 0); // <--- 使用 transformed
     }
     
     // 重置繪製設置
