@@ -10,10 +10,25 @@ enum BATTLE_STATE {
     RESULT       // 顯示戰鬥結果
 }
 
+// === 新增：ENDING 子狀態枚舉 ===
+enum ENDING_SUBSTATE {
+    SHRINKING,       // 正在縮小邊界
+    WAITING_DROPS,   // 等待掉落物動畫
+    DELAYING,        // 短暫延遲
+    FINISHED         // 結束流程完成
+}
+ending_substate = ENDING_SUBSTATE.SHRINKING; // 初始狀態
+
 // 戰鬥核心數據
 battle_state = BATTLE_STATE.INACTIVE;
 battle_timer = 0;
 battle_result_handled = false;
+
+// === 新增：追蹤最後敵人掉落物的列表 ===
+last_enemy_flying_items = ds_list_create();
+
+// === 新增：標記是否正在處理最後敵人的掉落物 ===
+processing_last_enemy_drops = false;
 
 // 初始化單位列表
 player_units = ds_list_create();
@@ -155,6 +170,10 @@ cleanup_battle_data = function() {
     if (ds_exists(player_units, ds_type_list)) ds_list_destroy(player_units);
     if (ds_exists(enemy_units, ds_type_list)) ds_list_destroy(enemy_units);
     if (ds_exists(defeated_enemies_exp, ds_type_list)) ds_list_destroy(defeated_enemies_exp);
+    // === 新增：清理掉落物追蹤列表 ===
+    if (ds_exists(last_enemy_flying_items, ds_type_list)) {
+        ds_list_destroy(last_enemy_flying_items);
+    }
     // 其他需要清理的資源...
 }
 
@@ -188,8 +207,10 @@ initialize_battle_manager = function() {
     
     // 重置戰鬥狀態
     battle_state = BATTLE_STATE.INACTIVE;
+    ending_substate = ENDING_SUBSTATE.SHRINKING; // <--- 重置子狀態
     battle_timer = 0;
     battle_result_handled = false;
+    processing_last_enemy_drops = false; // <--- 重置標記
     
     // 重置戰鬥區域
     battle_area.center_x = 0;
@@ -201,16 +222,23 @@ initialize_battle_manager = function() {
     battle_center_y = battle_area.center_y;
     battle_boundary_radius = battle_area.boundary_radius;
     
-    // 清空戰鬥日誌
-    ds_list_clear(battle_log);
+    // 清空戰鬥日誌和列表
+    if (ds_exists(battle_log, ds_type_list)) ds_list_clear(battle_log);
+    if (ds_exists(last_enemy_flying_items, ds_type_list)) { // <--- 清空追蹤列表
+        ds_list_clear(last_enemy_flying_items);
+    } else {
+        last_enemy_flying_items = ds_list_create(); // <--- 如果不存在則創建
+    }
+    enemies_defeated_this_battle = 0;
+    defeated_enemy_ids_this_battle = [];
+    current_battle_drops = [];
+    if (ds_exists(defeated_enemies_exp, ds_type_list)) ds_list_clear(defeated_enemies_exp);
     
     // 檢查並創建必要的管理器
     ensure_managers_exist();
     
     // 訂閱相關事件
     subscribe_to_events();
-    
-    enemies_defeated_this_battle = 0; // <--- 重置計數器
     
     show_debug_message("戰鬥管理器初始化完成");
 };
@@ -345,6 +373,23 @@ function on_unit_died(data) {
 
     // pending_flying_items = []; // 清空佇列 (如果需要)
 
+    // === 新增：判斷是否為最後一個敵人 ===
+    var is_last_enemy = false;
+    if (battle_state == BATTLE_STATE.ACTIVE && instance_exists(obj_unit_manager)) {
+        var living_enemy_count = 0;
+        for (var i = 0; i < ds_list_size(obj_unit_manager.enemy_units); i++) {
+            var enemy_id = obj_unit_manager.enemy_units[| i];
+            if (instance_exists(enemy_id) && enemy_id != _unit_instance && !enemy_id.dead) {
+                living_enemy_count++;
+                break;
+            }
+        }
+        if (living_enemy_count == 0) {
+             is_last_enemy = true;
+             show_debug_message("[Battle Manager] 偵測到最後一個敵人死亡，將標記其掉落物。");
+        }
+    }
+
     for (var j = 0; j < array_length(drop_entries); j++) {
         var entry = drop_entries[j];
         if (entry == "") continue;
@@ -458,7 +503,6 @@ function on_unit_died(data) {
                 } else {
                     // show_debug_message("[Drop Anim Prep] 警告: 無法為物品 ID " + string(item_id) + " 獲取有效的精靈索引 ..."); // 保留警告
                 }
-                // --- <<<<<<< 修改結束 >>>>>>> ---
             } else {
                  // show_debug_message("[Unit Died Drop Calc]       - Drop Failed."); // 之前的訊息更詳細，保留之前的
             }
@@ -471,8 +515,13 @@ function on_unit_died(data) {
 
     // --- 在迴圈結束後，檢查佇列並觸發 Alarm[1] ---
     if (array_length(pending_flying_items) > 0) {
-        // show_debug_message("[Drop Anim Trigger] 飛行道具佇列中有 " + string(array_length(pending_flying_items)) + " 個物品，觸發 Alarm[1]。"); // 移除
-        alarm[1] = 5;
+        // === 新增：如果是最後敵人，設置標記 ===
+        if (is_last_enemy) {
+            processing_last_enemy_drops = true;
+            show_debug_message("[Battle Manager] 設置 processing_last_enemy_drops = true");
+        }
+        alarm[1] = 5; // 觸發 Alarm[1] 來創建實例
+        show_debug_message("[Drop Anim Trigger] 飛行道具佇列中有 " + string(array_length(pending_flying_items)) + " 個物品，觸發 Alarm[1]。");
     }
     // ------------------------------------------
 }

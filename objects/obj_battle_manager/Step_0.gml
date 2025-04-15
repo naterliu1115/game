@@ -206,55 +206,93 @@ switch (battle_state) {
         break;
         
     case BATTLE_STATE.ENDING:
-        // 戰鬥結束過渡 - 縮小戰鬥邊界
+        // 戰鬥結束過渡
         battle_timer++;
-        
-        show_debug_message("處理 ENDING 狀態（計時器：" + string(battle_timer) + "）");
-        
-        // 通知單位管理器更新邊界 (逐漸縮小)
-        if (instance_exists(obj_unit_manager)) {
-            // 計算應該的邊界半徑
-            var shrink_speed = 10;
-            var radius = max(0, 300 - (shrink_speed * (battle_timer / game_get_speed(gamespeed_fps)) * 60));
-            
-            show_debug_message("更新戰鬥邊界 - 當前半徑: " + string(radius));
-            
-            obj_unit_manager.set_battle_area(
-                obj_unit_manager.battle_center_x,
-                obj_unit_manager.battle_center_y,
-                radius
-            );
-            
-            // 邊界縮小完成，顯示戰鬥結果
-            if (radius <= 0) {
-                // show_debug_message("邊界收縮完成，轉換到 RESULT 狀態"); // 移除
-                battle_state = BATTLE_STATE.RESULT;
-                battle_timer = 0;  // 重置計時器
-                
-                // --- 直接使用儲存好的秒數 --- 
-                var _duration_to_broadcast = 0;
-                if (variable_instance_exists(id, "final_battle_duration_seconds")) {
-                    _duration_to_broadcast = final_battle_duration_seconds;
+        // 訪問 Create 事件中定義的 ending_substate
+        show_debug_message("處理 ENDING 狀態（計時器：" + string(battle_timer) + "，子狀態：" + string(ending_substate) + "）"); 
+
+        // === 使用子狀態管理 ENDING 流程 ===
+        switch (ending_substate) {
+            case ENDING_SUBSTATE.SHRINKING:
+                // --- 處理邊界縮小 ---
+                if (instance_exists(obj_unit_manager)) {
+                    var shrink_speed = 10;
+                    var shrink_duration_frames = battle_timer;
+                    var required_radius = 300;
+                    var radius = max(0, required_radius - (shrink_speed * (shrink_duration_frames / game_get_speed(gamespeed_fps)) * 60));
+
+                    show_debug_message("更新戰鬥邊界 - 當前半徑: " + string(radius));
+                    obj_unit_manager.set_battle_area(
+                        obj_unit_manager.battle_center_x,
+                        obj_unit_manager.battle_center_y,
+                        radius
+                    );
+
+                    if (radius <= 0) {
+                        show_debug_message("邊界收縮完成，轉換到 WAITING_DROPS 子狀態");
+                        ending_substate = ENDING_SUBSTATE.WAITING_DROPS;
+
+                        // 清理監控列表中無效的實例 (以防萬一)
+                        if (ds_exists(last_enemy_flying_items, ds_type_list)) {
+                            var i = 0;
+                            while (i < ds_list_size(last_enemy_flying_items)) {
+                                if (!instance_exists(last_enemy_flying_items[| i])) {
+                                    ds_list_delete(last_enemy_flying_items, i);
+                                } else {
+                                    i++;
+                                }
+                            }
+                             show_debug_message("清理後，監控掉落物數量: " + string(ds_list_size(last_enemy_flying_items)));
+                        } else {
+                            show_debug_message("警告: last_enemy_flying_items 列表不存在於 SHRINKING 完成時!");
+                        }
+                    }
                 } else {
-                    show_debug_message("警告: final_battle_duration_seconds 變數未定義! Setting duration to 0."); // 保留警告
+                    show_debug_message("警告：單位管理器不存在，直接轉換到 WAITING_DROPS 子狀態");
+                    ending_substate = ENDING_SUBSTATE.WAITING_DROPS;
                 }
-                
-                // 發送事件以觸發最終的獎勵計算
-                _event_broadcaster("finalize_battle_results", {
-                    defeated_enemies: enemies_defeated_this_battle,
-                    defeated_enemy_ids: defeated_enemy_ids_this_battle, 
-                    item_drops: current_battle_drops, // <--- 傳遞實際掉落物列表
-                    duration: _duration_to_broadcast
-                });
-                show_debug_message("[Battle Manager] Broadcasted finalize_battle_results with duration: " + string(_duration_to_broadcast) + ", defeated_enemies: " + string(enemies_defeated_this_battle) + ", IDs: " + json_stringify(defeated_enemy_ids_this_battle) + ", Drops: " + json_stringify(current_battle_drops)); // 更新調試信息
-            }
-        } else {
-            show_debug_message("警告：單位管理器不存在，直接轉換到 RESULT 狀態");
-            battle_state = BATTLE_STATE.RESULT;
-            battle_timer = 0;
-        }
-        break;
-        
+                break; // SHRINKING 結束
+
+            case ENDING_SUBSTATE.WAITING_DROPS:
+                // --- 等待掉落物動畫 --- 
+                var all_drops_finished = true;
+                 // 確保列表存在再檢查
+                if (ds_exists(last_enemy_flying_items, ds_type_list) && ds_list_size(last_enemy_flying_items) > 0) {
+                    for (var i = 0; i < ds_list_size(last_enemy_flying_items); i++) {
+                        var item_id = last_enemy_flying_items[| i];
+                        if (instance_exists(item_id) && item_id.flight_state == FLYING_STATE.SCATTERING) {
+                            all_drops_finished = false;
+                            show_debug_message("掉落物 " + string(item_id) + " 仍在 SCATTERING 狀態，繼續等待...");
+                            break;
+                        }
+                    }
+                } else {
+                     show_debug_message("沒有需要監控的掉落物 (列表不存在或為空)。視為完成。");
+                     all_drops_finished = true;
+                }
+
+                if (all_drops_finished) {
+                    show_debug_message("所有監控的掉落物 SCATTERING 動畫完成，轉換到 DELAYING 子狀態");
+                    ending_substate = ENDING_SUBSTATE.DELAYING;
+                    alarm[2] = max(1, round(room_speed * 4.5)); // 設置 4.5 秒延遲
+                    if (ds_exists(last_enemy_flying_items, ds_type_list)) { // 清空列表
+                         ds_list_clear(last_enemy_flying_items);
+                    }
+                }
+                break; // WAITING_DROPS 結束
+
+            case ENDING_SUBSTATE.DELAYING:
+                // --- 短暫延遲中 --- 
+                show_debug_message("正在 DELAYING 子狀態，等待 Alarm[2]...");
+                break; // DELAYING 結束
+
+             case ENDING_SUBSTATE.FINISHED:
+                 // --- 結束流程已完成 --- 
+                 break;
+
+        } // switch (ending_substate) 結束
+        break; // BATTLE_STATE.ENDING 結束
+
     case BATTLE_STATE.RESULT:
         // 確保只有這個階段會處理結果
         if (!battle_result_handled) {
@@ -263,7 +301,19 @@ switch (battle_state) {
             // 檢查勝負
             var victory = false;
             if (instance_exists(obj_unit_manager)) {
-                victory = (ds_list_size(obj_unit_manager.enemy_units) <= 0);
+                 // 可靠的勝負判斷應基於觸發 ENDING 的原因，或者檢查 player_units 是否還有存活
+                 // 暫時保留原有的敵人數量判斷
+                 // TODO: Review victory condition logic if needed
+                 victory = (ds_list_size(obj_unit_manager.enemy_units) <= 0);
+                 var living_players = 0;
+                 for(var i=0; i < ds_list_size(obj_unit_manager.player_units); i++) {
+                     var p_unit = obj_unit_manager.player_units[| i];
+                     if(instance_exists(p_unit) && !p_unit.dead) {
+                         living_players++;
+                         break;
+                     }
+                 }
+                 if(living_players == 0) victory = false; // 玩家全滅則必敗
             }
             
             // 發送計算獎勵事件
@@ -275,10 +325,13 @@ switch (battle_state) {
             }
             
             add_battle_log("戰鬥結果處理完成，勝利: " + string(victory));
+            show_debug_message("[Battle Manager] RESULT state: Battle result handled. Victory: " + string(victory));
         }
 
+        // === 新增：臨時關閉邏輯 ===
         // 玩家確認後，戰鬥正式結束
         if (keyboard_check_pressed(vk_space)) {
+            show_debug_message("[Battle Manager] RESULT state: Space pressed, ending battle.");
             end_battle();
         }
         break;
