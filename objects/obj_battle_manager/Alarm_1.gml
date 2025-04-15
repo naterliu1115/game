@@ -1,4 +1,4 @@
-/// @description 處理飛行道具創建佇列
+/// @description 處理飛行道具創建佇列 (已修正為世界座標)
 // show_debug_message("===== [Alarm 1 Triggered] ====="); // 移除觸發標記
 
 // 檢查佇列是否存在且有內容
@@ -12,74 +12,69 @@ var info = array_shift(pending_flying_items);
 
 // show_debug_message("[Alarm 1] 處理佇列中的物品: ID=" + string(info.item_id) + ", Qty=" + string(info.quantity) + ", Sprite=" + string(info.sprite_index)); // 移除
 
-// --- 與原 Alarm[0] 類似的創建邏輯 ---
-var gui_layer_name = "GUI";
+// 世界層名稱
+var world_layer_name = "Instances";
 
-// 使用座標轉換函數
-var coords = world_to_gui_coords(info.start_world_x, info.start_world_y);
-var start_gui_x = coords.x;
-var start_gui_y = coords.y;
+// 直接使用 info 中的世界座標
+var start_world_x = info.start_world_x;
+var start_world_y = info.start_world_y;
 
-// 檢查轉換後的座標是否合理
-if (start_gui_x < 0 || start_gui_x > display_get_gui_width() ||
-    start_gui_y < 0 || start_gui_y > display_get_gui_height()) {
-    // show_debug_message("[Alarm 1] 警告: 轉換後的 GUI 座標 (...) 超出螢幕範圍。使用備用座標。"); // 保留警告
-    start_gui_x = display_get_gui_width() / 2;
-    start_gui_y = display_get_gui_height() / 2;
+// 除錯：打印創建信息
+show_debug_message("[Alarm 1] Preparing to create flying item ID: " + string(info.item_id) + 
+                   " at World Coords: (" + string(start_world_x) + ", " + string(start_world_y) + ")" + 
+                   " on Layer: " + world_layer_name);
+
+// 確保世界圖層存在 (可選，通常 Instances 層都存在)
+/*
+if (!layer_exists(world_layer_name)) {
+    layer_create(-9700, world_layer_name);
 }
-
-// 確保 GUI 圖層存在
-if (!layer_exists(gui_layer_name)) {
-    layer_create(-9700, gui_layer_name);
-    // show_debug_message("[Alarm 1] 創建缺失的 GUI 圖層: '" + gui_layer_name + "'"); // 可以移除，因為創建成功與否更重要
-}
+*/
 
 // 再次檢查精靈索引是否有效 (理論上在 on_unit_died 已檢查，雙重保險)
 if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
-    // 確保座標在螢幕範圍內 (給予一些邊距)
-    var gui_width = display_get_gui_width();
-    var gui_height = display_get_gui_height();
-    start_gui_x = clamp(start_gui_x, 32, gui_width - 32); // 增加邊距
-    start_gui_y = clamp(start_gui_y, 32, gui_height - 32); // 增加邊距
+    // 在世界層、世界座標創建飛行道具
+    with (instance_create_layer(start_world_x, start_world_y, world_layer_name, obj_flying_item)) { 
+        // 除錯：打印實例創建成功信息
+        show_debug_message("[Alarm 1] Instance Create SUCCESS! ID: " + string(id) + 
+                           ", World Pos: (" + string(x) + ", " + string(y) + ")");
 
-    show_debug_message("[Alarm 1] 準備在座標 (" + string(start_gui_x) + ", " + string(start_gui_y) + ") 創建飛行物品實例。");
-
-    with (instance_create_layer(start_gui_x, start_gui_y, gui_layer_name, obj_flying_item)) {
-        // *** 新增調試信息：實例創建成功 ***
-        show_debug_message("[Alarm 1] Instance Create SUCCESS! ID: " + string(id) + " for item ID: " + string(info.item_id));
-
-        // 設置基本屬性
-        sprite_index = info.sprite_index;
-        quantity = info.quantity;
+        // === 由創建者直接設定 ===
+        source_type = "monster"; // 明確設定來源
+        sprite_index = info.sprite_index; // 從 info 獲取
+        quantity = info.quantity; // 從 info 獲取
+        item_id = info.item_id; // 從 info 獲取
         image_xscale = 0.8;
         image_yscale = 0.8;
+        
+        flight_state = FLYING_STATE.SCATTERING; // 明確設定初始狀態
+        
+        // 初始化拋灑速度 (不再進行初始位置偏移)
+        var angle = random(scatter_angle_range);
+        var scatter_init_speed = random_range(scatter_speed_min, scatter_speed_max);
+        hspeed = lengthdir_x(scatter_init_speed, angle);
+        vspeed = lengthdir_y(scatter_init_speed, angle);
+        zspeed = random_range(3, 5);
+        bounce_count = 0;
+        
+        // 除錯：打印初始速度和狀態
+        show_debug_message("  [FlyingItem Init] State: " + string(flight_state) + 
+                           ", Angle: " + string(angle) + ", Speed: " + string(scatter_init_speed) + 
+                           ", HS: " + string(hspeed) + ", VS: " + string(vspeed));
 
-        // 設置飛行狀態
-        flight_state = FLYING_STATE.FLYING_UP; // 假設有定義 FLYING_STATE.FLYING_UP
-        fly_up_distance = 30; // 設置上升高度
-
-        // 設置玩家目標座標（如果玩家存在）
-        if (instance_exists(Player)) {
-            target_x = Player.x;
-            target_y = Player.y;
-            // show_debug_message("[Alarm 1 Flying Item] 設置飛向玩家位置：(" + string(target_x) + ", " + string(target_y) + ")"); // 移除
-        } else {
-            target_x = x;
-            target_y = y;
-            // show_debug_message("[Alarm 1 Flying Item] 警告：找不到玩家，物品將原地淡出"); // 保留警告
-        }
-
-        // show_debug_message("[Alarm 1 Flying Item] 飛行物品 (ID: " + string(info.item_id) + ") 初始化完成。"); // 移除
+        // 初始化 player_target (FLYING_TO_PLAYER 會更新)
+        player_target_x = x; 
+        player_target_y = y;
     }
 } else {
-    // show_debug_message("[Alarm 1] 警告: 無效的 sprite_index (...) 或精靈不存在..."); // 保留警告
+    show_debug_message("[Alarm 1] Warning: Invalid sprite_index (" + string(info.sprite_index) + ")" + 
+                       " or sprite does not exist for item ID " + string(info.item_id) + ". Cannot create flying item.");
 }
 // --- 創建邏輯結束 ---
 
 // 檢查佇列中是否還有剩餘物品
 if (array_length(pending_flying_items) > 0) {
-    // show_debug_message("[Alarm 1] 佇列中還有 " + string(array_length(pending_flying_items)) + " 個物品，再次觸發 Alarm[1]。"); // 移除
-    alarm[1] = 5;
+    alarm[1] = 1; // 將延遲從 5 改為 1
 } else {
-     // show_debug_message("[Alarm 1] 佇列已處理完畢。"); // 可以移除
+    // show_debug_message("[Alarm 1] Queue processed."); // 可選
 } 

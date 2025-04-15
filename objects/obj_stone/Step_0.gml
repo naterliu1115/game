@@ -142,7 +142,10 @@ if (can_start_mining) {
                 global.create_flying_item_info = {
                     start_world_x : stone_world_x,
                     start_world_y : stone_world_y,
-                    sprite_index : item_sprite_index
+                    sprite_index : item_sprite_index,
+                    quantity : 1,
+                    item_id : ore_item_id,
+                    source_type: "gather"
                 };
                 alarm[0] = 1;
             }

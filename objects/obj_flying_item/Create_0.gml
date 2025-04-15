@@ -2,20 +2,46 @@
 
 // --- 狀態定義 ---
 enum FLYING_STATE {
-    FLYING_UP,        // 向上飛行
-    PAUSING,          // 停頓
-    FLYING_TO_PLAYER, // 飛向玩家
-    FADING_OUT        // 淡出並消失
+    SCATTERING,      // 拋灑/彈跳
+    WAIT_ON_GROUND,  // 地面等待
+    FLYING_UP,       // 向上飛行（保留給礦石/特殊掉落）
+    PAUSING,         // 停頓
+    FLYING_TO_PLAYER,// 飛向玩家
+    FADING_OUT       // 淡出並消失
 }
 
+// --- 新增拋灑/彈跳參數 ---
+hspeed = 0; // 水平速度
+vspeed = 0; // 垂直速度
+// gravity = 0.3; // 重力加速度 (註解掉，改用 Z 軸重力)
+z = 0;             // Z 軸高度
+zspeed = 0;        // Z 軸速度
+gravity_z = 0.3;   // Z 軸重力加速度
+tilemap_id = -1; // Tilemap ID，將在 Step 事件中獲取
+
+scatter_speed = 0;
+scatter_angle = 0;
+scatter_speed_min = 1;
+scatter_speed_max = 3;
+scatter_angle_range = 360; // 全方向
+scatter_radius_min = 16;
+scatter_radius_max = 32;
+bounce_count = 0;
+bounce_count_max = 2;
+ground_wait_timer = 0;
+wait_duration = room_speed * 2; // 地面停留 2 秒
+
+// --- 粒子特效參數 ---
+particle_effects_enabled = true;
+
 // --- 基本設定 (狀態由創建者設置) ---
-flight_state = FLYING_STATE.FLYING_UP; // 預設狀態
+// flight_state 由創建者設置，不再強制預設
 
 // --- 計時器與持續時間 ---
 pause_timer = 0;
-pause_duration = room_speed * 0.8; // 停頓 0.8 秒 (原為 1.5 秒，已縮短)
+pause_duration = room_speed * 0.8; // 停頓 0.8 秒
 fade_timer = 0;
-fade_duration = room_speed * 0.5; // 淡出時間 0.5 秒 (原為 0.8 秒，已縮短)
+fade_duration = room_speed * 0.5; // 淡出時間 0.5 秒
 
 // --- 飛向玩家相關變數 ---
 player_target_x = 0;  // 玩家目標 X 座標
@@ -37,18 +63,48 @@ outline_offset = 2;
 outline_color = c_white;
 
 // --- 基本除錯訊息 ---
-show_debug_message("飛行道具已創建於座標: (" + string(x) + ", " + string(y) + ")");
+show_debug_message("飛行道具已創建於世界座標: (" + string(x) + ", " + string(y) + ")");
 
-// --- 確保在螢幕範圍內 ---
-var gui_width = display_get_gui_width();
-var gui_height = display_get_gui_height();
+// 預設狀態（可選，或完全由創建者設定）
+flight_state = FLYING_STATE.FLYING_UP; // 保留一個預設值以防萬一
+source_type = "unknown"; // 添加預設來源
 
-// 如果座標超出螢幕範圍，調整到螢幕內
-if (x < 0 || x > gui_width || y < 0 || y > gui_height) {
-    show_debug_message("警告: 飛行道具座標超出螢幕範圍，調整到螢幕內");
-    x = clamp(x, 50, gui_width - 50);
-    y = clamp(y, 50, gui_height - 50);
-    show_debug_message("調整後的座標: (" + string(x) + ", " + string(y) + ")");
-}
+// 目標設定將在創建者（如 obj_stone）with 區塊中完成
 
-// 目標設定將在 Alarm_0 中完成
+// === 粒子型態建立（可替換） ===
+// 拋灑拖尾粒子
+particle_trail = part_type_create();
+part_type_shape(particle_trail, pt_shape_pixel);
+part_type_size(particle_trail, 0.3, 0.6, 0, 0);
+part_type_color1(particle_trail, c_yellow);
+part_type_alpha2(particle_trail, 0.8, 0);
+part_type_life(particle_trail, 10, 18);
+part_type_speed(particle_trail, 0.5, 1, 0, 0);
+
+// 落地衝擊粒子
+particle_land = part_type_create();
+part_type_shape(particle_land, pt_shape_cloud);
+part_type_size(particle_land, 0.5, 1.2, 0, 0);
+part_type_color1(particle_land, c_gray);
+part_type_alpha2(particle_land, 0.7, 0);
+part_type_life(particle_land, 12, 20);
+part_type_speed(particle_land, 1, 2, -0.1, 0);
+
+// 吸收閃光粒子
+particle_absorb = part_type_create();
+part_type_shape(particle_absorb, pt_shape_spark);
+part_type_size(particle_absorb, 0.4, 0.8, 0, 0);
+part_type_color1(particle_absorb, c_white);
+part_type_alpha2(particle_absorb, 1, 0);
+part_type_life(particle_absorb, 8, 14);
+part_type_speed(particle_absorb, 1, 2, 0, 0);
+
+// === 粒子系統 ===
+particle_system = part_system_create();
+part_system_depth(particle_system, depth - 1);
+
+// === 飄浮效果變數 ===
+ground_y_pos = -1; // 記錄落地時的Y座標
+float_timer = 0;   // 用於計算sin函數
+float_amplitude = 1; // 浮動幅度（像素）
+float_frequency = 0.08; // 浮動頻率

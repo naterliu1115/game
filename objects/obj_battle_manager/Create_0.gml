@@ -450,7 +450,8 @@ function on_unit_died(data) {
                         quantity: quantity_dropped,
                         sprite_index: _sprite_index,
                         start_world_x: _unit_instance.x,
-                        start_world_y: _unit_instance.y
+                        start_world_y: _unit_instance.y,
+                        source_type: "monster"
                     };
                     array_push(pending_flying_items, flying_item_info);
                     // show_debug_message("[Drop Anim Prep] 已將物品加入飛行佇列: ID=" + string(item_id) + ", Sprite Index=" + string(_sprite_index)); // 移除
