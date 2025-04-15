@@ -3,6 +3,10 @@
 /// @param {real} world_x 世界座標 X
 /// @param {real} world_y 世界座標 Y
 /// @returns {struct} 包含 x 和 y 的 GUI 座標結構體
+// --- world_to_gui_coords 函數已移除 ---
+// 原因：其原始實現不準確，且在重構 obj_flying_item 後不再被需要。
+// 飛行道具現在完全在世界層 ("Instances") 創建和運行。
+/*
 function world_to_gui_coords(world_x, world_y) {
     // 簡化座標轉換，使用直接的方法
     // 在測試中發現之前的方法可能導致座標錯誤
@@ -41,6 +45,7 @@ function world_to_gui_coords(world_x, world_y) {
         y: gui_y
     };
 }
+*/
 
 /// @function gui_to_world_coords
 /// @param {real} gui_x GUI座標 X

@@ -476,7 +476,6 @@ UI 系統管理遊戲中的各種用戶界面元素。
 **主要組件:**
 - `obj_stone`: 可挖掘的礦石物件，玩家可以使用礦鎬挖掘獲取礦石資源
 - `obj_flying_item`: 顯示獲得物品的飛行動畫效果
-- `scr_coordinate_utils`: 座標轉換工具函數，用於世界座標和 GUI 座標的轉換 (注意：目前飛行道具創建和飛行目標可能未使用此工具，存在潛在座標問題)
 
 **礦石物件 (`obj_stone`) 特性:**
 - **耐久度系統**: 每個礦石有 `durability` 屬性，每次挖掘進度完成會減少1點，歸零時礦石被破壞並產生獎勵
@@ -492,7 +491,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
   - 礦石被破壞時有粒子爆發效果
 - **獎勵系統**:
   - 礦石被破壞時，將指定的物品 (`ore_item_id`) 添加到玩家背包
-  - 創建 `obj_flying_item` 顯示獲得物品的視覺效果
+  - **(更新)** 通過 `Alarm 0` 觸發，在世界層 ("Instances") 創建 `obj_flying_item` 顯示獲得物品的視覺效果。
 
 **飛行物品 (`obj_flying_item`) 特性 (更新):**
 - **狀態機設計**: 具有多個狀態，包括：
@@ -517,40 +516,15 @@ UI 系統管理遊戲中的各種用戶界面元素。
       - **(已修正)** 文字大小使用 `draw_text_transformed` 和 `quantity_scale` 變數進行獨立縮放 (可在 Draw 事件調整)。
   - 在飛行過程中會縮小，淡出過程中會進一步縮小並降低透明度。
 - **粒子系統**: 在拋灑、落地、吸收時觸發粒子效果。
-- **座標問題**: (保留已知問題) 創建和飛向玩家的座標可能仍存在世界/GUI 轉換問題。
+- **座標系統**: 完全在世界座標系 ("Instances" 層) 中創建、運行和繪製。不再依賴 GUI 座標轉換。
 
 **粒子系統:**
 - 使用 GameMaker 的粒子系統創建挖掘效果
 - 在 `Create_0` 事件中初始化粒子系統和粒子類型
 - 在 `CleanUp_0` 事件中清理粒子系統資源
 
-**座標轉換工具 (`scr_coordinate_utils`):**
-- `world_to_gui_coords`: 將世界座標轉換為 GUI 座標
-- `gui_to_world_coords`: 將 GUI 座標轉換為世界座標
-- 確保座標在螢幕範圍內，避免物品在螢幕外創建
-
-**使用示例:**
-```gml
-// 創建一個礦石實例
-var stone = instance_create_layer(x, y, "Instances", obj_stone);
-with (stone) {
-    ore_item_id = 4001;  // 設置產出的礦石ID (銅礦石)
-    durability = 3;      // 設置需要挖掘的次數
-    max_durability = 3;  // 設置最大耐久度
-}
-
-// 座標轉換示例
-var world_pos = { x: obj_stone.x, y: obj_stone.y };
-var gui_coords = world_to_gui_coords(world_pos.x, world_pos.y);
-
-// 手動創建飛行物品
-with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item)) {
-    sprite_index = spr_item;       // 設置物品精靈
-    fly_up_distance = 150;        // 自訂飛行高度
-    to_player_speed = 10;         // 自訂飛向玩家的速度
-    pause_duration = room_speed * 0.3; // 自訂停頓時間
-}
-```
+- **已知問題**:
+    - （新增或修改）飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。
 
 ## 設計模式與特點
 
@@ -725,3 +699,4 @@ with (instance_create_layer(gui_coords.x, gui_coords.y, "GUI", obj_flying_item))
 
 - **已知問題**:
     - 飛行道具 (`obj_flying_item`) 的起始座標轉換和飛向玩家目標座標計算可能不準確，尤其在攝像機移動或縮放時，因混合使用世界座標和 GUI 層繪製導致。
+    - （新增或修改）飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。

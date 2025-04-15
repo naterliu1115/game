@@ -44,8 +44,9 @@
   - 在 `SCATTERING` 切換到 `WAIT_ON_GROUND` 時，**加入了 `vspeed = 0;`**，解決了等待時的垂直漂移問題。
 - **調整掉落效果參數：**
   - 在 `obj_battle_manager` 的 `Alarm 1` 中，為 `SCATTERING` 狀態的 `obj_flying_item` **賦予了初始 `zspeed`** (random_range(3, 5))，以產生拋物線。
-  - 在 `obj_flying_item` 的 `Create` 事件中，**降低了 `scatter_speed_min/max`** (1-3)，以減小水平散開範圍。
-  - （確認 `bounce_count_max = 2` 已滿足 "最少彈1次，最多彈2次" 的需求，未修改）。
+- **清理冗餘代碼：**
+  - 清空了 `obj_battle_manager` 的 `Alarm 0` 事件內容，因其邏輯與當前設計衝突。
+  - 從 `scr_coordinate_utils.gml` 中移除了不再需要的 `world_to_gui_coords` 函數。
 
 ## 下一步行動
 - ~~完成礦石掉落 quantity 傳遞修正~~ (似乎已包含在飛行道具重構中)
