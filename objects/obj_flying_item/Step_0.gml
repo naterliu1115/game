@@ -117,7 +117,36 @@ switch (flight_state) {
     case FLYING_STATE.SCATTERING:
         // --- 拋灑/彈跳 (使用偽 Z 軸物理模擬) ---
         
-        // 更新水平位置 (如果需要)
+        // --- 碰撞檢測與反應 (新增) ---
+        ds_list_clear(nearby_items_list); // 清空上次的列表
+        var check_radius = sprite_get_width(sprite_index) * 0.6; // 碰撞檢查半徑
+        var hit_count = collision_circle_list(x, y, check_radius, obj_flying_item, false, true, nearby_items_list, false);
+
+        if (hit_count > 1) { // 至少要包含自己和另一個才需要處理
+            for (var i = 0; i < hit_count; i++) {
+                var other_item_id = nearby_items_list[| i];
+                if (other_item_id != id && instance_exists(other_item_id)) { // 排除自己並確保對方存在
+                    var distance = point_distance(x, y, other_item_id.x, other_item_id.y);
+                    var min_separation_distance = (sprite_get_width(sprite_index) + sprite_get_width(other_item_id.sprite_index)) * 0.4; // 最小分離距離
+
+                    if (distance < min_separation_distance && distance > 0) { // 避免除以零
+                        var overlap = min_separation_distance - distance;
+                        var dir_to_self = point_direction(other_item_id.x, other_item_id.y, x, y);
+                        var push_magnitude = overlap * push_force; // 使用 Create 中定義的 push_force
+                        var push_vx = lengthdir_x(push_magnitude, dir_to_self);
+                        var push_vy = lengthdir_y(push_magnitude, dir_to_self);
+
+                        // 直接修改位置來推開
+                        x += push_vx;
+                        y += push_vy;
+                        show_debug_message("  [SCATTERING Collision] Pushed away from " + string(other_item_id) + " by (" + string(push_vx) + ", " + string(push_vy) + ")");
+                    }
+                }
+            }
+        }
+        // --- 碰撞檢測結束 ---
+
+        // 更新水平位置 (現在已包含碰撞推力)
         x += hspeed;
         // y += vspeed; // 移除舊的 Y 軸速度更新
         
@@ -132,7 +161,7 @@ switch (flight_state) {
             part_particles_create(particle_system, x, y - z, particle_trail, 1);
         }
         
-        // 簡單空氣阻力 (可選，影響 hspeed)
+        // 簡單空氣阻力
         hspeed *= 0.99;
         
         // 檢查是否「落地」(z <= 0 且向下運動)

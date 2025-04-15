@@ -31,6 +31,10 @@ bounce_count_max = 2;
 ground_wait_timer = 0;
 wait_duration = room_speed * 2; // 地面停留 2 秒
 
+// === 新增：碰撞相關變數 ===
+push_force = 0.2; // 推開力度，需要實驗調整
+nearby_items_list = ds_list_create(); // 用於碰撞檢測的列表
+
 // --- 粒子特效參數 ---
 particle_effects_enabled = true;
 
