@@ -57,10 +57,11 @@ if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
             
             flight_state = FLYING_STATE.SCATTERING; // 明確設定初始狀態
             
-            // 初始化拋灑速度 (不再進行初始位置偏移)
+            // 初始化拋灑速度
             var angle = random(scatter_angle_range);
             var scatter_init_speed = random_range(scatter_speed_min, scatter_speed_max);
             hspeed = lengthdir_x(scatter_init_speed, angle);
+            vspeed = lengthdir_y(scatter_init_speed, angle);
             zspeed = random_range(3, 5);
             bounce_count = 0;
             

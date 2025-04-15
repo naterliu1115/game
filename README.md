@@ -500,9 +500,12 @@ UI 系統管理遊戲中的各種用戶界面元素。
     - `FLYING_TO_PLAYER`: 飛向玩家
     - `FADING_OUT`: 淡出消失
     - `SCATTERING`: **(已重構)** 拋灑/彈跳 (用於怪物掉落等)
+        - **360度拋射**: 現在同時使用初始的 `hspeed` 和 `vspeed` (在 `obj_battle_manager` 的 `Alarm 1` 中基於隨機角度和速度計算) 來實現 X 和 Y 軸方向的移動，確保掉落物能向四周分散，而不僅僅是水平移動。
+        - **拋射範圍控制**: 初始拋射速度的大小範圍由 `scatter_speed_min` 和 `scatter_speed_max` 變數控制，這兩個變數定義在 `obj_flying_item` 的 `Create_0.gml` 事件中。調整這些值可以改變掉落物的擴散距離 (近期已調整)。
         - **Z 軸物理模擬**: 使用 `z` (高度) 和 `zspeed` (垂直速度) 變數，以及 `gravity_z` 來模擬拋物線運動。
         - **落地檢測**: 當 `z <= 0` 且 `zspeed < 0` 時觸發落地。
-        - **反彈**: 根據 `bounce_count_max` (在 Create 事件設定，目前為 2) 和落地時的 `zspeed` 決定是否反彈。
+        - **反彈**: 根據 `bounce_count_max` (在 Create 事件設定，目前為 2) 和落地時的 `zspeed` 決定是否反彈。反彈時 `hspeed` 和 `vspeed` 也會衰減。
+        - **空氣阻力**: 在空中飛行時，`hspeed` 和 `vspeed` 會逐漸減小 (乘以 0.99)。
         - **已取代**舊的基於 `vspeed` 和 Tilemap 碰撞的邏輯。
     - `WAIT_ON_GROUND`: 落地後等待，執行上下浮動效果。**(已修正)** 確保此狀態下 `hspeed` 和 `vspeed` 都歸零，防止意外漂移。
 - **飛行參數**:

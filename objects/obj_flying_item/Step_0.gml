@@ -146,9 +146,9 @@ switch (flight_state) {
         }
         // --- 碰撞檢測結束 ---
 
-        // 更新水平位置 (現在已包含碰撞推力)
+        // 更新 X, Y 位置 (恢復 vspeed)
         x += hspeed;
-        // y += vspeed; // 移除舊的 Y 軸速度更新
+        y += vspeed; // <-- 恢復 Y 軸位移
         
         // 應用 Z 軸重力
         zspeed -= gravity_z;
@@ -161,10 +161,11 @@ switch (flight_state) {
             part_particles_create(particle_system, x, y - z, particle_trail, 1);
         }
         
-        // 簡單空氣阻力
+        // 空氣阻力 (恢復 vspeed)
         hspeed *= 0.99;
+        vspeed *= 0.99; // <-- 恢復 vspeed 空氣阻力
         
-        // 檢查是否「落地」(z <= 0 且向下運動)
+        // 檢查是否「落地」
         if (z <= 0 && zspeed < 0) {
             z = 0; // 精確設定高度為 0
 
@@ -173,8 +174,9 @@ switch (flight_state) {
                                ", Z Speed: " + string(zspeed));
 
             if (bounce_count < bounce_count_max && abs(zspeed) > 1.0) { // 根據 Z 速度判斷反彈
-                zspeed = -zspeed * 0.5; // 反彈 Z 速度並衰減
-                hspeed *= 0.8; // 地面摩擦力 (影響水平速度)
+                zspeed = -zspeed * 0.5;
+                hspeed *= 0.8; // 反彈時減弱水平速度
+                vspeed *= 0.8; // 反彈時減弱垂直速度
                 bounce_count++;
                 // 落地粒子
                 if (particle_effects_enabled) {
@@ -182,8 +184,8 @@ switch (flight_state) {
                 }
             } else { // 停止彈跳 / 停止運動
                 zspeed = 0;
-                hspeed = 0; // 停止水平移動
-                vspeed = 0; // <--- 新增：確保垂直速度也歸零
+                hspeed = 0;
+                vspeed = 0; // <-- 確保停止時 vspeed 也為 0
                 flight_state = FLYING_STATE.WAIT_ON_GROUND;
                 ground_wait_timer = 0;
                 ground_y_pos = y; // 記錄原始 Y 座標用於浮動
