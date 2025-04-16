@@ -223,6 +223,18 @@ function handle_event(event_name, data) {
     }
 }
 
+// 觸發事件 (公開接口)
+function trigger_event(event_name, data) {
+    // 這裡可以根據需要添加一些基本的檢查，例如 event_name 是否為空字串等
+
+    if (event_debug_mode) {
+        show_debug_message("[EventManager] Triggering event: " + event_name);
+    }
+
+    // 調用內部處理函數
+    handle_event(event_name, data);
+}
+
 // 清理資源
 // 在Destroy事件中調用
 function cleanup_event_system() {
