@@ -107,6 +107,7 @@ border_anim_speed = 0.05;
 // 初始化（已拆分至 script）
 // ==========================
 battle_init();
+battle_event_subscribe();
 
 // ==========================
 // Variable Initialization
@@ -285,6 +286,7 @@ ensure_managers_exist = function() {
 };
 
 // --- 事件訂閱 ---
+/*
 subscribe_to_events = function() {
     show_debug_message("===== 開始訂閱戰鬥事件 =====");
     if (instance_exists(obj_event_manager)) {
@@ -294,19 +296,20 @@ subscribe_to_events = function() {
             subscribe_to_event("all_enemies_defeated", other.id, "on_all_enemies_defeated");
             subscribe_to_event("all_player_units_defeated", other.id, "on_all_player_units_defeated");
             subscribe_to_event("battle_defeat_handled", other.id, "on_battle_defeat_handled");
-            subscribe_to_event("battle_result_closed", other.id, "on_battle_result_closed"); // 新增訂閱 (技術債)
+            subscribe_to_event("battle_result_closed", other.id, "on_battle_result_closed");
             show_debug_message("正在訂閱單位相關事件...");
             subscribe_to_event("unit_stats_updated", other.id, "on_unit_stats_updated");
             subscribe_to_event("unit_died", other.id, "on_unit_died");
             show_debug_message("正在訂閱戰鬥階段相關事件...");
             subscribe_to_event("battle_ending", other.id, "on_battle_ending");
-            subscribe_to_event("battle_result_confirmed", other.id, "on_battle_result_confirmed"); // 注意: 這個事件似乎沒用了
+            subscribe_to_event("battle_result_confirmed", other.id, "on_battle_result_confirmed");
             subscribe_to_event("rewards_calculated", other.id, "on_rewards_calculated");
-             subscribe_to_event("battle_start", other.id, "start_battle"); // 從這裡訂閱戰鬥開始
+            subscribe_to_event("battle_start", other.id, "start_battle");
         }
         show_debug_message("所有事件訂閱完成");
     }
 };
+*/
 
 // --- 事件處理回調 ---
 on_unit_died = function(data) {
@@ -636,7 +639,7 @@ initialize = function() { // Renamed for consistency
     enemies_defeated_this_battle = 0; defeated_enemy_ids_this_battle = []; current_battle_drops = [];
     if (ds_exists(defeated_enemies_exp, ds_type_list)) ds_list_clear(defeated_enemies_exp);
     ensure_managers_exist();
-    subscribe_to_events();
+    battle_event_subscribe();
     show_debug_message("戰鬥管理器初始化完成");
 };
 
@@ -649,7 +652,7 @@ _distribute_battle_exp_method = method(self, distribute_battle_exp);
 // _cleanup_battle_data_method = method(self, cleanup_battle_data); // Removed as logic moved to CleanUp event
 _add_battle_log_method = method(self, add_battle_log);
 // _initialize_battle_manager_method = method(self, initialize_battle_manager); // Renamed
-_subscribe_to_events_method = method(self, subscribe_to_events);
+_subscribe_to_events_method = method(self, battle_event_subscribe);
 _on_unit_died_method = method(self, on_unit_died);
 _on_unit_stats_updated_method = method(self, on_unit_stats_updated);
 _on_battle_ending_method = method(self, on_battle_ending);
