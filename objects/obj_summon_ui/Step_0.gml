@@ -1,10 +1,16 @@
 // obj_summon_ui - Step_0.gml
-if (!active) {
-    if (visible && open_animation <= 0) {
-        hide();
-    }
-    return;
-}
+
+// 首先重置內部輸入標誌
+process_internal_input_flag = false;
+
+// --- 移除：錯誤的非活躍檢查 --- 
+// if (!active) {
+//    if (visible && open_animation <= 0) {
+//        hide(); // <-- 錯誤調用
+//    }
+//    return;
+// }
+// --- 結束移除 ---
 
 // 如果正在關閉UI
 if (active && open_animation > 0 && !visible) {
@@ -27,7 +33,8 @@ if (active && open_animation > 0 && !visible) {
     return;
 }
 
-// 鼠標控制
+// --- 移除：被註解掉的舊鼠標按鈕檢查 --- 
+/*
 if (mouse_check_button_pressed(mb_left)) {
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
@@ -55,75 +62,18 @@ if (mouse_check_button_pressed(mb_left)) {
         hide();
     }
     
-    // 檢查是否點擊了怪物卡片
-    var list_count = ds_list_size(monster_list);
-    if (list_count > 0) {
-        var start_index = clamp(scroll_offset, 0, max(0, list_count - max_visible_monsters));
-        var end_index = min(start_index + max_visible_monsters, list_count);
-        
-        for (var i = start_index; i < end_index; i++) {
-            var card_y = ui_y + 50 + (i - start_index) * 130;
-            
-            if (point_in_rectangle(
-                mx, my,
-                ui_x + 20, card_y,
-                ui_x + 20 + 220, card_y + 120
-            )) {
-                selected_monster = i;
-                break;
-            }
-        }
-    }
-    
-    // 檢查是否點擊了滾動箭頭
-    if (ds_list_size(monster_list) > max_visible_monsters) {
-        // 上滾動箭頭
-        if (scroll_offset > 0 && point_in_rectangle(
-            mx, my,
-            ui_x + ui_width - 40, ui_y + 45,
-            ui_x + ui_width - 5, ui_y + 65
-        )) {
-            scroll_offset--;
-        }
-        
-        // 下滾動箭頭
-        if (scroll_offset < ds_list_size(monster_list) - max_visible_monsters && point_in_rectangle(
-            mx, my,
-            ui_x + ui_width - 40, ui_y + ui_height - 90,
-            ui_x + ui_width - 5, ui_y + ui_height - 70
-        )) {
-            scroll_offset++;
-        }
-    }
+    // ... (點擊卡片和滾動箭頭的邏輯保留，但移到下面) ...
 }
+*/
 
-// 鍵盤控制
+// --- 移除：被註解掉的舊鍵盤控制 --- 
+/*
 if (keyboard_check_pressed(vk_escape)) {
     // ESC關閉UI
     hide();
 }
 
-if (keyboard_check_pressed(vk_up)) {
-    // 向上選擇
-    if (selected_monster > 0) {
-        selected_monster--;
-        // 如果需要滾動顯示
-        if (selected_monster < scroll_offset) {
-            scroll_offset = selected_monster;
-        }
-    }
-}
-
-if (keyboard_check_pressed(vk_down)) {
-    // 向下選擇
-    if (selected_monster < ds_list_size(monster_list) - 1) {
-        selected_monster++;
-        // 如果需要滾動顯示
-        if (selected_monster >= scroll_offset + max_visible_monsters) {
-            scroll_offset = selected_monster - max_visible_monsters + 1;
-        }
-    }
-}
+// ... (Up/Down key logic remains, but moved below) ...
 
 if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space)) {
     // 確認選擇
@@ -133,18 +83,59 @@ if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space)) {
         }
     }
 }
+*/
 
-// 滾輪控制滾動
-var wheel = mouse_wheel_down() - mouse_wheel_up();
-if (wheel != 0 && ds_list_size(monster_list) > max_visible_monsters) {
-    scroll_offset = clamp(
-        scroll_offset + wheel,
-        0,
-        ds_list_size(monster_list) - max_visible_monsters
-    );
-}
+// --- 修改：只保留需要 process_internal_input_flag 的邏輯 ---
+if (process_internal_input_flag) {
+    show_debug_message("[Summon UI] Processing internal input (keyboard/wheel scroll).");
 
-// 檢查surface是否丟失
+    // 1. 移除鼠標點擊處理 (已移到 handle_mouse_click)
+    /*
+    if (mouse_check_button_pressed(mb_left)) {
+        // ... (移除卡片選擇和滾動箭頭點擊邏輯) ...
+    } 
+    */
+
+    // 2. 保留鍵盤上下選擇
+    if (keyboard_check_pressed(vk_up)) {
+        if (selected_monster > 0) {
+            selected_monster--;
+            if (selected_monster < scroll_offset) {
+                scroll_offset = selected_monster;
+            }
+            show_debug_message("[Summon UI] Selected up: index " + string(selected_monster));
+            surface_needs_update = true;
+        }
+    }
+    else if (keyboard_check_pressed(vk_down)) {
+        if (selected_monster < ds_list_size(monster_list) - 1) {
+            selected_monster++;
+            if (selected_monster >= scroll_offset + max_visible_monsters) {
+                scroll_offset = selected_monster - max_visible_monsters + 1;
+            }
+            show_debug_message("[Summon UI] Selected down: index " + string(selected_monster));
+            surface_needs_update = true;
+        }
+    }
+
+    // 3. 保留鼠標滾輪滾動
+    var wheel = mouse_wheel_down() - mouse_wheel_up();
+    if (wheel != 0 && ds_list_size(monster_list) > max_visible_monsters) {
+        var old_offset = scroll_offset;
+        scroll_offset = clamp(
+            scroll_offset + wheel,
+            0,
+            ds_list_size(monster_list) - max_visible_monsters
+        );
+        if (scroll_offset != old_offset) {
+            show_debug_message("[Summon UI] Scrolled with wheel: offset " + string(scroll_offset));
+            surface_needs_update = true;
+        }
+    }
+
+} // End if (process_internal_input_flag)
+
+// 檢查surface是否丟失 (保留在外部)
 if (active && !surface_exists(ui_surface)) {
     surface_needs_update = true;
 }

@@ -17,10 +17,10 @@ if (tilemap_id == -1) {
 
 // 根據當前狀態處理飛行道具的行為
 // 除錯：打印當前狀態和座標
-show_debug_message("[FlyingItem Step] ID: " + string(id) + ", State: " + string(flight_state) + 
+/*show_debug_message("[FlyingItem Step] ID: " + string(id) + ", State: " + string(flight_state) + 
                    ", World Pos: (" + string(x) + ", " + string(y) + ")" + 
                    ", HS: " + string(hspeed) + ", VS: " + string(vspeed));
-
+*/
 switch (flight_state) {
 
     case FLYING_STATE.FLYING_UP:
@@ -80,7 +80,7 @@ switch (flight_state) {
 
         // 加入 to_player_speed 的一次性除錯
         if (!variable_instance_exists(id, "debug_speed_printed")) {
-             show_debug_message("  [FLYING_TO_PLAYER] Initial check - to_player_speed: " + string(to_player_speed));
+             //show_debug_message("  [FLYING_TO_PLAYER] Initial check - to_player_speed: " + string(to_player_speed));
              debug_speed_printed = true;
         }
 
@@ -92,15 +92,15 @@ switch (flight_state) {
         var dist_to_player = point_distance(x, y, player_target_x, player_target_y);
 
         // 除錯：打印目標和距離
-        show_debug_message("  [FLYING_TO_PLAYER] Target: (" + string(player_target_x) + ", " + string(player_target_y) + ")" +
+        /*show_debug_message("  [FLYING_TO_PLAYER] Target: (" + string(player_target_x) + ", " + string(player_target_y) + ")" +
                            ", Current: (" + string(x) + ", " + string(y) + ")" + 
                            ", Dist: " + string(dist_to_player));
-
+        */
         // 如果已經到達玩家附近，切換到淡出狀態
         if (dist_to_player < to_player_speed) {
             flight_state = FLYING_STATE.FADING_OUT;
             fade_timer = 0;
-            show_debug_message("  [FLYING_TO_PLAYER] Reached player! Changing state to FADING_OUT.");
+           // show_debug_message("  [FLYING_TO_PLAYER] Reached player! Changing state to FADING_OUT.");
         } else {
             // 向玩家方向移動
             var dir = point_direction(x, y, player_target_x, player_target_y);
@@ -139,7 +139,7 @@ switch (flight_state) {
                         // 直接修改位置來推開
                         x += push_vx;
                         y += push_vy;
-                        show_debug_message("  [SCATTERING Collision] Pushed away from " + string(other_item_id) + " by (" + string(push_vx) + ", " + string(push_vy) + ")");
+                        //show_debug_message("  [SCATTERING Collision] Pushed away from " + string(other_item_id) + " by (" + string(push_vx) + ", " + string(push_vy) + ")");
                     }
                 }
             }
@@ -170,9 +170,9 @@ switch (flight_state) {
             z = 0; // 精確設定高度為 0
 
             // 除錯：打印落地信息
-            show_debug_message("  [SCATTERING] Ground Collision (Z=0)! Bounce: " + string(bounce_count) + 
+            /*show_debug_message("  [SCATTERING] Ground Collision (Z=0)! Bounce: " + string(bounce_count) + 
                                ", Z Speed: " + string(zspeed));
-
+            */
             if (bounce_count < bounce_count_max && abs(zspeed) > 1.0) { // 根據 Z 速度判斷反彈
                 zspeed = -zspeed * 0.5;
                 hspeed *= 0.8; // 反彈時減弱水平速度
@@ -190,7 +190,7 @@ switch (flight_state) {
                 ground_wait_timer = 0;
                 ground_y_pos = y; // 記錄原始 Y 座標用於浮動
                 float_timer = 0;
-                show_debug_message("  [SCATTERING] Stopped bouncing. Changing state to WAIT_ON_GROUND.");
+               // show_debug_message("  [SCATTERING] Stopped bouncing. Changing state to WAIT_ON_GROUND.");
             }
         }
         
@@ -245,11 +245,11 @@ switch (flight_state) {
         // y = ground_y_pos + float_offset; // 移除 Y 座標修改
         
         // 除錯：打印等待計時器
-        show_debug_message("  [WAIT_ON_GROUND] Wait Timer: " + string(ground_wait_timer) + 
+       /* show_debug_message("  [WAIT_ON_GROUND] Wait Timer: " + string(ground_wait_timer) + 
                            " / " + string(wait_duration));
-            
+       */     
         if (ground_wait_timer >= wait_duration) {
-            show_debug_message("  [WAIT_ON_GROUND] Wait complete! Changing state to FLYING_TO_PLAYER.");
+            //show_debug_message("  [WAIT_ON_GROUND] Wait complete! Changing state to FLYING_TO_PLAYER.");
             hspeed = 0; // 明確重置速度
             vspeed = 0; // 明確重置速度
             flight_state = FLYING_STATE.FLYING_TO_PLAYER;
@@ -272,9 +272,9 @@ switch (flight_state) {
         image_yscale = image_xscale;
 
         // 除錯：打印淡出計時器和 Alpha
-        show_debug_message("  [FADING_OUT] Fade Timer: " + string(fade_timer) + 
+        /*show_debug_message("  [FADING_OUT] Fade Timer: " + string(fade_timer) + 
                            " / " + string(fade_duration) + ", Alpha: " + string(image_alpha));
-
+        */
         // 淡出完成後銷毀
         if (fade_timer >= fade_duration) {
             instance_destroy();

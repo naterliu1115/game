@@ -304,4 +304,9 @@ if (reward_visible) {
 } // end if reward_visible
 // --- 結束修改 --- 
 
+// 檢查surface是否丟失
+if (active && !surface_exists(ui_surface)) {
+    surface_needs_update = true;
+}
+
 // --- 其他原有的 Step 事件邏輯應該保留 ---

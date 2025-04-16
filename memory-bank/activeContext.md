@@ -20,6 +20,7 @@
   - world_to_gui_coords 相關耦合待完全移除。
 
 ## 當前工作焦點
+- **調查並解決 `obj_event_manager` 中缺失 `trigger_event` 函數的警告。** (觀察到在獎勵系統添加物品時觸發)
 - 驗證戰鬥結束流程修改：
     - 確認延遲 3 秒是否符合預期。
     - 確認 Space 鍵能正常關閉結果畫面。
@@ -58,15 +59,28 @@
 - **清理冗餘代碼：** (已完成)
   - 清空了 `obj_battle_manager` 的 `Alarm 0` 事件內容，因其邏輯與當前設計衝突。
   - 從 `scr_coordinate_utils.gml` 中移除了不再需要的 `world_to_gui_coords` 函數。
+- **`obj_battle_ui` 事件回調修復：**
+    - 嘗試將 `show_battle_result` 事件回調從腳本索引改為內部定義的方法名 (`on_show_battle_result_event`)，但遭遇 GML 內建函數 (`method_exists`) 無法訪問的錯誤。
+    - 最終將事件回調改為使用 `obj_battle_ui` 內已穩定定義的 `show_rewards` 方法，並將事件處理邏輯（提取數據、設置標誌、調用 `update_rewards_display`、通知 UI 管理器等）整合進該方法。
+    - 此修改成功解決了回調執行錯誤，使得戰鬥結果 UI 能夠正常接收事件並觸發顯示邏輯。
 
 ## 下一步行動
-- **測試當前修改。**
-- **(技術債)** 將戰鬥結果畫面的關閉邏輯從 `obj_battle_manager` 移至對應的 UI 物件 (需先整合結果畫面到 `obj_ui_manager`)。
-- **(可選)** 根據測試結果微調 3 秒延遲。
-- 繼續處理「根據物品稀有度改變飛行道具外框顏色」的功能。
+1.  **檢查 `obj_event_manager` 的代碼**，確認是否存在 `trigger_event` 方法（或類似的事件廣播函數）。
+2.  如果存在，檢查 `obj_reward_system` (或其他觸發警告的代碼) 是如何調用它的。
+3.  如果不存在，需要在 `obj_event_manager` 中實現 `trigger_event` 功能。
+4.  (待 `trigger_event` 問題解決後) 調查並解決重複隱藏 `obj_battle_ui` 的警告。
+5.  (待 `trigger_event` 問題解決後) 調查戰鬥初始化時 `戰鬥已經在進行中` 的警告。
+6.  (後續) 恢復玩家移動能力。
+
+## 活躍決策與考量
+- 使用對象實例內穩定定義的方法 (如 `show_rewards`) 作為事件回調，被證實比使用腳本索引或動態創建的函數更可靠，能有效規避 GML 中潛在的作用域/上下文問題。
+- `trigger_event` 功能對於系統間解耦（如獎勵系統通知庫存系統）至關重要，需優先解決。
 
 ## 已知技術債
-- **戰鬥結果關閉邏輯位置不當:** 目前臨時放在 `obj_battle_manager`，應移至專門的 UI 物件。
+- **`trigger_event` 功能缺失/調用錯誤。**
+- 重複隱藏 UI 的邏輯。
+- 戰鬥狀態重置/管理可能存在問題。
+- 戰鬥結果關閉邏輯位置不當 (臨時在 `obj_battle_manager`)。
 - 採集系統掉落尚未工廠化
 - 飛行道具與 GUI 座標轉換耦合
 - UI/UX 細節與部分動畫流程待優化
@@ -78,17 +92,11 @@
 - 如何實現基於稀有度的外框顏色變更？（涉及讀取物品數據、定義顏色映射、修改 Draw 事件）。
 
 ## 最近活動與狀態
-
-- **`obj_flying_item` 散佈行為調整**: 
-    - 之前專注於解決 `obj_flying_item` 在 `SCATTERING` 狀態下的 Y 軸移動和最終散佈範圍問題。
-    - 使用者已自行完成最終的散佈範圍調整。
-    - `README.md` 文件已更新，詳細記錄了目前的 360 度拋射機制以及透過 `scatter_speed_min`/`max` 控制範圍的方式。
-- **文件更新**: `README.md` 中關於 `obj_flying_item` 的部分已更新。
+- **主要問題解決：** `obj_battle_ui` 無法顯示戰鬥結果的問題已解決。
+- **新問題發現：** `obj_event_manager` 缺少 `trigger_event` 功能的警告成為當前最高優先級問題。
 
 ## 目前焦點
-
-- 解決 `obj_flying_item` 散佈問題的任務已完成。
+- **解決 `obj_event_manager` 的 `trigger_event` 問題。**
 
 ## 下一步
-
 - 等待使用者確認下一步的工作重點。可以參考 `README.md` 的「進行中/待辦」部分，或提出新的任務。 

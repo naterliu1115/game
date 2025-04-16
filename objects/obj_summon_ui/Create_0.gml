@@ -33,33 +33,6 @@ show = function() {
     show_debug_message("召喚UI已打開");
 };
 
-hide = function() {
-    active = false; 
-    visible = false;
-    depth = 0;
-    allow_player_movement = true;  // 添加這行來恢復玩家移動能力
-    
-    // 釋放表面資源
-    if (surface_exists(ui_surface)) {
-        surface_free(ui_surface);
-        ui_surface = -1;
-    }
-    
-    // 重置繪圖屬性，避免影響其他UI
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
-    draw_set_color(c_white);
-    draw_set_alpha(1.0);
-    
-    // 如果是從準備階段打開的，讓戰鬥UI知道玩家已經關閉了召喚UI
-    if (from_preparing_phase && instance_exists(obj_battle_ui)) {
-        // 可以在這裡做一些清理工作或顯示提示
-    }
-    
-    from_preparing_phase = false; // 重置標記
-    show_debug_message("召喚UI已關閉，資源已釋放");
-};
-
 // 添加缺少的變量初始化
 info_alpha = 1.0; // 初始化信息透明度
 info_text = "";  // 初始化信息文本
@@ -218,7 +191,8 @@ summon_selected_monster = function() {
             return false;
         }
     }
-    return false;
+    
+    return false; // 確保函數有返回值
 }
 
 /// 繪製怪物卡片
@@ -336,3 +310,155 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     // 恢復繪圖顏色
     draw_set_color(c_white);
 };
+
+// --- 新增：UI管理器接口函數和標誌 ---
+
+process_internal_input_flag = false; // 標誌：是否應處理內部輸入
+
+// 處理關閉輸入 (ESC)
+handle_close_input = function() {
+    show_debug_message("[Summon UI] handle_close_input called (ESC). Requesting UI Manager hide.");
+    if (instance_exists(obj_ui_manager)) {
+        obj_ui_manager.hide_ui(id);
+    } else {
+        show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
+        // Fallback: 直接調用自身的 hide，但不推薦
+        // hide(); 
+    }
+}
+
+// 處理確認輸入 (Enter/Space)
+handle_confirm_input = function() {
+    show_debug_message("[Summon UI] handle_confirm_input called (Enter/Space).");
+    if (selected_monster >= 0 && selected_monster < ds_list_size(monster_list)) {
+        show_debug_message("Attempting to summon selected monster: index " + string(selected_monster));
+        var success = summon_selected_monster(); // 嘗試召喚
+        if (success) {
+            show_debug_message("[Summon UI] Summon successful. Requesting UI Manager hide.");
+            // 召喚成功後，請求管理器關閉 UI
+            if (instance_exists(obj_ui_manager)) {
+                obj_ui_manager.hide_ui(id);
+            } else {
+                show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
+            }
+        } else {
+            show_debug_message("[Summon UI] Summon failed (e.g., cooldown, max units). UI remains open.");
+            // 召喚失敗（例如冷卻中、數量已滿），UI 保持打開狀態，summon_selected_monster 內部已顯示提示
+        }
+    } else {
+        show_debug_message("[Summon UI] Confirm pressed, but no valid monster selected.");
+        // 可以考慮加一個提示
+        if (instance_exists(obj_battle_ui)) {
+            obj_battle_ui.show_info("請先選擇一個怪物！");
+        }
+    }
+}
+
+// 處理鼠標點擊 (由 UI 管理器傳遞)
+handle_mouse_click = function(mx, my) {
+    show_debug_message("[Summon UI] handle_mouse_click called at (" + string(mx) + ", " + string(my) + ").");
+    var _handled = false; // 追蹤此點擊是否被此 UI 處理
+
+    // 1. 檢查是否點擊了召喚按鈕
+    if (selected_monster >= 0 && point_in_rectangle(
+        mx, my,
+        summon_btn_x, summon_btn_y,
+        summon_btn_x + summon_btn_width, summon_btn_y + summon_btn_height
+    )) {
+        show_debug_message("[Summon UI] Summon button clicked.");
+        var success = summon_selected_monster(); // 嘗試召喚
+        if (success) {
+            show_debug_message("[Summon UI] Summon successful via button. Requesting UI Manager hide.");
+            // 召喚成功後，請求管理器關閉 UI
+            if (instance_exists(obj_ui_manager)) {
+                obj_ui_manager.hide_ui(id);
+                _handled = true; // 關閉操作由管理器發起，標記已處理
+            } else {
+                show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
+            }
+        } else {
+             show_debug_message("[Summon UI] Summon failed via button. UI remains open.");
+             _handled = true; // 點擊被處理了，即使召喚失敗
+        }
+        return _handled; // 無論成功失敗，點擊在按鈕上就算處理了
+    }
+
+    // 2. 檢查是否點擊了取消按鈕
+    if (point_in_rectangle(
+        mx, my,
+        cancel_btn_x, cancel_btn_y,
+        cancel_btn_x + cancel_btn_width, cancel_btn_y + cancel_btn_height
+    )) {
+        show_debug_message("[Summon UI] Cancel button clicked. Requesting UI Manager hide.");
+        if (instance_exists(obj_ui_manager)) {
+            obj_ui_manager.hide_ui(id);
+             _handled = true; // 關閉操作由管理器發起，標記已處理
+        } else {
+            show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
+        }
+        return _handled; // 點擊在取消按鈕上就算處理了
+    }
+
+    // 3. 檢查是否點擊了怪物卡片 (從 Step 事件移動過來)
+    var list_count = ds_list_size(monster_list);
+    if (list_count > 0) {
+        var start_index = clamp(scroll_offset, 0, max(0, list_count - max_visible_monsters));
+        var end_index = min(start_index + max_visible_monsters, list_count);
+        
+        for (var i = start_index; i < end_index; i++) {
+            var card_y = ui_y + 50 + (i - start_index) * 130;
+            
+            if (point_in_rectangle(
+                mx, my,
+                ui_x + 20, card_y,
+                ui_x + 20 + 220, card_y + 120
+            )) {
+                selected_monster = i;
+                show_debug_message("[Summon UI] Card selected via click: index " + string(i));
+                surface_needs_update = true; // Need to redraw selection
+                _handled = true; // 點擊在卡片上算處理了
+                break;
+            }
+        }
+    }
+    if (_handled) return true; // 如果點擊在卡片上，直接返回
+
+    // 4. 檢查是否點擊了滾動箭頭 (從 Step 事件移動過來)
+    if (ds_list_size(monster_list) > max_visible_monsters) {
+        // 上滾動箭頭
+        if (point_in_rectangle(
+            mx, my,
+            ui_x + ui_width - 40, ui_y + 45,
+            ui_x + ui_width - 5, ui_y + 65
+        )) {
+            if (scroll_offset > 0) { 
+                scroll_offset--;
+                show_debug_message("[Summon UI] Scrolled up via click.");
+                surface_needs_update = true;
+                _handled = true;
+            }
+        }
+        // 下滾動箭頭
+        else if (point_in_rectangle(
+            mx, my,
+            ui_x + ui_width - 40, ui_y + ui_height - 90,
+            ui_x + ui_width - 5, ui_y + ui_height - 70
+        )) {
+            if (scroll_offset < ds_list_size(monster_list) - max_visible_monsters) {
+                scroll_offset++;
+                show_debug_message("[Summon UI] Scrolled down via click.");
+                surface_needs_update = true;
+                 _handled = true;
+            }
+        }
+    }
+
+    show_debug_message("[Summon UI] Click was not handled by summon/cancel buttons or cards/scroll arrows.");
+    return _handled; // 返回是否處理了點擊
+}
+
+// --- 結束新增 ---
+
+
+// 初始化
+show_debug_message("obj_summon_ui Create event finished.");

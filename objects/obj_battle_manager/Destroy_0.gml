@@ -1,4 +1,5 @@
 // obj_battle_manager - Destroy_0.gml
+// 清理邏輯已移至 Clean Up 事件。
 
 // 釋放資源
 if (ds_exists(battle_log, ds_type_list)) {

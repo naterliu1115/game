@@ -130,28 +130,54 @@ function show_ui(ui_instance, layer_name) {
 // 隱藏UI
 function hide_ui(ui_instance) {
     if (!instance_exists(ui_instance)) return;
-    
-    // 隱藏UI
-    with (ui_instance) {
-        if (variable_instance_exists(id, "hide") && is_method(variable_instance_get(id, "hide"))) {
-            var hide_method = variable_instance_get(id, "hide");
-            hide_method();
-        } else {
-            visible = false;
-            active = false;
-        }
-    }
-    
-    // 從活躍UI列表中移除
+
+    // --- 步驟 1：先從活躍列表中移除 ---
+    var _removed = false;
+    var _removed_from_layer = "unknown";
     var keys = ds_map_keys_to_array(active_ui);
     for (var i = 0; i < array_length(keys); i++) {
         var layer_name = keys[i];
         var active_list = active_ui[? layer_name];
-        
         var index = ds_list_find_index(active_list, ui_instance);
         if (index != -1) {
             ds_list_delete(active_list, index);
-            show_debug_message("UI隱藏: " + object_get_name(ui_instance.object_index) + " 從層級 " + layer_name);
+            _removed = true; // 標記已移除
+            _removed_from_layer = layer_name;
+            show_debug_message("從活躍列表移除: " + object_get_name(ui_instance.object_index) + " (層級: " + layer_name + ")");
+            // 假設 UI 只在一個層級，找到即可跳出
+             break; 
+        }
+    }
+    
+    // 如果根本沒在活躍列表裡，打印警告但繼續執行 UI 的 hide
+    if (!_removed) {
+        show_debug_message("警告：hide_ui 嘗試隱藏一個不在活躍列表中的 UI: " + object_get_name(ui_instance.object_index));
+    }
+
+    // --- 步驟 2：然後再調用 UI 自己的 hide 方法 --- 
+    // 即使 UI 不在活躍列表（可能已被移除），仍嘗試調用其 hide 清理內部狀態
+    with (ui_instance) {
+        // 注意：這裡的 hide() 仍然會調用管理器，但管理器現在不會再次刪除
+        if (variable_instance_exists(id, "hide") && typeof(variable_instance_get(id, "hide")) == "method") { // Use safer check
+            var hide_method = variable_instance_get(id, "hide");
+            show_debug_message("調用 " + object_get_name(object_index) + " 自身的 hide 方法...");
+            hide_method(); 
+        } else {
+            // 如果沒有繼承或自定義 hide，執行基礎隱藏邏輯
+            show_debug_message("設置 " + object_get_name(object_index) + " visible=false, active=false (無自定義或繼承 hide)");
+            visible = false;
+            active = false;
+             // 備選：如果沒有 hide，可能需要管理器直接釋放表面？
+            if (variable_instance_exists(id, "ui_surface") && surface_exists(ui_surface)) {
+                 surface_free(ui_surface);
+                 // variable_instance_set(id, "ui_surface", -1); // Set surface to -1 on the instance
+                 try {
+                     ui_surface = -1; // Try setting directly, might fail if called outside with
+                 } catch(e) {
+                     variable_instance_set(id, "ui_surface", -1);
+                 }
+                 show_debug_message("Manager 手動釋放表面 for " + object_get_name(object_index));
+            }
         }
     }
 }

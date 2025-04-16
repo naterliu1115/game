@@ -7,11 +7,6 @@ show = function() {
     depth = -100; // 確保UI在最上層 (會被UI管理器覆蓋)
 };
 
-hide = function() {
-    visible = false;
-    active = false;
-};
-
 // UI位置和尺寸
 ui_width = display_get_gui_width();
 ui_height = 120; // 稍微增加高度
@@ -59,6 +54,7 @@ reward_gold = 0;            // 儲存獲得或損失的金幣 (失敗時為負�
 reward_items_list = ds_list_create(); // 儲存獲得的物品列表 (結構體數組)
 reward_visible = false;       // 控制獎勵/結果面板是否可見的標誌
 defeat_penalty_text = "";    // 儲存用於顯示失敗懲罰的特定文本 (例如 "損失金幣: XXX")
+is_showing_results = false; // 新增：標誌是否正在顯示結果畫面
 
 // --- 新增：物品網格顯示相關變數 ---
 items_start_x = display_get_gui_width() / 2 - 150; // 大致居中，需要微調
@@ -88,36 +84,78 @@ show_info = function(text) {
     info_timer = 120; // 2秒顯示時間
 };
 
-// 重寫獎勵顯示函數，接收更多參數
-show_rewards = function(victory_flag, duration_val, enemies_defeated_val, exp_val, gold_val, items_val) {
-    // show_debug_message("[DEBUG] show_rewards 被調用"); // 可以移除
-    // show_debug_message("[DEBUG] 參數：Victory=" + string(victory_flag) + ", Duration=" + string(duration_val) + ", Defeated=" + string(enemies_defeated_val) + ", EXP=" + string(exp_val) + ", Gold=" + string(gold_val)); // 可以移除
-    
-    // 更新內部狀態
-    battle_victory_status = victory_flag;
-    battle_duration = duration_val;
-    defeated_enemies_count = enemies_defeated_val;
-    reward_exp = exp_val;
-    reward_gold = gold_val;
-    reward_visible = true;
-    
-    // 清理舊的物品獎勵顯示
-    ds_list_clear(reward_items_list);
-    
-    // 處理新的物品獎勵
-    // show_debug_message("[DEBUG] 處理物品獎勵，數量：" + string(array_length(item_drops))); // 可以移除
-    if (is_array(items_val)) {
-        // show_debug_message("[DEBUG] 處理物品獎勵，數量：" + string(array_length(items_val))); // 可以移除
-        var i;
-        var count = array_length(items_val);
-        for (i = 0; i < count; i++) {
-            // array_push(reward_items_list, items_val[i]); // <-- 註解掉舊的
-            ds_list_add(reward_items_list, items_val[i]); // <-- 改用 ds_list_add
-        }
+// 重寫獎勵顯示函數，現在作為事件回調，接收 event_data 結構體
+show_rewards = function(event_data) { // <-- 修改函數簽名
+    show_debug_message("[obj_battle_ui show_rewards (Event Handler)] 收到事件數據。");
+    show_debug_message("===== obj_battle_ui (show_rewards 作為處理器) 處理事件 =====");
+    show_debug_message("Received data: " + json_stringify(event_data));
+
+    // 檢查 event_data 是否為結構體
+    if (!is_struct(event_data)) {
+        show_debug_message("錯誤：[obj_battle_ui show_rewards] event_data 不是有效的結構體！");
+        return;
     }
-    
+
+    // --- 新增：從 event_data 提取數據 ---
+    var _victory = variable_struct_get(event_data, "victory");
+    var _duration = variable_struct_get(event_data, "battle_duration");
+    var _defeated = variable_struct_get(event_data, "defeated_enemies");
+    var _exp = variable_struct_get(event_data, "exp_gained");
+    var _gold = variable_struct_get(event_data, "gold_gained");
+    var _items = variable_struct_get(event_data, "item_drops"); // 確保使用正確鍵名
+
+    // 檢查數據是否有效
+    if (is_undefined(_victory) || is_undefined(_duration) || is_undefined(_defeated) || is_undefined(_exp) || is_undefined(_gold) || is_undefined(_items)) {
+        show_debug_message("警告：[obj_battle_ui show_rewards] 收到的事件數據不完整！");
+        return;
+    }
+    // --- 結束新增提取數據 ---
+
+    // --- 新增：整合 on_show_battle_result_event 的核心邏輯 ---
+    // 設置標誌
+    is_showing_results = true;
+    reward_visible = true;
+    show_debug_message("[obj_battle_ui show_rewards] 將 is_showing_results 和 reward_visible 設為 true。");
+
+    // 更新內部狀態 (這些變數用於繪圖)
+    battle_victory_status = _victory;
+    battle_duration = _duration;
+    defeated_enemies_count = _defeated;
+    reward_exp = _exp;
+    reward_gold = _gold; // 包含勝利/失敗的金幣值
+    // --- 結束整合：設置標誌和內部狀態 ---
+
+    // --- 保留：處理物品列表的邏輯 ---
+    ds_list_clear(reward_items_list);
+    if (is_array(_items)) {
+        var i;
+        var count = array_length(_items);
+        for (i = 0; i < count; i++) {
+            ds_list_add(reward_items_list, _items[i]);
+        }
+        show_debug_message("[obj_battle_ui show_rewards] 處理了 " + string(count) + " 個物品。");
+    }
+    // --- 結束保留：物品列表處理 ---
+
+    // --- 新增：整合失敗處理和視覺更新 ---
+    // 統一調用 update_rewards_display 來確保懲罰文本（如果失敗）和視覺更新
+    update_rewards_display();
+    show_debug_message("[obj_battle_ui show_rewards] 已呼叫 update_rewards_display (for penalty/visual update)。");
+    // --- 結束整合：失敗處理和視覺更新 ---
+
+
+    // --- 新增：整合通知 UI 管理器的邏輯 ---
+    if (instance_exists(obj_ui_manager)) {
+        obj_ui_manager.show_ui(id, "main");
+        show_debug_message("[obj_battle_ui show_rewards] 已通知 UI 管理器顯示此 UI (ID: " + string(id) + ")");
+    } else {
+        show_debug_message("警告：[obj_battle_ui show_rewards] UI 管理器不存在，無法註冊！");
+    }
+    // --- 結束整合：通知 UI 管理器 ---
+
+    // 標記表面需要更新 (原 show_rewards 和 update_rewards_display 都有此操作)
     surface_needs_update = true;
-    // show_debug_message("[DEBUG] surface_needs_update 已設置為 true"); // 移除
+    show_debug_message("[obj_battle_ui show_rewards] 事件處理完成，surface_needs_update = true。");
 };
 
 // 更新戰敗獎勵/懲罰顯示的方法
@@ -138,42 +176,54 @@ update_rewards_display = function() {
     surface_needs_update = true; 
 };
 
-// --- Define callback method using function syntax --- 
-function on_show_battle_result(event_data) {
-    // show_debug_message("[DEBUG] obj_battle_ui: Executing on_show_battle_result METHOD for instance " + string(id)); // 移除
-    // show_debug_message("===== obj_battle_ui (via method) 收到 show_battle_result 事件 ====="); // 移除
-    // show_debug_message("Received data: " + json_stringify(event_data)); // 移除
-    
-    // 從結構體中提取數據
-    var _victory = variable_struct_get(event_data, "victory");
-    var _duration = variable_struct_get(event_data, "battle_duration");
-    var _defeated = variable_struct_get(event_data, "defeated_enemies");
-    var _exp = variable_struct_get(event_data, "exp_gained");
-    var _gold = variable_struct_get(event_data, "gold_gained");
-    var _items = variable_struct_get(event_data, "item_drops");
+// --- 修改：使用 "show_rewards" 作為回調 ---
+if (instance_exists(obj_event_manager)) {
+    // 移除舊的回調嘗試
+    // var _callback_method_name = "on_show_battle_result_event";
+    // obj_event_manager.subscribe_to_event("show_battle_result", id, _callback_method_name);
+    // show_debug_message("...");
 
-    // 檢查數據是否存在
-    if (is_undefined(_victory) || is_undefined(_duration) || is_undefined(_defeated) || is_undefined(_exp) || is_undefined(_gold) || is_undefined(_items)) {
-        show_debug_message("警告 (on_show_battle_result method): 收到的 show_battle_result 事件數據不完整！"); // 保留警告
+    // 使用現有的 "show_rewards" 方法名 (字串) 進行訂閱
+    var _callback_method_name = "show_rewards"; // <-- 修改這裡
+    obj_event_manager.subscribe_to_event("show_battle_result", id, _callback_method_name);
+    show_debug_message("obj_battle_ui 已訂閱 show_battle_result 事件，回調方法名: " + _callback_method_name);
+
+} else {
+    show_debug_message("警告：無法訂閱事件，obj_event_manager NOT FOUND at subscription time!");
+}
+
+// --- 新增：處理關閉輸入的方法 ---
+handle_close_input = function() {
+    show_debug_message("[Battle UI] handle_close_input called.");
+    
+    // 確保只在顯示結果時響應
+    if (!is_showing_results) {
+        show_debug_message("[Battle UI] handle_close_input ignored: Not showing results.");
         return;
     }
 
-    show_rewards(_victory, _duration, _defeated, _exp, _gold, _items);
-    // show_debug_message("(via method) 已呼叫 show_rewards 函數。"); // 移除
+    // 停止顯示結果
+    is_showing_results = false;
+    reward_visible = false; // 重置這個標誌
 
-    if (!_victory) {
-        update_rewards_display(); 
-        // show_debug_message("(via method) 檢測到失敗，已呼叫 update_rewards_display。"); // 移除
+    // 廣播關閉事件
+    if (instance_exists(obj_event_manager)) {
+        broadcast_event("battle_result_closed", {}); 
+        show_debug_message("[Battle UI] Broadcasted battle_result_closed event.");
+    } else {
+        show_debug_message("錯誤：[Battle UI] 無法廣播 battle_result_closed，事件管理器不存在。");
     }
-}
 
-// --- Subscribe immediately after definition, using string name --- 
-if (instance_exists(obj_event_manager)) {
-    show_debug_message("[DEBUG] obj_battle_ui Create: obj_event_manager FOUND. Attempting subscription with METHOD callback name.");
-    obj_event_manager.subscribe_to_event("show_battle_result", id, "on_show_battle_result"); 
-    show_debug_message("obj_battle_ui 已訂閱 show_battle_result 事件，回調方法: on_show_battle_result");
-} else {
-    show_debug_message("警告：無法訂閱事件，obj_event_manager NOT FOUND at subscription time!");
+    // 讓 UI 管理器隱藏自己
+    if (instance_exists(obj_ui_manager)) {
+         with(obj_ui_manager) {
+             hide_ui(other.id); // other.id 指向 obj_battle_ui 實例
+             show_debug_message("[Battle UI] Requested UI Manager to hide self (ID: " + string(other.id) + ").");
+         }
+    } else {
+         show_debug_message("錯誤：[Battle UI] 無法通過 UI 管理器隱藏，管理器不存在。");
+         hide(); // 備選方案
+    }
 }
 
 // 初始化時顯示戰鬥開始提示

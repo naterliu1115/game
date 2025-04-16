@@ -80,9 +80,10 @@ idle_update_rate = 9;
 
 **主要功能:**
 - 事件訂閱: `subscribe_to_event(event_name, instance_id, callback)` (通過 `obj_event_manager`)
-- 事件廣播: `broadcast_event(event_name, data = {})` (通過 `obj_event_manager`)
+- 事件廣播: `broadcast_event(event_name, data = {})` (通過 `obj_event_manager`) - **(注意: 可能缺少 `trigger_event` 或類似函數，正在調查)**
 - 事件取消訂閱: `unsubscribe_from_event(event_name, instance_id)` (通過 `obj_event_manager`)
 - **更新**: `obj_game_controller` 現在使用 Alarm[0] 延遲廣播 `managers_initialized` 事件，以確保所有實例（如 `obj_enemy_placer`）有足夠時間完成創建和訂閱。
+- **回調機制註記**: 經驗證，使用已定義的實例方法名（字串）作為 `callback` 參數比使用腳本索引或動態函數更穩定，能避免 GML 中潛在的作用域/上下文問題。
 
 **使用示例:**
 ```gml
@@ -96,10 +97,13 @@ if (instance_exists(obj_event_manager)) {
 // 廣播事件 (例如，在子彈擊中玩家時)
 if (instance_exists(obj_event_manager)) {
     with (obj_event_manager) {
-        broadcast_event("player_damaged", { damage: 10 });
+        // 注意：確切的廣播方法名可能需要確認或實現 (例如 broadcast_event 或 trigger_event)
+        // broadcast_event("player_damaged", { damage: 10 }); 
     }
 }
 ```
+**已知問題**:
+- **`trigger_event` 功能缺失**: 警告顯示在某些情況下（如獎勵系統）缺少 `trigger_event` 或類似的事件廣播功能，正在調查中。
 
 ### 3. 戰鬥系統 (Battle System)
 
@@ -132,6 +136,7 @@ if (instance_exists(obj_event_manager)) {
     - `obj_reward_system` 計算完成後，更新其內部的 `battle_result` 結構體，然後廣播 `rewards_calculated` 事件，包含完整的 `battle_result`。
     - `obj_battle_manager` 監聽 `rewards_calculated`，更新自身狀態後，最終廣播 `show_battle_result` 事件給 UI。
     - `obj_battle_ui` 監聽 `show_battle_result`，使用收到的完整數據更新結果畫面。
+    - **(已更新)** `obj_battle_ui` 現在通過其內部的 `show_rewards` 方法響應此事件，該方法已整合了數據處理和界面更新邏輯。
   - **物品掉落計算 (核心重構):**
     - 物品掉落的計算現在**完全由 `obj_battle_manager`** 在處理 `unit_died` 事件時執行（在其 `on_unit_died` 方法內部）。
     - `on_unit_died` 會從死去的敵人模板 (`template`) 中獲取 `loot_table` **原始字串** (例如 `"1001:1:1-1;1002:0.5:1"`）。
@@ -398,6 +403,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
 - `parent_ui`: UI 元素的父類
 - `obj_main_hud`: **(新增)** 主界面 HUD，常駐顯示
 - `obj_battle_ui`: 戰鬥界面
+    - **(已更新)** 響應 `show_battle_result` 事件，通過自身的 `show_rewards` 方法處理數據並更新顯示。修復了之前的回調執行錯誤。
 - `obj_inventory_ui`: 物品欄界面
 - `obj_item_info_popup`: 物品資訊彈出視窗
 - `obj_monster_manager_ui`: 怪物管理界面
@@ -564,7 +570,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
 ### 添加新事件
 1. 在需要監聽事件的對象中添加對應的回調方法 (Script Function 或 Object Method)
 2. 在 `Create` 或適當時機，使用 `obj_event_manager` 的 `subscribe_to_event` 訂閱事件
-3. 在需要觸發事件的地方，使用 `obj_event_manager` 的 `broadcast_event` 廣播事件
+3. 在需要觸發事件的地方，使用 `obj_event_manager` 的 `broadcast_event` (或確認存在的廣播方法如 `trigger_event`) 廣播事件
 
 ### 擴展戰鬥系統
 1. 在 `obj_battle_manager` 中添加新的戰鬥邏輯或修改狀態機行為
@@ -626,6 +632,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 實現了與主背包分離的快捷欄數據 (`global.player_hotbar`)。
         - **實現了通過物品彈窗指派和取消快捷欄物品的功能**。
         - **實現了快捷欄物品的拖放重排功能**。
+      - **(新增)** 修復了 `obj_battle_ui` 無法響應 `show_battle_result` 事件並顯示結果的問題（通過修改回調機制）。
     - **採集系統**:
       - 實現了可挖掘的礦石物件 (`obj_stone`)
       - 實現了物品獲取的飛行動畫效果 (`obj_flying_item`)
@@ -658,6 +665,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
             - 修復了 `is_numeric_safe` 函數未能正確處理從模板中讀取的數字（而非字符串）的問題。
 
 - **進行中/待辦**:
+    - **(高優先級)** **解決 `obj_event_manager` 缺少 `trigger_event` 功能**: 調查獎勵系統等處觸發的警告，實現或修復事件廣播功能。
     - **採集系統擴展**: (保留)
     - **快捷欄持久化**: 在實現存檔系統時，需要保存和加載 `global.player_hotbar`。
     - **互動提示位置 (UX)**: 根據測試反饋，考慮是否將互動提示移到遊戲世界中的互動目標附近。
@@ -670,7 +678,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - **已實現**: 將實際掉落物品列表記錄在 `obj_battle_manager` 的 `current_battle_drops` 中，並通過 `finalize_battle_results` 事件傳遞。
         - **已確認**: `obj_reward_system` 現在能正確接收預先計算好的掉落列表。
         - **已解決**: `obj_flying_item` 的視覺動畫問題。
-        - **戰鬥結果 UI**: 需要確認 `obj_battle_ui` 是否正確顯示佇列處理後的所有掉落物品圖示和數量。
+        - **戰鬥結果 UI**: 需要確認 `obj_battle_ui` 是否正確顯示佇列處理後的所有掉落物品圖示和數量。**(已部分完成顯示流程修復)**
         - **戰鬥結果分層**: (保留) 重構 `obj_battle_manager` 狀態機，加入等待掉落動畫和升級動畫完成的狀態，確保結果 UI 在演出結束後才顯示。
     - **新增**: **根據物品稀有度改變飛行道具 (`obj_flying_item`) 的外框顏色。**
     - **Battle Log 功能**:
@@ -701,5 +709,8 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 考慮快捷欄在非戰鬥狀態下的使用。
 
 - **已知問題**:
+    - **事件管理器 `trigger_event` 功能缺失或調用錯誤。**
     - 飛行道具 (`obj_flying_item`) 的起始座標轉換和飛向玩家目標座標計算可能不準確，尤其在攝像機移動或縮放時，因混合使用世界座標和 GUI 層繪製導致。
     - （新增或修改）飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。
+    - 重複隱藏 UI 的警告 (`obj_battle_ui`)。
+    - 戰鬥狀態初始化警告 (`戰鬥已經在進行中`)。

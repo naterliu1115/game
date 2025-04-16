@@ -19,7 +19,7 @@ if (battle_state == BATTLE_STATE.ENDING && ending_substate == ENDING_SUBSTATE.DE
     }
 
     // 發送事件以觸發最終的獎勵計算和結果顯示
-    _event_broadcaster("finalize_battle_results", {
+    _local_broadcast_event("finalize_battle_results", {
         defeated_enemies: enemies_defeated_this_battle,
         defeated_enemy_ids: defeated_enemy_ids_this_battle, 
         item_drops: current_battle_drops, // 傳遞之前記錄的總掉落物
@@ -33,3 +33,18 @@ if (battle_state == BATTLE_STATE.ENDING && ending_substate == ENDING_SUBSTATE.DE
 
 // Alarm 通常是一次性的，無需在此重置 ending_substate
 // 重置應在戰鬥完全結束 (end_battle) 或重新開始 (initialize_battle_manager/start_battle) 時進行 
+
+// 等待一小段時間確保所有動畫完成
+show_debug_message("[Battle Manager Alarm 2] 延遲完成，準備顯示最終結果。");
+
+// 廣播最終結果事件，讓 UI 顯示
+// _event_broadcaster("show_battle_result", { victory: (battle_result == "VICTORY"), /* ... other data ... */ }); // This is likely handled by reward system / earlier events
+
+// 準備結束戰鬥的核心邏輯 (等待 UI 關閉)
+battle_state = BATTLE_STATE.RESULT; // Move to result state to wait for UI confirmation
+ending_substate = ENDING_SUBSTATE.FINISHED; // Mark ending flow as finished internally
+
+// (技術債移除) 不在這裡直接調用 end_battle()
+// end_battle();
+
+show_debug_message("[Battle Manager Alarm 2] 完成。狀態變為 RESULT，等待 UI 關閉事件。"); 

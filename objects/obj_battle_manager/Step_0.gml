@@ -54,7 +54,7 @@ switch (battle_state) {
                 }
                 
                 // 發送進入準備階段事件
-                _event_broadcaster("battle_preparing", {});
+                _local_broadcast_event("battle_preparing", {});
             }
         }
         break;
@@ -71,7 +71,7 @@ switch (battle_state) {
         
         if (has_units || battle_timer > game_get_speed(gamespeed_fps) * 10) {
             // 關閉所有可能開啟的UI
-            _event_broadcaster("close_all_ui", {});
+            _local_broadcast_event("close_all_ui", {});
             
             // 如果10秒內沒有召喚單位，自動召喚一個
             if (!has_units && instance_exists(obj_unit_manager)) {
@@ -120,7 +120,7 @@ switch (battle_state) {
             }
             
             // 發送戰鬥開始事件
-            _event_broadcaster("battle_active", {});
+            _local_broadcast_event("battle_active", {});
         }
         break;
         
@@ -189,14 +189,14 @@ switch (battle_state) {
                     // 如果敵人數量為0但沒有觸發結束事件
                     if (enemy_count <= 0) {
                         show_debug_message("警告：安全網檢測到敵人數量為0但戰鬥仍在進行，觸發all_enemies_defeated事件");
-                        _event_broadcaster("all_enemies_defeated", {
+                        _local_broadcast_event("all_enemies_defeated", {
                             reason: "safety_check_delayed"
                         });
                     }
                     // 如果玩家單位數量為0但沒有觸發結束事件
                     else if (player_count <= 0) {
                         show_debug_message("警告：安全網檢測到玩家單位數量為0但戰鬥仍在進行，觸發all_player_units_defeated事件");
-                        _event_broadcaster("all_player_units_defeated", {
+                        _local_broadcast_event("all_player_units_defeated", {
                             reason: "safety_check_delayed"
                         });
                     }
@@ -209,7 +209,7 @@ switch (battle_state) {
         // 戰鬥結束過渡
         battle_timer++;
         // 訪問 Create 事件中定義的 ending_substate
-        show_debug_message("處理 ENDING 狀態（計時器：" + string(battle_timer) + "，子狀態：" + string(ending_substate) + "）"); 
+        //show_debug_message("處理 ENDING 狀態（計時器：" + string(battle_timer) + "，子狀態：" + string(ending_substate) + "）"); 
 
         // === 使用子狀態管理 ENDING 流程 ===
         switch (ending_substate) {
@@ -242,13 +242,13 @@ switch (battle_state) {
                                     i++;
                                 }
                             }
-                             show_debug_message("清理後，監控掉落物數量: " + string(ds_list_size(last_enemy_flying_items)));
+                             //show_debug_message("清理後，監控掉落物數量: " + string(ds_list_size(last_enemy_flying_items)));
                         } else {
-                            show_debug_message("警告: last_enemy_flying_items 列表不存在於 SHRINKING 完成時!");
+                            //show_debug_message("警告: last_enemy_flying_items 列表不存在於 SHRINKING 完成時!");
                         }
                     }
                 } else {
-                    show_debug_message("警告：單位管理器不存在，直接轉換到 WAITING_DROPS 子狀態");
+                    //show_debug_message("警告：單位管理器不存在，直接轉換到 WAITING_DROPS 子狀態");
                     ending_substate = ENDING_SUBSTATE.WAITING_DROPS;
                 }
                 break; // SHRINKING 結束
@@ -283,7 +283,7 @@ switch (battle_state) {
 
             case ENDING_SUBSTATE.DELAYING:
                 // --- 短暫延遲中 --- 
-                show_debug_message("正在 DELAYING 子狀態，等待 Alarm[2]...");
+                //show_debug_message("正在 DELAYING 子狀態，等待 Alarm[2]...");
                 break; // DELAYING 結束
 
              case ENDING_SUBSTATE.FINISHED:
@@ -330,10 +330,10 @@ switch (battle_state) {
 
         // === 新增：臨時關閉邏輯 ===
         // 玩家確認後，戰鬥正式結束
-        if (keyboard_check_pressed(vk_space)) {
-            show_debug_message("[Battle Manager] RESULT state: Space pressed, ending battle.");
-            end_battle();
-        }
+        // if (keyboard_check_pressed(vk_space)) { // COMMENT OUT or REMOVE this block
+        //     show_debug_message("[Battle Manager] RESULT state: Space pressed, ending battle.");
+        //     end_battle();
+        // } // COMMENT OUT or REMOVE this block
         break;
 }
 

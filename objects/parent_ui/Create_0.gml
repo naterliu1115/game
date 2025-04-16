@@ -54,7 +54,7 @@ show = function() {
 
 hide = function() {
     if (active) {  // 只在狀態改變時輸出
-        show_debug_message("UI隱藏: " + object_get_name(object_index));
+        show_debug_message("UI隱藏: " + object_get_name(object_index) + " (ID: " + string(id) + ")");
     }
     
     visible = false;
@@ -66,6 +66,7 @@ hide = function() {
         surface_free(ui_surface);
         ui_surface = -1;
     }
+    
     // 子類應覆蓋此方法
 };
 

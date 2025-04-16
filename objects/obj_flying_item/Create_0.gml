@@ -67,7 +67,7 @@ outline_offset = 2;
 outline_color = c_white;
 
 // --- 基本除錯訊息 ---
-show_debug_message("飛行道具已創建於世界座標: (" + string(x) + ", " + string(y) + ")");
+//show_debug_message("飛行道具已創建於世界座標: (" + string(x) + ", " + string(y) + ")");
 
 // 預設狀態（可選，或完全由創建者設定）
 flight_state = FLYING_STATE.FLYING_UP; // 保留一個預設值以防萬一

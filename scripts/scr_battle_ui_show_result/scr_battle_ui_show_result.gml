@@ -40,6 +40,28 @@ function scr_battle_ui_show_result(event_data, ui_instance_id) {
             update_rewards_display();
             show_debug_message("(via script) 檢測到失敗，已呼叫 update_rewards_display。");
         }
+
+        // 確保調用 update_rewards_display 來實際更新視覺
+        update_rewards_display();
+        
+        // 設置標誌表示正在顯示結果
+        is_showing_results = true; 
+        reward_visible = true; // 確保這個也設置了
+
+        // --- 新增：通知 UI 管理器顯示此 UI ---
+        if (instance_exists(obj_ui_manager)) {
+            obj_ui_manager.show_ui(id, "main"); // 使用 id，因為我們在 with 塊內
+            show_debug_message("[scr_battle_ui_show_result] Registered obj_battle_ui (ID: " + string(id) + ") with UI Manager.");
+        } else {
+            show_debug_message("警告 (scr_battle_ui_show_result): UI 管理器不存在，無法註冊 obj_battle_ui！");
+            // 作為備選方案，可以嘗試直接設置 active = true，但不推薦
+            // active = true; 
+        }
+        // --- 結束新增 ---
+
+        // 根據需要顯示戰鬥結果信息
+        // show_info(victory ? "戰鬥勝利!" : "戰鬥失敗!"); // 可能不需要重複顯示
+
         // --- 複製結束 ---
     }
 }

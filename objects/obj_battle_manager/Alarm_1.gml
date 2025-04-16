@@ -25,10 +25,10 @@ var start_world_x = info.start_world_x;
 var start_world_y = info.start_world_y;
 
 // 除錯：打印創建信息
-show_debug_message("[Alarm 1] Preparing to create flying item ID: " + string(info.item_id) + 
+/*show_debug_message("[Alarm 1] Preparing to create flying item ID: " + string(info.item_id) + 
                    " at World Coords: (" + string(start_world_x) + ", " + string(start_world_y) + ")" + 
                    " on Layer: " + world_layer_name);
-
+*/
 // 確保世界圖層存在 (可選，通常 Instances 層都存在)
 /*
 if (!layer_exists(world_layer_name)) {
@@ -44,9 +44,9 @@ if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
     if (instance_exists(new_item_instance)) { // 確認實例創建成功
         with (new_item_instance) { 
             // 除錯：打印實例創建成功信息
-            show_debug_message("[Alarm 1] Instance Create SUCCESS! ID: " + string(id) + 
+            /*show_debug_message("[Alarm 1] Instance Create SUCCESS! ID: " + string(id) + 
                                ", World Pos: (" + string(x) + ", " + string(y) + ")");
-
+            */
             // === 由創建者直接設定 ===
             source_type = "enemy_drop";
             sprite_index = info.sprite_index;
@@ -66,10 +66,10 @@ if (info.sprite_index != -1 && sprite_exists(info.sprite_index)) {
             bounce_count = 0;
             
             // 除錯：打印初始速度和狀態
-            show_debug_message("  [FlyingItem Init] State: " + string(flight_state) + 
+            /*show_debug_message("  [FlyingItem Init] State: " + string(flight_state) + 
                                ", Angle: " + string(angle) + ", Speed: " + string(scatter_init_speed) + 
                                ", HS: " + string(hspeed) + ", VS: " + string(vspeed));
-
+            */
             player_target_x = x; 
             player_target_y = y;
         }
