@@ -337,6 +337,8 @@ if (!in_battle) {
                     start_battle(fallback_enemy);
                 }
             }
+            // 更新玩家狀態為戰鬥中
+            in_battle = true;
         }
     }
 }

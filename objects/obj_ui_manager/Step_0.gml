@@ -143,7 +143,7 @@ if (instance_exists(_top_ui_instance)) {
     // 如果通用輸入未處理，則允許 UI 處理內部輸入
     if (!_input_handled_by_manager) {
         _top_ui_instance.process_internal_input_flag = true;
-        show_debug_message("[UI Manager] Allowing internal input processing for: " + object_get_name(_top_ui_instance.object_index));
+        // show_debug_message("[UI Manager] Allowing internal input processing for: " + object_get_name(_top_ui_instance.object_index));
     }
 }
 
