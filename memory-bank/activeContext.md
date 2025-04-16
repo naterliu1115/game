@@ -148,4 +148,17 @@
 - **調查並解決初始化戰鬥時 `戰鬥已經在進行中` 的警告。**
 
 ## 下一步
-- 調查 `戰鬥已經在進行中` 警告的觸發原因和解決方案。 
+- 調查 `戰鬥已經在進行中` 警告的觸發原因和解決方案。
+
+## 2024/04/16 玩家怪物資料結構統一
+- 已確認 global.player_monsters 來源分散，部分 struct 無 exp 欄位。
+- 目前已規劃所有新增、捕獲、初始化流程 struct 必須有 exp 欄位。
+- 下一步將設計集中式腳本統一管理 struct 欄位與同步。
+
+## 2024/04/16 升級資料同步現況
+- 升級時即時將 instance 的 level、exp、hp、max_hp、attack、defense、spd 等欄位同步回 global.player_monsters。
+- 以 id 或 type+name 作為唯一 key。
+- struct 缺少 exp 欄位則補上。
+- UI 讀取 global.player_monsters 時資料即時正確。
+- 捕獲、初始化、經驗分配、升級等所有流程都必須補齊 exp 欄位，並即時同步所有關鍵欄位。
+- 未來將設計 player_monster.gml 腳本，集中管理 struct 欄位與同步，優化資料流。 

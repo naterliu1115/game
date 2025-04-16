@@ -148,7 +148,7 @@ if (instance_exists(obj_event_manager)) {
   - **經驗記錄**: `obj_battle_manager` 在單位死亡時 (`on_unit_died` 事件處理中) 記錄被擊敗敵人的經驗值。
   - **經驗分配**: 戰鬥勝利後 (`ACTIVE` 狀態檢測到勝利時)，`obj_battle_manager` 調用 `distribute_battle_exp()` 將累計的經驗值分配給所有存活的我方單位 (調用其 `gain_exp` 方法)。
   - **升級曲線**: 升級所需經驗由 `levels.csv` 定義，由 `obj_level_manager` 載入和管理 (`global.level_exp_map`)。
-  - **升級處理**: `obj_player_summon_parent` 的 `gain_exp` 方法會檢查是否達到升級所需經驗，如果達到則調用 `level_up`。
+  - **升級處理與資料同步**: `obj_player_summon_parent` 的 `gain_exp` 方法會檢查是否達到升級所需經驗，如果達到則調用 `level_up`。`level_up` 執行時，會即時將 instance 的 `level`、`exp`、`hp`、`max_hp`、`attack`、`defense`、`spd` 等欄位同步回 `global.player_monsters`，以 id 或 type+name 作為唯一 key。若 struct 缺少 `exp` 欄位則補上，確保 UI 讀取時資料即時正確。
   - **屬性成長與技能學習**: `level_up` 方法負責提升單位等級、根據模板數據 (`hp_growth` 等) 重新計算屬性、檢查並學習達到新等級要求的新技能 (從模板數據獲取技能 ID)。
   - **視覺效果**: 升級時觸發浮動文字提示和粒子效果。
 - 新增：實現了浮動傷害文字系統 (`obj_floating_text`)，用於即時顯示傷害數值。
@@ -192,6 +192,7 @@ if (instance_exists(obj_event_manager)) {
     - 單位會在戰鬥管理器狀態不再是 `INACTIVE` 時（即 `STARTING` 階段開始）立即停止遊蕩。
     - 同步調整了單位 UI：生命條 (`Draw_0.gml`) 現在只在戰鬥管理器狀態不再是 `INACTIVE` 時顯示。
     - 調整了 ATB 充能機制 (`Step_0.gml`)：所有單位的 ATB 現在只在戰鬥管理器狀態進入 `ACTIVE` 後才開始充能，確保敵我雙方起始條件更公平。
+- **升級資料同步**: 玩家召喚單位升級時，會即時將所有關鍵欄位（level、exp、hp、max_hp、attack、defense、spd）同步回 `global.player_monsters`，以確保資料一致性與 UI 即時更新。
 
 **單位優化:**
 - 使用對象池系統優化單位創建和回收 (若已實現)
@@ -645,6 +646,7 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 創建了等級經驗表 (`levels.csv`) 和對應的管理員 (`obj_level_manager`)，用於定義和加載升級所需經驗。
         - 重構了 `obj_player_summon_parent` 的經驗獲取 (`gain_exp`) 和升級 (`level_up`) 邏輯，以使用等級表、處理連續升級，並根據模板學習新技能。
         - 實現了升級時的視覺特效（浮動文字 + 粒子效果）。
+        - 升級時即時同步所有關鍵欄位到 global.player_monsters，確保 UI 讀取正確。
     - **戰鬥結果事件流修復**:
         - 重新設計了戰鬥結束到結果顯示的事件流程 (`finalize_battle_results`, `rewards_calculated`, `show_battle_result`)。
         - 修正了戰鬥持續時間 (`duration`) 在事件傳遞中丟失的問題。
@@ -707,9 +709,36 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 提升戰鬥信息顯示清晰度 (狀態、Buff/Debuff、行動順序)。
         - 優化物品/怪物管理界面 (排序、篩選、比較)。
         - 考慮快捷欄在非戰鬥狀態下的使用。
+    - **集中式腳本管理**: 設計 `player_monster.gml` 腳本，統一管理 struct 欄位與同步，優化資料流。
+    - **資料流優化**: 持續檢查所有流程，確保資料結構一致與同步正確。
 
 - **已知問題**:
     - **事件管理器 `trigger_event` 功能缺失或調用錯誤。**
     - 飛行道具 (`obj_flying_item`) 的起始座標轉換和飛向玩家目標座標計算可能不準確，尤其在攝像機移動或縮放時，因混合使用世界座標和 GUI 層繪製導致。
     - （新增或修改）飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。
     - 重複隱藏 UI 的警告 (`obj_battle_ui`)。
+
+## 玩家怪物資料結構統一方案
+
+- `global.player_monsters` 內每一筆 struct 必須包含以下欄位：
+  - id: 模板ID
+  - name: 名稱
+  - type: 召喚用物件類型
+  - level: 等級
+  - hp: 當前HP
+  - max_hp: 最大HP
+  - attack: 攻擊力
+  - defense: 防禦力
+  - spd: 速度
+  - exp: 經驗值（必須有，預設為0）
+  - skills: 技能陣列
+  - display_sprite: 顯示用精靈（可選）
+
+- 捕獲、初始化、經驗分配、升級等所有流程都必須補齊 exp 欄位，並即時同步所有關鍵欄位。
+- 未來將設計 player_monster.gml 腳本，集中管理所有新增、查詢、更新邏輯，確保資料一致性。
+
+## 升級資料同步規範
+- 每次 instance 升級時，必須即時將 level、exp、hp、max_hp、attack、defense、spd 等欄位同步回 global.player_monsters。
+- 建議以 id 或 type+name 作為唯一 key 進行對應。
+- 若 struct 缺少 exp 欄位，則補上。
+- UI 讀取 global.player_monsters 時，資料必須即時正確。

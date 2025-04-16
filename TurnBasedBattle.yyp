@@ -80,6 +80,7 @@
     {"id":{"name":"obj_item_info_popup","path":"objects/obj_item_info_popup/obj_item_info_popup.yy",},},
     {"id":{"name":"obj_item_manager","path":"objects/obj_item_manager/obj_item_manager.yy",},},
     {"id":{"name":"obj_level_manager","path":"objects/obj_level_manager/obj_level_manager.yy",},},
+    {"id":{"name":"obj_levelup_effect","path":"objects/obj_levelup_effect/obj_levelup_effect.yy",},},
     {"id":{"name":"obj_main_hud","path":"objects/obj_main_hud/obj_main_hud.yy",},},
     {"id":{"name":"obj_monster_manager_ui","path":"objects/obj_monster_manager_ui/obj_monster_manager_ui.yy",},},
     {"id":{"name":"obj_npc_parent","path":"objects/obj_npc_parent/obj_npc_parent.yy",},},

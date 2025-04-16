@@ -26,11 +26,9 @@ function level_up() {
     
     var _old_level = level;
     level++;
+    // 升級時扣除經驗值，確保能連續升級
+    experience -= _exp_for_next;
     show_debug_message("[Level Up] " + name + " 從 Lv." + string(_old_level) + " 升級至 Lv." + string(level) + "!");
-    
-    // **移除**舊的經驗值扣除和下一級經驗計算
-    // experience -= experience_to_level_up; 
-    // experience_to_level_up = 100 + (level * 20);
     
     // 屬性提升 (保持不變)
     var hp_increase = 5 + irandom(10);
@@ -52,9 +50,11 @@ function level_up() {
     // 升級特效 (保持不變)
     create_level_up_effect();
     
-    // 音效 (保持不變)
-    if (audio_exists(snd_level_up)) {
+    // 音效 (修正版)
+    if (variable_instance_exists(id, "snd_level_up") && audio_exists(snd_level_up)) {
         audio_play_sound(snd_level_up, 10, false);
+    } else {
+        show_debug_message("[LevelUp] 未設置升級音效，跳過播放。");
     }
     
     // --- 升級時檢查學習新技能 (使用我們之前討論的邏輯) ---
@@ -95,10 +95,14 @@ function level_up() {
         }
     }
     
-    // **移除**舊的遞迴調用檢查
-    // if (experience >= experience_to_level_up) {
-    //     level_up(); 
-    // }
+    // --- 升級後同步到 global.player_monsters ---
+    if (variable_global_exists("player_monsters")) {
+        for (var i = 0; i < array_length(global.player_monsters); ++i) {
+            var m = global.player_monsters[i];
+            show_debug_message("[LevelUp][SyncTest] index=" + string(i) + " type=" + string(m.type) + ", name=" + string(m.name) + ", level=" + string(m.level) + ", hp=" + string(m.hp) + ", max_hp=" + string(m.max_hp) + ", atk=" + string(m.attack) + ", def=" + string(m.defense) + ", spd=" + string(m.spd) + ", exp=" + string(m.exp));
+            show_debug_message("[LevelUp][SyncTest] instance: type=" + string(object_index) + ", name=" + string(name) + ", level=" + string(level) + ", hp=" + string(hp) + ", max_hp=" + string(max_hp) + ", atk=" + string(attack) + ", def=" + string(defense) + ", spd=" + string(spd) + ", exp=" + string(experience));
+        }
+    }
 }
 
 // 建立升級特效 (使用粒子系統 + obj_floating_text)
@@ -107,11 +111,11 @@ create_level_up_effect = function() {
     if (object_exists(obj_floating_text)) {
         var _text_effect = instance_create_layer(x, y - 32, "Effects", obj_floating_text);
         if (instance_exists(_text_effect)) {
-            _text_effect.display_text = "Level Up!"; 
-            _text_effect.text_color = c_yellow;      
-            _text_effect.scale = 1.3;               
-            _text_effect.float_speed = 0.7;         
-            _text_effect.duration = game_get_speed(gamespeed_fps) * 1.5; 
+            _text_effect.display_text = "Level Up!";
+            _text_effect.text_color = c_yellow;
+            _text_effect.scale = 1.3;
+            _text_effect.float_speed = 0.7;
+            _text_effect.duration = game_get_speed(gamespeed_fps) * 1.5;
         } else {
             show_debug_message("警告：未能創建 Level Up 文字特效實例。");
         }
@@ -119,30 +123,27 @@ create_level_up_effect = function() {
         show_debug_message("警告：obj_floating_text 物件資源不存在，無法創建 Level Up 文字特效。");
     }
 
-    // --- 2. 創建粒子效果 --- 
-    // 檢查全局粒子系統和所需的粒子類型是否存在
+    // --- 2. 創建粒子效果或物件特效 ---
+    var effect_created = false;
     if (variable_global_exists("particle_system") && part_system_exists(global.particle_system)) {
-        
-        // 檢查並創建閃爍火花粒子
         if (variable_global_exists("global.pt_level_up_sparkle") && part_type_exists(global.pt_level_up_sparkle)) {
-            // 在單位中心位置創建一定數量的火花粒子
-            part_particles_create(global.particle_system, x, y, global.pt_level_up_sparkle, 25); // 創建 25 個火花
+            part_particles_create(global.particle_system, x, y, global.pt_level_up_sparkle, 25);
             show_debug_message("創建了 Level Up 火花粒子。");
+            effect_created = true;
         } else {
             show_debug_message("警告：全局升級火花粒子類型 global.pt_level_up_sparkle 未定義或無效。");
         }
-        
-        // (可選) 檢查並創建其他粒子效果，例如光暈
-        // if (variable_global_exists("global.pt_level_up_glow") && part_type_exists(global.pt_level_up_glow)) {
-        //     // 創建發射器產生短暫光暈
-        //     var em = part_emitter_create(global.particle_system);
-        //     part_emitter_region(global.particle_system, em, x, x, y, y, ps_shape_ellipse, ps_distr_invgaussian);
-        //     part_emitter_burst(global.particle_system, em, global.pt_level_up_glow, 10);
-        //     part_emitter_destroy(global.particle_system, em); 
-        // }
-        
     } else {
         show_debug_message("警告：全局粒子系統 global.particle_system 不存在或無效，無法創建升級粒子特效。");
+    }
+    // 若無法產生粒子，則自動生成 obj_levelup_effect
+    if (!effect_created) {
+        if (object_exists(obj_levelup_effect)) {
+            instance_create_layer(x, y, "Effects", obj_levelup_effect);
+            show_debug_message("[LevelUp] 使用 obj_levelup_effect 物件產生火花動畫。");
+        } else {
+            show_debug_message("[LevelUp] 警告：obj_levelup_effect 物件不存在，無法產生火花動畫。");
+        }
     }
 }
 
