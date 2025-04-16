@@ -266,7 +266,6 @@ grant_rewards = function() {
             }
         }
     } else {
-        global.player_items = [];
         for (var i = 0; i < array_length(battle_result.item_drops); i++) {
             var drop = battle_result.item_drops[i];
             if (is_struct(drop) && variable_struct_exists(drop, "item_id") && variable_struct_exists(drop, "quantity")) {
@@ -275,7 +274,7 @@ grant_rewards = function() {
                  
                  // 調用物品管理器添加物品 (假設有 add_item_to_inventory 函數)
                  obj_item_manager.add_item_to_inventory(_item_id, _quantity); 
-                 show_debug_message("獎勵系統: 創建物品庫存並添加 " + string(_quantity) + " 個物品 ID: " + string(_item_id));
+                 show_debug_message("獎勵系統: 添加 " + string(_quantity) + " 個物品 ID: " + string(_item_id) + " 到庫存");
             } else {
                  show_debug_message("獎勵系統: 警告: item_drops 中發現無效的條目: " + json_stringify(drop));
             }
