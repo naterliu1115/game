@@ -104,6 +104,7 @@
     {"id":{"name":"rm_damage_test","path":"rooms/rm_damage_test/rm_damage_test.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
     {"id":{"name":"array_join","path":"scripts/array_join/array_join.yy",},},
+    {"id":{"name":"battle_init","path":"scripts/battle_init/battle_init.yy",},},
     {"id":{"name":"dialogue_functions","path":"scripts/dialogue_functions/dialogue_functions.yy",},},
     {"id":{"name":"scr_battle_ui_show_result","path":"scripts/scr_battle_ui_show_result/scr_battle_ui_show_result.yy",},},
     {"id":{"name":"scr_coordinate_utils","path":"scripts/scr_coordinate_utils/scr_coordinate_utils.yy",},},
