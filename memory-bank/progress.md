@@ -18,13 +18,14 @@
 - 飛行道具創建流程（怪物掉落 + 採集）。
 - 飛行道具的 `SCATTERING` 和 `WAIT_ON_GROUND` 狀態基礎物理模擬（使用 Tilemap 檢測地面）。
 - **已解決**：飛行道具創建和 Step 事件中的 `string_format` 除錯函數錯誤。
+- **已解決**：**事件管理器 `trigger_event` 功能實現：** 在 `obj_event_manager` 中添加了標準的 `trigger_event` 函數，解決了獎勵系統等處觸發事件的警告。
+- **已解決**：**重複隱藏 UI 警告修復：** 移除了 `obj_battle_ui` 中 `handle_close_input` 的直接隱藏請求，統一由 `obj_ui_manager` 響應 `battle_end` 事件關閉 UI，解決了重複隱藏警告。
 
 ## 待辦/已知問題
 
 - **核心問題 - 高優先級:**
     - **事件管理器缺少 `trigger_event` 功能**: 在獎勵系統等處觀察到警告，影響系統間通信。(**當前調查中**)
 - **核心問題 - 中優先級:**
-    - **重複隱藏 UI 警告**: `obj_battle_ui` 在關閉時可能被多次嘗試隱藏。
     - **戰鬥狀態警告**: 初始化戰鬥時提示 `戰鬥已經在進行中`。
 - **功能待完善:**
     - 戰鬥結果 UI 的關閉邏輯需要從 `obj_battle_manager` 遷移到 UI 層。
@@ -93,8 +94,8 @@
 
 ## Known Issues
 
-- **事件管理器 `trigger_event` 功能缺失或調用錯誤。**
-- 重複隱藏 UI 的警告。
+- **(已解決)** 事件管理器 `trigger_event` 功能缺失或調用錯誤。
+- **(已解決)** 重複隱藏 UI 的警告。
 - 戰鬥狀態初始化警告。
 - 飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。
 - 採集系統掉落尚未工廠化，維護需多處同步

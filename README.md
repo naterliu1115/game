@@ -80,7 +80,7 @@ idle_update_rate = 9;
 
 **主要功能:**
 - 事件訂閱: `subscribe_to_event(event_name, instance_id, callback)` (通過 `obj_event_manager`)
-- 事件廣播: `broadcast_event(event_name, data = {})` (通過 `obj_event_manager`) - **(注意: 可能缺少 `trigger_event` 或類似函數，正在調查)**
+- 事件廣播: `trigger_event(event_name, data = {})` (通過 `obj_event_manager`)
 - 事件取消訂閱: `unsubscribe_from_event(event_name, instance_id)` (通過 `obj_event_manager`)
 - **更新**: `obj_game_controller` 現在使用 Alarm[0] 延遲廣播 `managers_initialized` 事件，以確保所有實例（如 `obj_enemy_placer`）有足夠時間完成創建和訂閱。
 - **回調機制註記**: 經驗證，使用已定義的實例方法名（字串）作為 `callback` 參數比使用腳本索引或動態函數更穩定，能避免 GML 中潛在的作用域/上下文問題。
@@ -97,13 +97,12 @@ if (instance_exists(obj_event_manager)) {
 // 廣播事件 (例如，在子彈擊中玩家時)
 if (instance_exists(obj_event_manager)) {
     with (obj_event_manager) {
-        // 注意：確切的廣播方法名可能需要確認或實現 (例如 broadcast_event 或 trigger_event)
-        // broadcast_event("player_damaged", { damage: 10 }); 
+        trigger_event("player_damaged", { damage: 10 }); 
     }
 }
 ```
 **已知問題**:
-- **`trigger_event` 功能缺失**: 警告顯示在某些情況下（如獎勵系統）缺少 `trigger_event` 或類似的事件廣播功能，正在調查中。
+- **(已解決)** `trigger_event` 功能缺失。
 
 ### 3. 戰鬥系統 (Battle System)
 
@@ -137,6 +136,7 @@ if (instance_exists(obj_event_manager)) {
     - `obj_battle_manager` 監聽 `rewards_calculated`，更新自身狀態後，最終廣播 `show_battle_result` 事件給 UI。
     - `obj_battle_ui` 監聽 `show_battle_result`，使用收到的完整數據更新結果畫面。
     - **(已更新)** `obj_battle_ui` 現在通過其內部的 `show_rewards` 方法響應此事件，該方法已整合了數據處理和界面更新邏輯。
+    - **(已更新)** `obj_battle_ui` 的關閉現在統一由 `obj_ui_manager` 響應 `battle_end` 事件處理，避免了重複隱藏問題。
   - **物品掉落計算 (核心重構):**
     - 物品掉落的計算現在**完全由 `obj_battle_manager`** 在處理 `unit_died` 事件時執行（在其 `on_unit_died` 方法內部）。
     - `on_unit_died` 會從死去的敵人模板 (`template`) 中獲取 `loot_table` **原始字串** (例如 `"1001:1:1-1;1002:0.5:1"`）。

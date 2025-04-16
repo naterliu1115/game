@@ -7,7 +7,7 @@
 
 ## 關鍵技術決策
 - 狀態機模式：戰鬥系統、飛行道具、單位行為皆用明確狀態機管理。
-- 事件驅動：發布-訂閱模式，鬆耦合組件通信。
+- 事件驅動：發布-訂閱模式，鬆耦合組件通信。提供標準事件接口 (`subscribe_to_event`, `unsubscribe_from_event`, `trigger_event`) 由 `obj_event_manager` 管理。
 - 工廠模式：敵人、掉落物品等皆以工廠/資料表生成。
 - 資料驅動：物品、敵人、技能、掉落表皆以 CSV 管理。
 - 佇列/Alarm 驅動：掉落動畫、戰鬥結果流程。
@@ -15,7 +15,7 @@
 ## 設計模式
 - 狀態機模式（State Machine）
 - 工廠模式（Factory）
-- 事件驅動（Event-driven）
+- 事件驅動（Event-driven）(包含發布/訂閱)
 - 父子類繼承（Parent-Child Inheritance）
 - 資料驅動（Data-driven）
 

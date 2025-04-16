@@ -214,7 +214,8 @@ handle_close_input = function() {
         show_debug_message("錯誤：[Battle UI] 無法廣播 battle_result_closed，事件管理器不存在。");
     }
 
-    // 讓 UI 管理器隱藏自己
+    // 讓 UI 管理器隱藏自己 <--- 註解掉這部分
+    /*
     if (instance_exists(obj_ui_manager)) {
          with(obj_ui_manager) {
              hide_ui(other.id); // other.id 指向 obj_battle_ui 實例
@@ -224,6 +225,7 @@ handle_close_input = function() {
          show_debug_message("錯誤：[Battle UI] 無法通過 UI 管理器隱藏，管理器不存在。");
          hide(); // 備選方案
     }
+    */
 }
 
 // 初始化時顯示戰鬥開始提示
