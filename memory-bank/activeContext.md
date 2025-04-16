@@ -8,6 +8,10 @@
 - (長遠) 怪物/採集掉落工廠化規劃
 
 ## 近期決策與備忘
+- 【戰鬥事件 callback 重構】
+    - 已將所有 callback function（如 on_unit_died 等）自 obj_battle_manager Create 事件完全移除，統一集中於 battle_callbacks.gml。
+    - Method Bindings 也已調整為於 battle_callbacks() 呼叫後執行，確保 function 註冊順序正確。
+    - 測試結果：所有戰鬥事件流程、掉落、經驗、UI 顯示皆正常，無重複定義或未定義錯誤。
 - 【戰鬥結果流程優化】
     - 觸發結果顯示的時機改為：最後敵人掉落物完成 SCATTERING 動畫 + 3 秒延遲。
     - **(臨時措施)** 在 `obj_battle_manager` 的 `RESULT` 狀態直接添加了按 Space 鍵關閉結果畫面的邏輯。
@@ -29,6 +33,9 @@
 - **調查並解決初始化戰鬥時 `戰鬥已經在進行中` 的警告。**
 
 ## 近期變更
+- **戰鬥 callback function 重構與測試通過：**
+    - 完全移除 obj_battle_manager Create 事件內的 callback function 定義，統一由 battle_callbacks.gml 管理。
+    - Method Bindings 綁定順序已修正，所有事件流程測試通過。
 - **戰鬥結束流程修改 (`obj_battle_manager`):**
     - 在 `Step_0.gml` (ENDING 狀態) 中，將觸發 `Alarm[2]` 的延遲從 0.5 秒改為 3 秒。
     - 在 `Step_0.gml` (RESULT 狀態) 中，添加了臨時的按 Space 鍵調用 `end_battle()` 的邏輯。
