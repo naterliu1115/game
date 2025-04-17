@@ -1,5 +1,17 @@
 // obj_ui_manager - Create_0.gml
 
+if (!variable_instance_exists(id, "active_ui_instances")) {
+    active_ui_instances = ds_map_create();
+}
+
+if (!variable_instance_exists(id, "ui_manager_clock")) {
+    ui_manager_clock = 0;
+}
+
+if (!variable_instance_exists(id, "ui_transition_queue")) {
+    ui_transition_queue = ds_list_create();
+}
+
 // 建立UI層級結構
 ui_layers = ds_map_create();
 ds_map_add(ui_layers, "background", ds_list_create());  // 最底層

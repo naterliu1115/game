@@ -189,4 +189,65 @@ function battle_callbacks() {
              _execute_end_battle_core();
         } else { show_debug_message("警告：收到 battle_result_closed 事件，但狀態不是 RESULT（當前：" + string(battle_state) + "），已忽略。"); }
     };
+    on_unit_captured = function(data) {
+        if (!variable_struct_exists(data, "unit_instance")) {
+            show_debug_message("[on_unit_captured] 錯誤：事件數據缺少 'unit_instance'！"); return;
+        }
+        var _unit_instance = data.unit_instance;
+        if (!instance_exists(_unit_instance)) {
+            show_debug_message("[on_unit_captured] 警告：傳入的 unit_instance (ID: " + string(_unit_instance) + ") 已不存在。"); return;
+        }
+
+        show_debug_message("[Battle Manager] 收到 unit_captured 事件，處理單位: " + object_get_name(_unit_instance.object_index));
+
+        // 檢查是否為敵方單位 (理論上捕獲的總是敵方，但加個保險)
+        if (!variable_instance_exists(_unit_instance, "team") || _unit_instance.team != 1) {
+            show_debug_message("[on_unit_captured] 被捕獲單位非敵方 (Team: " + (variable_instance_exists(_unit_instance, "team") ? string(_unit_instance.team) : "未知") + ")，異常情況！");
+            instance_destroy(_unit_instance); // 銷毀異常單位
+            return;
+        }
+
+        // --- 複製 on_unit_died 的核心邏輯 ---
+        enemies_defeated_this_battle += 1;
+        show_debug_message("[Battle Manager] (Captured) 擊敗敵人數 +1，目前: " + string(enemies_defeated_this_battle));
+
+        var _template_id = variable_instance_exists(_unit_instance, "template_id") ? _unit_instance.template_id : undefined;
+        if (!is_undefined(_template_id)) {
+            array_push(defeated_enemy_ids_this_battle, _template_id);
+            show_debug_message("[Battle Manager] (Captured) 記錄被捕獲敵人的 Template ID: " + string(_template_id));
+            
+            // 假設捕獲也給經驗 (與 on_unit_died 邏輯保持一致)
+            var _exp_value = variable_instance_exists(_unit_instance, "exp_value") ? _unit_instance.exp_value : 0; 
+            if (_exp_value > 0) {
+                 record_defeated_enemy_exp(_exp_value);
+            }
+            
+            // 注意：捕獲通常不觸發掉落物，所以這裡不複製掉落邏輯
+            
+        } else {
+            show_debug_message("[Battle Manager] (Captured) 警告：被捕獲單位缺少 template_id，無法記錄。" );
+        }
+        // --- 複製結束 ---
+
+        // 銷毀被捕獲的敵人實例
+        show_debug_message("[on_unit_captured] 銷毀被捕獲的實例: " + string(_unit_instance));
+        instance_destroy(_unit_instance);
+        
+        // 檢查是否所有敵人都被擊敗了
+        var all_defeated = check_all_enemies_defeated();
+        
+        // 如果 check_all_enemies_defeated 沒有觸發事件 (返回 false)，但確實沒有敵人了，則手動觸發
+        if (!all_defeated && instance_exists(obj_unit_manager)) {
+            var enemy_count = ds_list_size(obj_unit_manager.enemy_units);
+            show_debug_message("[on_unit_captured] 檢查是否需要手動觸發勝利：敵人數量 = " + string(enemy_count));
+            
+            if (enemy_count <= 0 && battle_state == BATTLE_STATE.ACTIVE) {
+                show_debug_message("[on_unit_captured] 手動觸發 all_enemies_defeated 事件（捕獲後無敵人）");
+                _local_broadcast_event("all_enemies_defeated", {
+                    reason: "manual_check",
+                    source: "capture_system"
+                });
+            }
+        }
+    };
 } 

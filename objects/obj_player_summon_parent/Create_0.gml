@@ -99,8 +99,8 @@ function level_up() {
     if (variable_global_exists("player_monsters")) {
         for (var i = 0; i < array_length(global.player_monsters); ++i) {
             var m = global.player_monsters[i];
-            show_debug_message("[LevelUp][SyncTest] index=" + string(i) + " type=" + string(m.type) + ", name=" + string(m.name) + ", level=" + string(m.level) + ", hp=" + string(m.hp) + ", max_hp=" + string(m.max_hp) + ", atk=" + string(m.attack) + ", def=" + string(m.defense) + ", spd=" + string(m.spd) + ", exp=" + string(m.exp));
-            show_debug_message("[LevelUp][SyncTest] instance: type=" + string(object_index) + ", name=" + string(name) + ", level=" + string(level) + ", hp=" + string(hp) + ", max_hp=" + string(max_hp) + ", atk=" + string(attack) + ", def=" + string(defense) + ", spd=" + string(spd) + ", exp=" + string(experience));
+            show_debug_message("[LevelUp][SyncTest] index=" + string(i) + ", name=" + string(m.name) + ", level=" + string(m.level) + ", hp=" + string(m.hp) + ", max_hp=" + string(m.max_hp) + ", atk=" + string(m.attack) + ", def=" + string(m.defense) + ", spd=" + string(m.spd) + ", exp=" + string(variable_struct_exists(m,"current_exp") ? m.current_exp : "N/A"));
+            show_debug_message("[LevelUp][SyncTest] instance: name=" + string(name) + ", level=" + string(level) + ", hp=" + string(hp) + ", max_hp=" + string(max_hp) + ", atk=" + string(attack) + ", def=" + string(defense) + ", spd=" + string(spd) + ", exp=" + string(experience));
         }
     }
 }

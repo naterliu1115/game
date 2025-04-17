@@ -4,7 +4,7 @@
 function create_enemy_base_data() {
     return {
         // 基本識別和分類信息
-        id: -1,                           // 唯一ID
+        template_id: -1,                  // 唯一模板ID (原為 id)
         name: "未命名敵人",                 // 顯示名稱
         category: ENEMY_CATEGORY.NORMAL,  // 敵人類別
         family: "",                       // 種族系列

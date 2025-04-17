@@ -71,7 +71,6 @@ This document tracks the development progress, planned features, and known issue
 - **已解決**：**重複隱藏 UI 警告修復：** 移除了 `obj_battle_ui` 中 `handle_close_input` 的直接隱藏請求，統一由 `obj_ui_manager` 響應 `battle_end` 事件關閉 UI，解決了重複隱藏警告。
 - 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。
 
-
 ## 待辦/已知問題
 
 - **核心問題 - 高優先級:**
@@ -172,4 +171,40 @@ This document tracks the development progress, planned features, and known issue
 - world_to_gui_coords 相關耦合移除
 - 戰鬥結果關閉邏輯優化
 - 其他系統重構與優化
-- 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。 
+- 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。
+
+## Progress Update
+
+**What Works:**
+*   Game initialization sequence seems correct.
+*   Enemy factory (`obj_enemy_factory`) loads templates using `template_id` without the previous `GM1008` error.
+*   Monster data manager (`monster_data_manager`) appears to correctly create and manage player monster data internally using `template_id`.
+*   Enemy placer (`obj_enemy_placer`) correctly reads `template_id` from templates when creating enemy instances.
+*   Game controller (`obj_game_controller`) initializes the starting player monster using the manager (`add_monster_from_template`).
+*   Summon UI (`obj_summon_ui`) correctly identifies the selected monster and retrieves its data structure (which now contains `template_id`).
+
+**What's Left to Build / Fix:**
+*   **Critical:** Fix the monster summoning functionality blocked by the `global.array_clone` scope error.
+*   Complete the remaining steps of the player monster data refactoring plan (Steps 5, 7, 8, 9, 10 primarily, Step 6 partially done). This involves replacing direct `global.player_monsters` access in `obj_player_summon_parent`, `obj_unit_manager`, `obj_reward_system`, `obj_battle_manager`, etc., with calls to `monster_data_manager`.
+*   Thorough testing of all features affected by the refactoring (summoning, capture, level up, battle rewards, etc.).
+*   Remove temporary debug code added to `obj_summon_ui`.
+
+**Current Status:**
+*   Actively debugging the summoning runtime error. The core refactoring logic seems mostly in place, but this blocker prevents further progress and testing.
+
+**Known Issues:**
+*   **GML Scope Resolution Issue:** A persistent runtime error occurs when `global.array_clone` is called from the global script `summon_monster_from_ui`, specifically when this script is invoked via an anonymous function callback originating from `obj_summon_ui`. The engine incorrectly tries to find an `array_clone` variable within the `obj_summon_ui` instance scope, despite the `global.` prefix. This indicates a potential limitation or bug in GML's scope handling in this context. 
+
+## 近期進度
+- [x] UI 管理器 active_ui_instances、ui_manager_clock 已正確初始化。
+- [ ] ui_transition_queue 未初始化，導致 Step 事件崩潰，需補上。
+- [ ] 檢查所有 Step 事件會用到的變數，統一在 Create 事件最前面初始化。
+
+## Progress
+
+- [x] 怪物資料流統一（所有初始化、升級、同步、顯示皆經由 monster_data_manager，資料來源唯一）
+- [x] 屬性計算公式修正（正確反映等級成長）
+- [x] UI 顯示正確（資料來源唯一，顯示與資料同步）
+- [進行中] 採集系統掉落工廠化
+- [進行中] 技能系統 array 索引重構
+- [待辦] 戰鬥結果 UI 關閉邏輯遷移到 UI 層 

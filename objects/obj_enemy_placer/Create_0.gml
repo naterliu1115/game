@@ -75,7 +75,7 @@ convert_to_real_enemy = function() {
         return;
     }
     with (enemy_inst) {
-        template_id = template.id;
+        template_id = template.template_id;
         name = template.name;
         level = is_undefined(other.enemyLevel) ? template.level : other.enemyLevel;
         max_hp = template.hp_base + template.hp_growth * (level - 1);

@@ -186,82 +186,90 @@ set_battle_area = function(center_x, center_y, radius) {
     });
 }
 
-// 玩家召喚怪物方法
-summon_monster = function(monster_type, position_x, position_y) {
+/// @function summon_monster(monster_type, position_x, position_y, template_id, level)
+/// @description 召喚怪物到戰場上
+/// @param {Asset.GMObject} monster_type 怪物類型
+/// @param {Real} position_x X座標
+/// @param {Real} position_y Y座標
+/// @param {Real} template_id 怪物模板ID
+/// @param {Real} level 怪物等級
+/// @returns {Bool} 召喚是否成功
+summon_monster = function(monster_type, position_x, position_y, template_id = -1, level = 1) {
     show_debug_message("===== 開始召喚怪物 =====");
+    show_debug_message("- 怪物類型: " + string(object_get_name(monster_type)));
+    show_debug_message("- 位置: (" + string(position_x) + ", " + string(position_y) + ")");
+    show_debug_message("- 模板ID: " + string(template_id));
+    show_debug_message("- 等級: " + string(level));
+    show_debug_message("- 當前玩家單位數: " + string(ds_list_size(player_units)));
+    show_debug_message("- 最大玩家單位數: " + string(max_player_units));
+    show_debug_message("- 當前召喚冷卻: " + string(global_summon_cooldown));
     
     // 檢查是否在戰鬥中
     if (!global.in_battle) {
-        show_debug_message("無法召喚：不在戰鬥中");
+        show_debug_message("警告：不在戰鬥狀態中，無法召喚怪物");
         return false;
     }
     
-    // 檢查是否達到最大單位數量
+    // 檢查是否達到最大玩家單位數
     if (ds_list_size(player_units) >= max_player_units) {
-        show_debug_message("無法召喚：已達最大召喚數量 " + string(ds_list_size(player_units)) + "/" + string(max_player_units));
-        _event_broadcaster("ui_message", {message: "已達最大召喚數量!"});
+        show_debug_message("警告：已達到最大玩家單位數" + string(max_player_units));
         return false;
     }
     
-    // 檢查冷卻時間
+    // 檢查召喚冷卻
     if (global_summon_cooldown > 0) {
-        var cooldown_seconds = global_summon_cooldown / game_get_speed(gamespeed_fps);
-        show_debug_message("無法召喚：冷卻中，剩餘 " + string_format(cooldown_seconds, 1, 1) + " 秒");
-        _event_broadcaster("ui_message", {message: "召喚冷卻中! 剩餘: " + string_format(cooldown_seconds, 1, 1) + "秒"});
+        show_debug_message("警告：召喚冷卻中，剩餘時間：" + string(global_summon_cooldown));
         return false;
     }
     
-    show_debug_message("創建怪物實例：" + object_get_name(monster_type));
-    
-    // 創建單位
-    var monster_inst = instance_create_layer(position_x, position_y, "Instances", monster_type);
-    total_player_units_created++;
-    
-    show_debug_message("設置怪物屬性");
-    
-    // 設置單位屬性
-    apply_monster_stats(monster_inst, monster_type);
-    
-    // 確認team值
-    with (monster_inst) {
-        show_debug_message("確認怪物team值：" + string(team));
-        if (team != 0) {
-            team = 0;
-            show_debug_message("糾正team值為0（玩家方）");
-        }
-        
-        // 檢查 AI 模式是否有效，否則設為積極模式
-        if (variable_instance_exists(id, "ai_mode")) {
-            if (ai_mode < 0 || ai_mode > 2) { // 檢查是否為無效值
-                ai_mode = AI_MODE.AGGRESSIVE;
-                show_debug_message("修正怪物 AI 模式為積極");
-            } else {
-                show_debug_message("怪物 AI 模式為: " + string(ai_mode));
-            }
-        }
+    // 檢查位置是否有效
+    if (position_x < 0 || position_x > room_width || position_y < 0 || position_y > room_height) {
+        show_debug_message("警告：召喚位置無效");
+        return false;
     }
     
-    // 添加到單位列表
+    // 創建怪物實例
+    var monster_inst = instance_create_layer(position_x, position_y, "Instances", monster_type);
+    
+    if (!instance_exists(monster_inst)) {
+        show_debug_message("錯誤：怪物實例創建失敗");
+        return false;
+    }
+    
+    // 設置怪物屬性
+    with (monster_inst) {
+        show_debug_message("設置怪物屬性：");
+        team = 0; // 玩家隊伍
+        monster_inst.template_id = template_id; 
+        monster_inst.level = level;
+        
+        // 初始化怪物（將在initialize函數中設置屬性）
+        initialize();
+        
+        show_debug_message("怪物初始化後屬性：");
+        show_debug_message("- HP: " + string(hp) + "/" + string(max_hp));
+        show_debug_message("- 攻擊: " + string(attack));
+        show_debug_message("- 防禦: " + string(defense));
+        show_debug_message("- 速度: " + string(spd));
+        show_debug_message("- 隊伍: " + string(team));
+    }
+    
+    // 添加怪物到玩家單位列表
     ds_list_add(player_units, monster_inst);
-    show_debug_message("已添加到玩家單位列表，當前數量：" + string(ds_list_size(player_units)));
+    show_debug_message("怪物添加到玩家單位列表，當前數量：" + string(ds_list_size(player_units)));
     
-    // 設置冷卻
+    // 設置全局召喚冷卻
     global_summon_cooldown = max_global_cooldown;
+    show_debug_message("設置全局召喚冷卻：" + string(global_summon_cooldown));
     
-    // 創建召喚特效
-    instance_create_layer(position_x, position_y, "Effects", obj_summon_effect);
-    
-    // 發送召喚完成事件
+    // 發送怪物召喚事件
     _event_broadcaster("monster_summoned", {
         monster: monster_inst,
         type: monster_type,
         position: {x: position_x, y: position_y}
     });
     
-    // 顯示提示訊息
-    _event_broadcaster("ui_message", {message: object_get_name(monster_type) + " 已召喚!"});
-    
-    show_debug_message("===== 召喚完成 =====");
+    show_debug_message("怪物召喚成功！ID：" + string(monster_inst));
     return true;
 }
 

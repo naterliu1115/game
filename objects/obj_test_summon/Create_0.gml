@@ -1,6 +1,60 @@
 // 繼承父類的創建事件
 event_inherited();
 
+// 添加同步數據到全局玩家怪物列表的函數
+sync_data_to_global = function() {
+    show_debug_message("[obj_test_summon] 開始將數據同步到global.player_monsters");
+    
+    if (!variable_global_exists("player_monsters")) {
+        show_debug_message("[obj_test_summon] 錯誤：global.player_monsters不存在");
+        return false;
+    }
+    
+    // 查找與此召喚怪物相匹配的條目
+    var found = false;
+    var index = -1;
+    
+    for (var i = 0; i < array_length(global.player_monsters); i++) {
+        var monster_data = global.player_monsters[i];
+        
+        // 使用template_id匹配
+        if (variable_struct_exists(monster_data, "template_id") && monster_data.template_id == template_id) {
+            found = true;
+            index = i;
+            show_debug_message("[obj_test_summon] 找到匹配的怪物數據，索引：" + string(i));
+            break;
+        }
+    }
+    
+    if (!found) {
+        show_debug_message("[obj_test_summon] 錯誤：在global.player_monsters中未找到匹配的怪物");
+        return false;
+    }
+    
+    // 更新怪物數據
+    var monster_data = global.player_monsters[index];
+    monster_data.level = level;
+    monster_data.hp = hp;
+    monster_data.max_hp = max_hp;
+    monster_data.attack = attack;
+    monster_data.defense = defense;
+    monster_data.spd = spd;
+    
+    // 確保experience欄位存在
+    if (!variable_struct_exists(monster_data, "experience")) {
+        monster_data.experience = 0;
+    }
+    
+    show_debug_message("[obj_test_summon] 數據同步完成！");
+    show_debug_message("- 等級: " + string(level));
+    show_debug_message("- HP: " + string(hp) + "/" + string(max_hp));
+    show_debug_message("- 攻擊: " + string(attack));
+    show_debug_message("- 防禦: " + string(defense));
+    show_debug_message("- 速度: " + string(spd));
+    
+    return true;
+};
+
 can_wander = false; 
 // 覆蓋初始化函數
 initialize = function() {
@@ -65,6 +119,20 @@ initialize = function() {
     attack = max(1, attack);
     defense = max(1, defense);
     spd = max(1, spd);
+
+    // === 屬性驗證 debug 訊息 ===
+    show_debug_message("【怪物屬性驗證】");
+    show_debug_message("名稱: " + string(name) + " (ID: " + string(template_id) + ")");
+    show_debug_message("等級: " + string(_actual_level));
+    show_debug_message("CSV基礎值: HP=" + string(_hp_base) + ", 攻擊=" + string(_attack_base) + ", 防禦=" + string(_defense_base) + ", 速度=" + string(_speed_base));
+    show_debug_message("CSV成長: HP=" + string(_hp_growth) + ", 攻擊=" + string(_attack_growth) + ", 防禦=" + string(_defense_growth) + ", 速度=" + string(_speed_growth));
+    var _calc_max_hp = ceil(_hp_base + (_hp_base * _hp_growth * (_actual_level - 1)));
+    var _calc_attack = ceil(_attack_base + (_attack_base * _attack_growth * (_actual_level - 1)));
+    var _calc_defense = ceil(_defense_base + (_defense_base * _defense_growth * (_actual_level - 1)));
+    var _calc_spd = ceil(_speed_base + (_speed_base * _speed_growth * (_actual_level - 1)));
+    show_debug_message("公式計算: max_hp=" + string(_calc_max_hp) + ", attack=" + string(_calc_attack) + ", defense=" + string(_calc_defense) + ", spd=" + string(_calc_spd));
+    show_debug_message("實際屬性: max_hp=" + string(max_hp) + ", attack=" + string(attack) + ", defense=" + string(defense) + ", spd=" + string(spd));
+    // === 屬性驗證 debug 訊息結束 ===
         
     // 視覺相關
     if (variable_struct_exists(_template, "sprite_idle") && _template.sprite_idle != -1) {
@@ -123,7 +191,19 @@ initialize = function() {
     show_debug_message("    Team: " + string(team));
     show_debug_message("    AI Mode: " + string(ai_mode));
     show_debug_message("--- [Summon Init] 結束 ---");
+    
+    // 初始化完成後同步數據到global.player_monsters
+    sync_data_to_global();
 }
 
 // 在創建時調用一次初始化
 // initialize(); // <-- 移除或註解掉此行，初始化應由創建者在設置 template_id 後呼叫
+
+// 覆寫level_up函數，確保在升級後同步數據
+level_up = function() {
+    // 調用父類的level_up方法
+    event_perform_object(obj_battle_unit_parent, ev_other, ev_user1);
+    
+    // 在升級後同步數據
+    sync_data_to_global();
+}

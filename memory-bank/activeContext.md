@@ -169,4 +169,41 @@
 - 未來將設計 player_monster.gml 腳本，集中管理 struct 欄位與同步，優化資料流。
 
 ## 技能系統已重構為 array 索引模式：skills 與 skill_cooldowns 均為 array，完全一一對應，所有操作皆用數字索引，不再用 struct/ds_map。
-- 技能系統重構尚未完成，目前 bug 包含 struct/array 混用導致的 unable to convert string ... to int64 錯誤，初始化、技能新增、冷卻查找等流程皆有型別不一致問題。大部分技能相關操作仍在修正與驗證中。近期重點：徹底統一技能系統資料結構，消除所有型別錯誤。每次 build 幾乎都會遇到技能冷卻相關崩潰，重構尚未穩定。 
+- 技能系統重構尚未完成，目前 bug 包含 struct/array 混用導致的 unable to convert string ... to int64 錯誤，初始化、技能新增、冷卻查找等流程皆有型別不一致問題。大部分技能相關操作仍在修正與驗證中。近期重點：徹底統一技能系統資料結構，消除所有型別錯誤。每次 build 幾乎都會遇到技能冷卻相關崩潰，重構尚未穩定。
+
+# Active Context - Player Monster Refactoring & Summoning Bug
+
+**Current Focus:** Resolving a persistent runtime error preventing the monster summoning functionality from working correctly after refactoring player monster data management.
+
+**Recent Changes:**
+*   Standardized the use of `template_id` as the key for monster template identifiers across `obj_enemy_factory`, `monster_data_manager`, `obj_enemy_placer`, and related data structures (`create_enemy_base_data`).
+*   Fixed the `obj_game_controller` initialization logic to use `add_monster_from_template` from the `monster_data_manager`, ensuring initial monster data uses `template_id`.
+*   Corrected the data retrieval logic in `obj_summon_ui` to pass the correct monster data struct (containing `template_id`) to the summoning function.
+*   Corrected logic in `monster_data_manager` (`add_monster_from_template`) that incorrectly re-split arrays obtained from the template.
+
+**Current Blocker:**
+*   Despite the above fixes, a runtime error persists: `Variable <unknown_object>.array_clone(instance_id, -2147483648) not set before reading it.`
+*   This error occurs within the `summon_monster_from_ui` global script (specifically at the `global.array_clone` call) when invoked from an anonymous function within `obj_summon_ui`.
+*   The error context incorrectly points to the `obj_summon_ui` instance, suggesting a GML scope resolution issue where the `global.` prefix fails to resolve the built-in function correctly in this specific call chain.
+
+**Next Steps (Proposed):**
+*   Modify `scripts/scr_summon_logic/scr_summon_logic.gml`: Replace the problematic `global.array_clone` calls within `summon_monster_from_ui` with a local shallow-copy mechanism (e.g., using `array_copy`) to bypass the suspected scope resolution issue.
+*   Test the summoning functionality thoroughly after applying the fix.
+*   If successful, remove debug code from `obj_summon_ui`.
+*   Continue with the player monster data refactoring plan (`memory-bank/refactor_plan_player_monsters.md`).
+
+**Active Decisions:**
+*   Use `template_id` consistently for monster template identification throughout the relevant codebase.
+
+## 2024/04/18 UI 管理器初始化修正
+- 已將 active_ui_instances、ui_manager_clock 的初始化移到 Create 事件最前面。
+- 目前 Step 事件仍出現 ui_transition_queue 未初始化錯誤，需比照處理。
+- 下一步：檢查所有 Step 事件會用到的變數，統一在 Create 事件最前面初始化。
+
+## 2024/05/XX 怪物資料流與屬性公式統一
+
+- 所有玩家怪物的初始化、升級、同步都必須經過 monster_data_manager。
+- monster_data_manager.gml 內的屬性計算公式已修正為正確的等級成長公式（ceil(基礎值 + (基礎值 × 成長 × (等級-1)))）。
+- UI 只讀取管理器產生的資料，資料來源唯一且正確。
+- 初始化流程、戰鬥召喚、升級等都已經走正確的資料流。
+- 若有新功能（如自動召喚、捕獲、存檔/讀檔），也必須走管理器 API。 

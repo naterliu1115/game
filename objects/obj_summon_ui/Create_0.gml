@@ -19,6 +19,7 @@ show = function() {
     depth = -100; // 設置默認深度
     open_animation = 0;
     surface_needs_update = true;
+    process_internal_input_flag = true;
     
     // 從玩家怪物列表加載數據
     refresh_monster_list();
@@ -78,121 +79,32 @@ refresh_monster_list = function() {
     if (variable_global_exists("player_monsters")) {
         for (var i = 0; i < array_length(global.player_monsters); i++) {
             var monster = global.player_monsters[i];
-            
             // 只添加可用的怪物（HP > 0）
-            if (monster.hp > 0) {
-                ds_list_add(monster_list, monster);
+            var _hp = variable_struct_exists(monster, "hp") ? monster.hp : 1;
+            var _max_hp = variable_struct_exists(monster, "max_hp") ? monster.max_hp : 1;
+            var _atk = variable_struct_exists(monster, "attack") ? monster.attack : 1;
+            var _def = variable_struct_exists(monster, "defense") ? monster.defense : 0;
+            var _spd = variable_struct_exists(monster, "spd") ? monster.spd : 1;
+            if (_hp > 0) {
+                // 建立防禦性結構
+                var safe_monster = {
+                    template_id: variable_struct_exists(monster, "template_id") ? monster.template_id : (variable_struct_exists(monster, "id") ? monster.id : -1),
+                    name: variable_struct_exists(monster, "name") ? monster.name : "???",
+                    level: variable_struct_exists(monster, "level") ? monster.level : 1,
+                    hp: _hp,
+                    max_hp: _max_hp,
+                    attack: _atk,
+                    defense: _def,
+                    spd: _spd,
+                    display_sprite: variable_struct_exists(monster, "display_sprite") ? monster.display_sprite : (variable_struct_exists(monster, "sprite_index") ? monster.sprite_index : -1),
+                    skills: variable_struct_exists(monster, "skills") ? monster.skills : [],
+                    skill_unlock_levels: variable_struct_exists(monster, "skill_unlock_levels") ? monster.skill_unlock_levels : [],
+                    type: variable_struct_exists(monster, "type") ? monster.type : "obj_test_summon"
+                };
+                ds_list_add(monster_list, safe_monster);
             }
         }
     }
-}
-
-/// 召喚選中的怪物
-summon_selected_monster = function() {
-    if (selected_monster >= 0 && selected_monster < ds_list_size(monster_list)) {
-        var monster_data = monster_list[| selected_monster];
-        
-        // 首先檢查 obj_unit_manager 是否存在
-        if (!instance_exists(obj_unit_manager)) {
-            if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.show_info("單位管理器不存在！");
-            }
-            return false;
-        }
-        
-        // 檢查召喚條件
-        if (obj_unit_manager.global_summon_cooldown <= 0 && 
-            ds_list_size(obj_unit_manager.player_units) < obj_unit_manager.max_player_units) {
-            // 獲取召喚位置（靠近玩家）
-            var summon_x = global.player.x + 50;
-            var summon_y = global.player.y;
-            
-            // 創建對應類型的召喚物
-            var summon_type = monster_data.type;
-            // 在創建前打印 summon_type 的值
-            show_debug_message("[Summon UI] 準備創建實例，類型 object_index: " + string(summon_type) + " (" + object_get_name(summon_type) + ")");
-            var new_summon = instance_create_layer(summon_x, summon_y, "Instances", summon_type);
-            
-            // 設置召喚物的屬性與數據匹配
-            with (new_summon) {
-                // 1. 首先設置 active 變量，防止 parent_ui 的 Step 事件出錯
-                if (variable_instance_exists(id, "active")) {
-                     active = false;  // 確保重置為 false，即使父類可能設置了
-                } else {
-                     active = false;  // 如果不存在，直接創建並設為 false
-                }
-                
-                // 2. 然後設置 template_id (假設 monster_data.id 是模板 ID)
-                if (variable_struct_exists(monster_data, "id")) { // 檢查 id 是否存在
-                    template_id = monster_data.id;
-                    show_debug_message("設置召喚物 template_id 為: " + string(template_id));
-                } else {
-                    show_debug_message("錯誤：monster_data 中缺少 id (template_id)");
-                    instance_destroy(); // 創建失敗，銷毀
-                    return false; // 或者返回錯誤
-                }
-                
-                // 3. 設置 level (從 monster_data 中獲取)
-                if (variable_struct_exists(monster_data, "level")) { // 檢查 level 是否存在
-                    level = monster_data.level;
-                    show_debug_message("設置召喚物 level 為: " + string(level));
-                } else {
-                    show_debug_message("警告：monster_data 中缺少 level，預設為 1");
-                    level = 1; // 如果缺少 level，提供一個預設值
-                }
-                
-                // 4. 最後才調用 initialize
-                if (variable_instance_exists(id, "initialize")) {
-                     initialize();
-                     show_debug_message("玩家召唤物初始化完成: ref instance " + string(id));
-                } else {
-                    show_debug_message("錯誤：召喚物缺少 initialize 函數");
-                    // 可能需要額外處理
-                }
-            }
-            
-            // 添加到玩家單位列表
-            ds_list_add(obj_unit_manager.player_units, new_summon);
-            
-            // 設置全局召喚冷卻
-            obj_unit_manager.global_summon_cooldown = obj_unit_manager.max_global_cooldown;
-            
-            // 創建召喚效果
-            instance_create_layer(summon_x, summon_y, "Instances", obj_summon_effect);
-            
-            // 如果在準備階段召喚，立即開始戰鬥
-            if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.PREPARING) {
-                obj_battle_manager.battle_state = BATTLE_STATE.ACTIVE;
-                obj_battle_manager.battle_timer = 0;
-                
-                // 更新UI提示
-                if (instance_exists(obj_battle_ui)) {
-                    obj_battle_ui.show_info("戰鬥開始!");
-                }
-            }
-            
-            // 顯示成功召喚提示
-            if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.show_info("已召喚 " + monster_data.name + "!");
-            }
-            return true;
-        } else {
-            // 提示玩家無法召喚的原因
-            var reason = "";
-            if (obj_unit_manager.global_summon_cooldown > 0) {
-                reason = "召喚冷卻中!";
-            } else if (ds_list_size(obj_unit_manager.player_units) >= obj_unit_manager.max_player_units) {
-                reason = "已達到最大召喚數量!";
-            }
-            
-            if (instance_exists(obj_battle_ui)) {
-                obj_battle_ui.show_info("無法召喚: " + reason);
-            }
-            return false;
-        }
-    }
-    
-    return false; // 確保函數有返回值
 }
 
 /// 繪製怪物卡片
@@ -322,143 +234,39 @@ handle_close_input = function() {
         obj_ui_manager.hide_ui(id);
     } else {
         show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
-        // Fallback: 直接調用自身的 hide，但不推薦
-        // hide(); 
     }
 }
 
-// 處理確認輸入 (Enter/Space)
+// 處理確認輸入 (Enter/Space) - 改為直接調用全局腳本函數，不再傳遞管理器參數
 handle_confirm_input = function() {
-    show_debug_message("[Summon UI] handle_confirm_input called (Enter/Space).");
-    if (selected_monster >= 0 && selected_monster < ds_list_size(monster_list)) {
-        show_debug_message("Attempting to summon selected monster: index " + string(selected_monster));
-        var success = summon_selected_monster(); // 嘗試召喚
-        if (success) {
-            show_debug_message("[Summon UI] Summon successful. Requesting UI Manager hide.");
-            // 召喚成功後，請求管理器關閉 UI
-            if (instance_exists(obj_ui_manager)) {
-                obj_ui_manager.hide_ui(id);
-            } else {
-                show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
-            }
-        } else {
-            show_debug_message("[Summon UI] Summon failed (e.g., cooldown, max units). UI remains open.");
-            // 召喚失敗（例如冷卻中、數量已滿），UI 保持打開狀態，summon_selected_monster 內部已顯示提示
-        }
-    } else {
-        show_debug_message("[Summon UI] Confirm pressed, but no valid monster selected.");
-        // 可以考慮加一個提示
-        if (instance_exists(obj_battle_ui)) {
-            obj_battle_ui.show_info("請先選擇一個怪物！");
-        }
-    }
+    // 直接調用全局腳本函數，只傳遞 UI 實例
+    summon_ui_handle_confirm(id);
 }
 
-// 處理鼠標點擊 (由 UI 管理器傳遞)
+// 處理鼠標點擊 (由 UI 管理器傳遞) - 改為直接調用全局腳本函數，不再傳遞管理器參數
 handle_mouse_click = function(mx, my) {
-    show_debug_message("[Summon UI] handle_mouse_click called at (" + string(mx) + ", " + string(my) + ").");
-    var _handled = false; // 追蹤此點擊是否被此 UI 處理
-
-    // 1. 檢查是否點擊了召喚按鈕
-    if (selected_monster >= 0 && point_in_rectangle(
-        mx, my,
-        summon_btn_x, summon_btn_y,
-        summon_btn_x + summon_btn_width, summon_btn_y + summon_btn_height
-    )) {
-        show_debug_message("[Summon UI] Summon button clicked.");
-        var success = summon_selected_monster(); // 嘗試召喚
-        if (success) {
-            show_debug_message("[Summon UI] Summon successful via button. Requesting UI Manager hide.");
-            // 召喚成功後，請求管理器關閉 UI
-            if (instance_exists(obj_ui_manager)) {
-                obj_ui_manager.hide_ui(id);
-                _handled = true; // 關閉操作由管理器發起，標記已處理
-            } else {
-                show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
-            }
-        } else {
-             show_debug_message("[Summon UI] Summon failed via button. UI remains open.");
-             _handled = true; // 點擊被處理了，即使召喚失敗
-        }
-        return _handled; // 無論成功失敗，點擊在按鈕上就算處理了
-    }
-
-    // 2. 檢查是否點擊了取消按鈕
-    if (point_in_rectangle(
-        mx, my,
-        cancel_btn_x, cancel_btn_y,
-        cancel_btn_x + cancel_btn_width, cancel_btn_y + cancel_btn_height
-    )) {
-        show_debug_message("[Summon UI] Cancel button clicked. Requesting UI Manager hide.");
-        if (instance_exists(obj_ui_manager)) {
-            obj_ui_manager.hide_ui(id);
-             _handled = true; // 關閉操作由管理器發起，標記已處理
-        } else {
-            show_debug_message("警告：UI Manager 不存在，無法請求隱藏 Summon UI");
-        }
-        return _handled; // 點擊在取消按鈕上就算處理了
-    }
-
-    // 3. 檢查是否點擊了怪物卡片 (從 Step 事件移動過來)
-    var list_count = ds_list_size(monster_list);
-    if (list_count > 0) {
-        var start_index = clamp(scroll_offset, 0, max(0, list_count - max_visible_monsters));
-        var end_index = min(start_index + max_visible_monsters, list_count);
-        
-        for (var i = start_index; i < end_index; i++) {
-            var card_y = ui_y + 50 + (i - start_index) * 130;
-            
-            if (point_in_rectangle(
-                mx, my,
-                ui_x + 20, card_y,
-                ui_x + 20 + 220, card_y + 120
-            )) {
-                selected_monster = i;
-                show_debug_message("[Summon UI] Card selected via click: index " + string(i));
-                surface_needs_update = true; // Need to redraw selection
-                _handled = true; // 點擊在卡片上算處理了
-                break;
-            }
-        }
-    }
-    if (_handled) return true; // 如果點擊在卡片上，直接返回
-
-    // 4. 檢查是否點擊了滾動箭頭 (從 Step 事件移動過來)
-    if (ds_list_size(monster_list) > max_visible_monsters) {
-        // 上滾動箭頭
-        if (point_in_rectangle(
-            mx, my,
-            ui_x + ui_width - 40, ui_y + 45,
-            ui_x + ui_width - 5, ui_y + 65
-        )) {
-            if (scroll_offset > 0) { 
-                scroll_offset--;
-                show_debug_message("[Summon UI] Scrolled up via click.");
-                surface_needs_update = true;
-                _handled = true;
-            }
-        }
-        // 下滾動箭頭
-        else if (point_in_rectangle(
-            mx, my,
-            ui_x + ui_width - 40, ui_y + ui_height - 90,
-            ui_x + ui_width - 5, ui_y + ui_height - 70
-        )) {
-            if (scroll_offset < ds_list_size(monster_list) - max_visible_monsters) {
-                scroll_offset++;
-                show_debug_message("[Summon UI] Scrolled down via click.");
-                surface_needs_update = true;
-                 _handled = true;
-            }
-        }
-    }
-
-    show_debug_message("[Summon UI] Click was not handled by summon/cancel buttons or cards/scroll arrows.");
-    return _handled; // 返回是否處理了點擊
+    // 直接調用全局腳本函數，傳遞 UI 實例和鼠標坐標
+    return summon_ui_handle_mouse_click(id, mx, my);
 }
 
 // --- 結束新增 ---
 
+// 添加清理事件
+event_user(15); // Clean Up (假設 EV_CLEAN_UP = 15)
 
-// 初始化
+// 清理函數定義
+on_cleanup = function() {
+    // 確保列表存在再銷毀
+    if (ds_exists(monster_list, ds_type_list)) {
+        ds_list_destroy(monster_list);
+        monster_list = -1; // 標記為無效
+    }
+    
+    // 釋放表面
+    if (surface_exists(ui_surface)) {
+        surface_free(ui_surface);
+        ui_surface = -1;
+    }
+}
+
 show_debug_message("obj_summon_ui Create event finished.");

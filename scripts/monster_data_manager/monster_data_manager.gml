@@ -80,46 +80,54 @@ function add_monster_from_template(template_id, level) {
     }
     var m = {}; // 使用 Struct 替代 {} 以提高性能和清晰度
     m.uid = global.monster_uid_counter++;
-    m.id = template.id;
+    m.template_id = template.template_id;
     m.name = variable_struct_exists(template, "name") ? template.name : "Unknown";
     m.type = variable_struct_exists(template, "type") ? template.type : 0; // 假設 0 是預設 type
     m.level = level;
     // 計算屬性 (確保模板中有這些欄位)
     var hp_base = variable_struct_exists(template, "hp_base") ? template.hp_base : 10;
     var hp_growth = variable_struct_exists(template, "hp_growth") ? template.hp_growth : 1;
-    m.max_hp = hp_base + hp_growth * (level - 1);
+    m.max_hp = ceil(hp_base + (hp_base * hp_growth * (level - 1)));
     m.hp = m.max_hp; // 新怪物滿血
     var attack_base = variable_struct_exists(template, "attack_base") ? template.attack_base : 5;
     var attack_growth = variable_struct_exists(template, "attack_growth") ? template.attack_growth : 1;
-    m.attack = attack_base + attack_growth * (level - 1);
+    m.attack = ceil(attack_base + (attack_base * attack_growth * (level - 1)));
     var defense_base = variable_struct_exists(template, "defense_base") ? template.defense_base : 5;
     var defense_growth = variable_struct_exists(template, "defense_growth") ? template.defense_growth : 1;
-    m.defense = defense_base + defense_growth * (level - 1);
+    m.defense = ceil(defense_base + (defense_base * defense_growth * (level - 1)));
     var spd_base = variable_struct_exists(template, "spd_base") ? template.spd_base : 5;
     var spd_growth = variable_struct_exists(template, "spd_growth") ? template.spd_growth : 1;
-    m.spd = spd_base + spd_growth * (level - 1);
+    m.spd = ceil(spd_base + (spd_base * spd_growth * (level - 1)));
     m.experience = 0; // 新怪物經驗為 0
     m.skills = []; // 技能列表
     m.display_sprite = asset_get_index(variable_struct_exists(template, "sprite_idle") ? template.sprite_idle : "spr_default"); // 確保有預設 Sprite
-    // 技能解鎖
+    
+    // 技能解鎖 (已修正，直接使用模板提供的陣列)
     if (variable_struct_exists(template, "skills") && variable_struct_exists(template, "skill_unlock_levels")) {
-        // 確保分割函數存在且安全
-        var skill_ids_str = variable_struct_exists(template, "skills") ? template.skills : "";
-        var unlock_lvls_str = variable_struct_exists(template, "skill_unlock_levels") ? template.skill_unlock_levels : "";
-        // TODO: 替換為更安全的分割函數 scr_string_split 或類似功能
-        var skill_ids = string_split(skill_ids_str, ";");
-        var unlock_lvls = string_split(unlock_lvls_str, ";");
-        if (array_length(skill_ids) == array_length(unlock_lvls)) {
-            for (var i = 0; i < array_length(skill_ids); ++i) {
-                // 使用 is_numeric_safe 或類似函數進行安全轉換
-                var unlock_level = real(unlock_lvls[i]); // 假設 is_numeric_safe 已檢查
-                var skill_id = real(skill_ids[i]);     // 假設 is_numeric_safe 已檢查
+        // 直接獲取模板中的陣列
+        var skill_id_array = template.skills;          // 這個是技能 ID 字串的陣列
+        var unlock_level_array = template.skill_unlock_levels; // 這個是解鎖等級數字的陣列
+
+        // 確保獲取的是有效的陣列且長度匹配
+        if (is_array(skill_id_array) && is_array(unlock_level_array) && array_length(skill_id_array) == array_length(unlock_level_array)) {
+            for (var i = 0; i < array_length(skill_id_array); ++i) {
+                // 直接使用數字陣列中的解鎖等級
+                var unlock_level = unlock_level_array[i]; 
+                // 獲取技能 ID 字串並轉換為數字
+                var skill_id_str = skill_id_array[i];
+                var skill_id = real(skill_id_str); // 假設技能 ID 應為數字存儲
+
+                // 檢查等級要求和轉換有效性
                 if (level >= unlock_level) {
-                     array_push(m.skills, skill_id);
+                    if (!is_nan(skill_id)) { // 確保 real() 轉換成功
+                        array_push(m.skills, skill_id);
+                    } else {
+                        show_debug_message("[Monster Data Manager] Warning: Invalid skill ID string found in template " + string(template_id) + ": '" + skill_id_str + "'");
+                    }
                 }
             }
         } else {
-             show_debug_message("[Monster Data Manager] Warning: Mismatched skills and unlock levels for template ID " + string(template_id));
+             show_debug_message("[Monster Data Manager] Warning: Mismatched or invalid skills/unlock levels arrays for template ID " + string(template_id));
         }
     }
 
@@ -216,31 +224,31 @@ function add_experience(uid, experience) {
         show_debug_message("[Monster Data Manager] Monster UID " + string(uid) + " leveled up to " + string(m_ref.level));
 
         // 屬性成長 (需要怪物模板)
-        var template = get_template_by_id(m_ref.id); // 假設怪物 struct 中有 id 欄位
+        var template = get_template_by_id(m_ref.template_id);
         if (!is_undefined(template)) {
             // 安全地更新屬性
             var hp_base = variable_struct_exists(template, "hp_base") ? template.hp_base : 10;
             var hp_growth = variable_struct_exists(template, "hp_growth") ? template.hp_growth : 1;
-            m_ref.max_hp = hp_base + hp_growth * (m_ref.level - 1);
+            m_ref.max_hp = ceil(hp_base + (hp_base * hp_growth * (m_ref.level - 1)));
             m_ref.hp = m_ref.max_hp; // 升級補滿血
 
             var attack_base = variable_struct_exists(template, "attack_base") ? template.attack_base : 5;
             var attack_growth = variable_struct_exists(template, "attack_growth") ? template.attack_growth : 1;
-            m_ref.attack = attack_base + attack_growth * (m_ref.level - 1);
+            m_ref.attack = ceil(attack_base + (attack_base * attack_growth * (m_ref.level - 1)));
 
             var defense_base = variable_struct_exists(template, "defense_base") ? template.defense_base : 5;
             var defense_growth = variable_struct_exists(template, "defense_growth") ? template.defense_growth : 1;
-            m_ref.defense = defense_base + defense_growth * (m_ref.level - 1);
+            m_ref.defense = ceil(defense_base + (defense_base * defense_growth * (m_ref.level - 1)));
 
             var spd_base = variable_struct_exists(template, "spd_base") ? template.spd_base : 5;
             var spd_growth = variable_struct_exists(template, "spd_growth") ? template.spd_growth : 1;
-            m_ref.spd = spd_base + spd_growth * (m_ref.level - 1);
+            m_ref.spd = ceil(spd_base + (spd_base * spd_growth * (m_ref.level - 1)));
 
             // TODO: 處理技能解鎖
             // ...
 
         } else {
-            show_debug_message("[Monster Data Manager] Warning: Template not found for ID " + string(m_ref.id) + ". Cannot apply stat growth.");
+            show_debug_message("[Monster Data Manager] Warning: Template not found for ID " + string(m_ref.template_id) + ". Cannot apply stat growth.");
         }
     }
 

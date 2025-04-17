@@ -49,3 +49,23 @@ This file describes the system architecture, key technical decisions, design pat
 *   `Player`: Player character object, target for item collection.
 *   `obj_flying_item`: Handles drop animations and collection.
 *   UI Objects (`obj_main_hud`, `obj_battle_ui`, `obj_inventory_ui`, etc.): Display information and handle user input. (Target state) Should interact with data primarily through events. 
+
+# System Patterns Update
+
+## Data Management
+*   **Player Monster Data:** Centralized management of `global.player_monsters` (Array) is enforced through `scripts/monster_data_manager/monster_data_manager.gml`. All modifications (add, remove, update) MUST go through functions provided by this manager script. Direct access/modification of `global.player_monsters` is being actively refactored out.
+*   **Monster Template Identification:** The standard key for identifying monster templates across data structures (factory templates, player monster data) is `template_id`. (Previously inconsistent usage of `id` caused errors and has been corrected).
+
+## Potential Challenges / Anti-Patterns Observed
+*   **GML Scope Resolution with Callbacks:** Observed difficulties with scope resolution when calling global built-in functions (like `global.array_clone`) from within global scripts, especially if the initial call originates from an anonymous function defined within an object instance (`obj_summon_ui`). The `global.` prefix may not reliably force global scope lookup in such nested/indirect call chains. Consider workarounds like local function implementations or passing necessary functions/data explicitly. 
+
+## GameMaker 防禦性設計原則
+- 任何 GameMaker 物件的成員變數（ds_map、ds_list、計數器等）必須在 Create 事件最前面初始化。
+- Step/Draw/Alarm 事件不得假設變數已存在，必須有明確初始化流程。
+- 常見錯誤：只在用到變數前才初始化，導致重構或流程分支後產生未初始化錯誤。 
+
+## 怪物資料流規範
+
+- 所有玩家怪物資料初始化、升級、同步、顯示，必須經由 monster_data_manager。
+- 嚴禁直接操作 global.player_monsters。
+- 資料來源唯一，確保一致性與防禦性。 

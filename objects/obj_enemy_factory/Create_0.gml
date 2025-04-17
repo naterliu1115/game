@@ -326,7 +326,7 @@ load_enemies_from_csv = function(file_name) {
         var enemy_data = create_enemy_base_data();
         
         // 讀取基本屬性
-        enemy_data.id = real(csv_grid_get(grid, "id", i));
+        enemy_data.template_id = real(csv_grid_get(grid, "id", i));
         enemy_data.name = csv_grid_get(grid, "name", i);
         enemy_data.category = real(csv_grid_get(grid, "category", i));
         enemy_data.family = csv_grid_get(grid, "family", i);
@@ -390,7 +390,7 @@ load_enemies_from_csv = function(file_name) {
                 var companion_data = string_split(companions_array[c], ":");
                 if (array_length(companion_data) >= 2) {
                     array_push(enemy_data.companions, {
-                        id: real(companion_data[0]),
+                        template_id: real(companion_data[0]),
                         weight: real(companion_data[1])
                     });
                 }
@@ -444,11 +444,11 @@ load_enemies_from_csv = function(file_name) {
         // 讀取獎勵
         var raw_exp = csv_grid_get(grid, "exp_reward", i);
         var raw_gold = csv_grid_get(grid, "gold_reward", i);
-        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.id) + ": Raw exp_reward='" + string(raw_exp) + "', Raw gold_reward='" + string(raw_gold) + "'");
+        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.template_id) + ": Raw exp_reward='" + string(raw_exp) + "', Raw gold_reward='" + string(raw_gold) + "'");
         
         enemy_data.exp_reward = real(raw_exp); // Keep using real() for now
         enemy_data.gold_reward = real(raw_gold);
-        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.id) + ": Parsed exp=" + string(enemy_data.exp_reward) + ", Parsed gold=" + string(enemy_data.gold_reward));
+        // show_debug_message("  Row " + string(i) + " Enemy " + string(enemy_data.template_id) + ": Parsed exp=" + string(enemy_data.exp_reward) + ", Parsed gold=" + string(enemy_data.gold_reward));
         
         // 讀取技能
         var skills_str = csv_grid_get(grid, "skills", i);
@@ -478,7 +478,7 @@ load_enemies_from_csv = function(file_name) {
         }
         
         // 註冊敵人模板
-        var success = register_enemy_template(enemy_data.id, enemy_data);
+        var success = register_enemy_template(enemy_data.template_id, enemy_data);
         if (success) success_count++;
     }
     

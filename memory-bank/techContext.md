@@ -44,4 +44,21 @@ This file outlines the specific technologies, development setup, constraints, an
 *   **World Layer Focus:** New features should primarily operate on the world layer, avoiding mixing GUI/world coordinates unless necessary.
 *   **Future Optimizations:** Consider unifying drop factories.
 
-// The Chinese sections below this line are duplicates and should be removed. 
+# Tech Context Update
+
+## Engine/Language Considerations (GameMaker Language - GML)
+*   **Scope Resolution:** Be aware of potential inconsistencies or challenges with GML's scope resolution, particularly when dealing with nested calls involving anonymous functions, object instances, global scripts, and global built-in functions. The `global.` prefix might not always behave as expected in complex scenarios. Explicit context passing or local implementations might be necessary as workarounds. (See `activeContext.md` and `progress.md` for specific instance related to `global.array_clone`).
+*   **Structs vs. Arrays:** While transitioning towards struct-based data where appropriate (e.g., monster templates, item data), be mindful of GML's handling and ensure type consistency, especially when interacting with older array-based or ds_list-based systems during refactoring.
+*   **Data Structures:** Utilizing `ds_list` and `ds_map` for dynamic data storage. Ensure proper cleanup (`ds_destroy`) to prevent memory leaks, especially for non-persistent objects or temporary data structures.
+*   **Event System:** Employs a custom event manager (`obj_event_manager`) for decoupling object interactions using a subscribe/broadcast pattern.
+
+## Key Libraries/Frameworks
+*   (If any external libraries or specific GML frameworks are used, list them here.)
+
+## Development Setup
+*   GameMaker Studio 2 (Version: Runtime 2024.13.1.242 based on logs)
+*   Version Control: (Specify if using Git, etc.)
+
+## Technical Constraints
+*   (List any performance limitations, platform targets, or specific GML features to avoid/use carefully.)
+

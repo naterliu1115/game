@@ -118,33 +118,22 @@ refresh_monster_list = function() {
     ds_list_clear(monster_list);
     show_debug_message("刷新怪物列表開始..."); // 添加日誌
     
-    // 從全局玩家怪物列表加載
-    if (variable_global_exists("player_monsters")) {
-        var num_monsters = array_length(global.player_monsters);
-        show_debug_message("  找到 " + string(num_monsters) + " 個玩家怪物。");
-        
-        for (var i = 0; i < num_monsters; i++) {
-            var monster = global.player_monsters[i];
-            ds_list_add(monster_list, monster);
-            show_debug_message("    已添加怪物: " + (variable_struct_exists(monster, "name") ? monster.name : "未知名稱"));
-            
-            // --- 預加載並存儲顯示用的技能數據 ---
-            // 確保 monster 是一個結構體
-            if (is_struct(monster)) {
-                // 調用 get_monster_skills 獲取包含完整結構體的技能陣列
-                var display_skills_array = get_monster_skills(monster);
-                // 將獲取的陣列存儲到 monster 結構體的新欄位中
-                monster.display_skills = display_skills_array;
-                show_debug_message("      預加載技能完成，共 " + string(array_length(display_skills_array)) + " 個技能。");
-            } else {
-                 show_debug_message("      警告：無法預加載技能，monster 不是結構體！");
-                 // 可以考慮為非結構體設置一個空的 display_skills
-                 // monster.display_skills = []; // 取決於後續代碼是否需要此欄位一定存在
-            }
-            // --- 預加載結束 ---
+    // 從管理器取得玩家怪物列表
+    var player_monsters = get_player_monsters();
+    var num_monsters = array_length(player_monsters);
+    show_debug_message("  找到 " + string(num_monsters) + " 個玩家怪物（經由管理器）");
+    for (var i = 0; i < num_monsters; i++) {
+        var monster = player_monsters[i];
+        ds_list_add(monster_list, monster);
+        show_debug_message("    已添加怪物: " + (variable_struct_exists(monster, "name") ? monster.name : "未知名稱"));
+        // 預加載技能
+        if (is_struct(monster)) {
+            var display_skills_array = get_monster_skills(monster);
+            monster.display_skills = display_skills_array;
+            show_debug_message("      預加載技能完成，共 " + string(array_length(display_skills_array)) + " 個技能。");
+        } else {
+            show_debug_message("      警告：無法預加載技能，monster 不是結構體！");
         }
-    } else {
-        show_debug_message("  全局玩家怪物列表 player_monsters 不存在。");
     }
     show_debug_message("刷新怪物列表結束。");
 }
@@ -408,10 +397,10 @@ draw_monster_card = function(x, y, monster_data, is_selected) {
     
     // HP文字
     draw_set_color(c_white);
-    draw_text(hp_x, hp_y + hp_height + 5, "HP: " + string(monster_data.hp) + "/" + string(monster_data.max_hp));
+    draw_text(hp_x, hp_y + hp_height + 5, "HP: " + string(floor(monster_data.hp)) + "/" + string(floor(monster_data.max_hp)));
     
     // 怪物主要屬性
-    draw_text(x + 100, hp_y + hp_height + 25, "攻: " + string(monster_data.attack) + " 防: " + string(monster_data.defense) + " 速: " + string(monster_data.spd));
+    draw_text(x + 100, hp_y + hp_height + 25, "攻: " + string(floor(monster_data.attack)) + " 防: " + string(floor(monster_data.defense)) + " 速: " + string(floor(monster_data.spd)));
     
     // 繪製技能列表
     var skills = variable_struct_exists(monster_data, "display_skills") && is_array(monster_data.display_skills) 
@@ -509,16 +498,16 @@ draw_monster_details = function(monster_data) {
         draw_text(20, data_y, "等級: " + string(monster_data.level));
         
         data_y += 20;
-        draw_text(20, data_y, "HP: " + string(monster_data.hp) + "/" + string(monster_data.max_hp));
+        draw_text(20, data_y, "HP: " + string(floor(monster_data.hp)) + "/" + string(floor(monster_data.max_hp)));
         
         data_y += 20;
-        draw_text(20, data_y, "攻擊力: " + string(monster_data.attack));
+        draw_text(20, data_y, "攻擊力: " + string(floor(monster_data.attack)));
         
         data_y += 20;
-        draw_text(20, data_y, "防禦力: " + string(monster_data.defense));
+        draw_text(20, data_y, "防禦力: " + string(floor(monster_data.defense)));
         
         data_y += 20;
-        draw_text(20, data_y, "速度: " + string(monster_data.spd));
+        draw_text(20, data_y, "速度: " + string(floor(monster_data.spd)));
         
         // 技能列表
         data_y += 40;

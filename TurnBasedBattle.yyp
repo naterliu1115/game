@@ -52,7 +52,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.13.0.190",
+    "IDEVersion":"2024.13.1.193",
   },
   "name":"TurnBasedBattle",
   "resources":[
@@ -111,6 +111,7 @@
     {"id":{"name":"dialogue_functions","path":"scripts/dialogue_functions/dialogue_functions.yy",},},
     {"id":{"name":"monster_data_manager","path":"scripts/monster_data_manager/monster_data_manager.yy",},},
     {"id":{"name":"scr_battle_ui_show_result","path":"scripts/scr_battle_ui_show_result/scr_battle_ui_show_result.yy",},},
+    {"id":{"name":"scr_capture_logic","path":"scripts/scr_capture_logic/scr_capture_logic.yy",},},
     {"id":{"name":"scr_coordinate_utils","path":"scripts/scr_coordinate_utils/scr_coordinate_utils.yy",},},
     {"id":{"name":"scr_csv_parser","path":"scripts/scr_csv_parser/scr_csv_parser.yy",},},
     {"id":{"name":"scr_drawing_utils","path":"scripts/scr_drawing_utils/scr_drawing_utils.yy",},},
@@ -118,6 +119,7 @@
     {"id":{"name":"scr_enemy_enums","path":"scripts/scr_enemy_enums/scr_enemy_enums.yy",},},
     {"id":{"name":"scr_event_system","path":"scripts/scr_event_system/scr_event_system.yy",},},
     {"id":{"name":"scr_string_helpers","path":"scripts/scr_string_helpers/scr_string_helpers.yy",},},
+    {"id":{"name":"scr_summon_logic","path":"scripts/scr_summon_logic/scr_summon_logic.yy",},},
     {"id":{"name":"catbao","path":"sprites/catbao/catbao.yy",},},
     {"id":{"name":"Monster1","path":"sprites/Monster1/Monster1.yy",},},
     {"id":{"name":"Monster2","path":"sprites/Monster2/Monster2.yy",},},

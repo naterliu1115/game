@@ -49,6 +49,43 @@ function draw_text_safe(x, y, text, color = c_white, halign = TEXT_ALIGN_LEFT, v
     draw_set_valign(original_valign);
 }
 
+/// @function draw_text_transformed_safe(x, y, text, color, xscale, yscale, angle, halign, valign)
+/// @description 安全地繪製帶縮放和旋轉的文字，並在繪製後還原繪圖狀態
+/// @param {real} x X 座標
+/// @param {real} y Y 座標
+/// @param {string} text 要顯示的文字
+/// @param {real} color 文字顏色 (預設為白色)
+/// @param {real} xscale X軸縮放比例 (預設為1)
+/// @param {real} yscale Y軸縮放比例 (預設為1)
+/// @param {real} angle 旋轉角度 (預設為0)
+/// @param {real} halign 水平對齊方式 (預設為左對齊)
+/// @param {real} valign 垂直對齊方式 (預設為頂部對齊)
+function draw_text_transformed_safe(x, y, text, color = c_white, xscale = 1, yscale = 1, angle = 0, halign = TEXT_ALIGN_LEFT, valign = TEXT_VALIGN_TOP) {
+    var original_color = draw_get_color();
+    var original_halign = draw_get_halign();
+    var original_valign = draw_get_valign();
+
+    draw_set_color(color);
+
+    // 將自定義的對齊常量映射到 GameMaker 的內建常量
+    var gm_halign = fa_left;
+    if (halign == TEXT_ALIGN_CENTER) gm_halign = fa_center;
+    else if (halign == TEXT_ALIGN_RIGHT) gm_halign = fa_right;
+
+    var gm_valign = fa_top;
+    if (valign == TEXT_VALIGN_MIDDLE) gm_valign = fa_middle;
+    else if (valign == TEXT_VALIGN_BOTTOM) gm_valign = fa_bottom;
+
+    draw_set_halign(gm_halign);
+    draw_set_valign(gm_valign);
+
+    draw_text_transformed(x, y, string(text), xscale, yscale, angle);
+
+    draw_set_color(original_color);
+    draw_set_halign(original_halign);
+    draw_set_valign(original_valign);
+}
+
 /// @function draw_text_outlined(x, y, text, text_color, outline_color, halign, valign, scale)
 /// @description 繪製帶輪廓的文字，支援縮放
 /// @param {real} x X 座標

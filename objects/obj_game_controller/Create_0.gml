@@ -149,14 +149,7 @@ global.captured_monsters = []; // 已捕獲的怪物數組
 
 // 檢查是否已經初始化過玩家怪物列表
 // 確保變數存在
-if (!variable_global_exists("player_monsters")) {
-    global.player_monsters = [];
-}
-
-// 確保 `global.player_monsters` 是陣列，避免 `Undefined` 錯誤
-if (!is_array(global.player_monsters)) {
-    global.player_monsters = [];
-}
+initialize_player_monsters(); // <-- 使用管理器初始化
 
 // 在 initialize_managers 函數中添加敵人工廠初始化
 initialize_managers = function() {
@@ -219,81 +212,11 @@ if (array_length(global.player_monsters) == 0) {
             var _template_id = setup.template_id;
             var _level = setup.level;
 
-            // 從工廠獲取模板
-            var _template = obj_enemy_factory.get_enemy_template(_template_id);
-
-            if (_template == undefined) {
-                show_debug_message("錯誤：無法獲取初始怪物的模板 ID: " + string(_template_id));
-                continue; // 跳過這個怪物
-            }
-
-            // 計算標準屬性
-            var _hp_base = variable_struct_exists(_template, "hp_base") ? _template.hp_base : 1;
-            var _hp_growth = variable_struct_exists(_template, "hp_growth") ? _template.hp_growth : 0;
-            var _attack_base = variable_struct_exists(_template, "attack_base") ? _template.attack_base : 1;
-            var _attack_growth = variable_struct_exists(_template, "attack_growth") ? _template.attack_growth : 0;
-            var _defense_base = variable_struct_exists(_template, "defense_base") ? _template.defense_base : 1;
-            var _defense_growth = variable_struct_exists(_template, "defense_growth") ? _template.defense_growth : 0;
-            var _speed_base = variable_struct_exists(_template, "speed_base") ? _template.speed_base : 1;
-            var _speed_growth = variable_struct_exists(_template, "speed_growth") ? _template.speed_growth : 0;
-
-            var _max_hp = ceil(_hp_base + (_hp_base * _hp_growth * (_level - 1)));
-            var _attack = ceil(_attack_base + (_attack_base * _attack_growth * (_level - 1)));
-            var _defense = ceil(_defense_base + (_defense_base * _defense_growth * (_level - 1)));
-            var _spd = ceil(_speed_base + (_speed_base * _speed_growth * (_level - 1)));
-             _max_hp = max(1, _max_hp);
-             _attack = max(1, _attack);
-             _defense = max(1, _defense);
-             _spd = max(1, _spd);
-
-            // --- 添加：獲取模板的基礎 Sprite ---
-            var _sprite_idle = variable_struct_exists(_template, "sprite_idle") ? _template.sprite_idle : -1;
-            // --- 添加結束 ---
-
-            // 獲取模板中的技能信息
-            var template_skills = variable_struct_exists(_template, "skills") ? _template.skills : [];
-            var template_unlock_levels = variable_struct_exists(_template, "skill_unlock_levels") ? _template.skill_unlock_levels : [];
-
-            // 創建標準數據結構
-            var monster_data = {
-                id: _template_id,
-                level: _level,
-                name: _template.name, // 從模板獲取名字
-                type: obj_test_summon, // 假設所有玩家怪物都用這個類型召喚
-                display_sprite: _sprite_idle, // <-- 添加 display_sprite
-                max_hp: _max_hp,
-                hp: _max_hp, // 初始滿血
-                attack: _attack,
-                defense: _defense,
-                spd: _spd,
-                exp: 0, // <--- 補上經驗值欄位
-                skills: [] // <-- 初始化為空陣列
-            };
-
-            // 根據等級填充技能列表 (只存儲 ID)
-            if (is_array(template_skills)) {
-                for (var j = 0; j < array_length(template_skills); j++) {
-                    var skill_id = template_skills[j];
-                    // 確保 template_unlock_levels 是陣列且索引有效
-                    var unlock_level = (is_array(template_unlock_levels) && j < array_length(template_unlock_levels)) ? template_unlock_levels[j] : 1;
-
-                    if (_level >= unlock_level) {
-                         // 確保技能 ID 是字符串
-                         skill_id = string(skill_id);
-                         // 檢查並添加非空 ID
-                         if (skill_id != "") {
-                             array_push(monster_data.skills, skill_id);
-                         }
-                    }
-                }
-            }
-
-            // 添加到全局列表
-            array_push(global.player_monsters, monster_data);
-
-            // 更新日誌以顯示添加的技能 (調用自定義的 array_join 腳本函數)
-            var skills_str = array_length(monster_data.skills) > 0 ? array_join(monster_data.skills, ", ") : "無";
-            show_debug_message("已添加初始怪物 [" + monster_data.name + " Lv." + string(_level) + "] (ID: " + string(_template_id) + ") 帶有技能: " + skills_str);
+            // --- ADDED: Directly call the manager function --- 
+            add_monster_from_template(_template_id, _level);
+            // Optional: Add a simpler debug message if needed, 
+            // possibly requiring add_monster_from_template to return info.
+            show_debug_message("Attempted to add initial monster (Template ID: " + string(_template_id) + " Lv." + string(_level) + ") via manager.");
         }
     }
 
@@ -330,12 +253,11 @@ toggle_summon_ui = function() {
 
     // 檢查是否有可用怪物
     var has_usable_monsters = false;
-    if (variable_global_exists("player_monsters")) {
-        for (var i = 0; i < array_length(global.player_monsters); i++) {
-            if (global.player_monsters[i].hp > 0) {
-                has_usable_monsters = true;
-                break;
-            }
+    var player_monsters_list = get_player_monsters(); // <-- 使用管理器獲取列表
+    for (var i = 0; i < array_length(player_monsters_list); i++) { // <-- 遍歷獲取的列表
+        if (player_monsters_list[i].hp > 0) { // <-- 檢查獲取列表中的數據
+            has_usable_monsters = true;
+            break;
         }
     }
 

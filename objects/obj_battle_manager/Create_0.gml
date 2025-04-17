@@ -335,3 +335,37 @@ initialize = function() { // Renamed for consistency
 // Final Initialization Call
 // ==========================
 initialize(); // Calling the renamed initialize function
+
+// ==========================
+// Helper Functions
+// ==========================
+check_all_enemies_defeated = function() {
+    // 檢查是否所有敵人都已被擊敗
+    if (!instance_exists(obj_unit_manager)) return false;
+    
+    var all_enemies_defeated = true;
+    
+    if (ds_list_size(obj_unit_manager.enemy_units) > 0) {
+        for (var i = 0; i < ds_list_size(obj_unit_manager.enemy_units); i++) {
+            var enemy_id = obj_unit_manager.enemy_units[| i];
+            if (instance_exists(enemy_id) && !enemy_id.dead) {
+                all_enemies_defeated = false;
+                break;
+            }
+        }
+    } else {
+        // 如果敵人列表為空，也視為已擊敗所有敵人
+        all_enemies_defeated = true;
+    }
+    
+    if (all_enemies_defeated && battle_state == BATTLE_STATE.ACTIVE) {
+        show_debug_message("[Battle Manager] 檢測到所有敵人已被擊敗，廣播 all_enemies_defeated 事件");
+        _local_broadcast_event("all_enemies_defeated", {
+            reason: "check_function",
+            source: "capture_system"
+        });
+        return true;
+    }
+    
+    return all_enemies_defeated;
+};

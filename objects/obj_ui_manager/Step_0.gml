@@ -4,6 +4,12 @@
 
 // obj_ui_manager - Step_0.gml
 
+// 防禦性檢查，確保 active_ui_instances 已初始化
+if (!variable_instance_exists(id, "active_ui_instances")) {
+    active_ui_instances = ds_map_create();
+    show_debug_message("警告：active_ui_instances 在 Step 事件中未初始化，已自動建立。");
+}
+
 // 定期檢查surface狀態
 surface_check_counter++;
 if (surface_check_counter >= 30) { // 每30幀檢查一次
@@ -45,110 +51,104 @@ if (queue_size > 0) {
     ds_queue_destroy(temp_queue);
 }
 
-// --- 處理通用 UI 輸入 (例如關閉、確認按鈕) ---
-var _input_handled_by_manager = false; // Renamed to be clearer
-var _top_ui_instance = noone;
+// 處理UI輸入
+var main_ui_list = active_ui[? "main"];
+if (ds_list_size(main_ui_list) > 0) {
+    var _ui_inst = main_ui_list[| ds_list_size(main_ui_list) - 1]; // 取最上層UI
+    if (instance_exists(_ui_inst)) {
+        // Space鍵（確認）
+        if (keyboard_check_pressed(vk_space)) {
+            var _handled = false;
+            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
+                _handled = _ui_inst.handle_confirm_input();
+            }
+            if (_handled) {
+                keyboard_clear(vk_space);
+                show_debug_message("UI管理器: Space鍵確認輸入被UI處理並消耗");
+            }
+        }
+        // Escape鍵（關閉）
+        if (keyboard_check_pressed(vk_escape)) {
+            var _handled = false;
+            if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
+                _handled = _ui_inst.handle_close_input();
+            } else {
+                hide_ui(_ui_inst);
+                _handled = true;
+            }
+            if (_handled) {
+                keyboard_clear(vk_escape);
+                show_debug_message("UI管理器: Escape鍵關閉輸入被UI處理並消耗");
+            }
+        }
+        // Enter鍵（確認，作為Space的替代）
+        if (keyboard_check_pressed(vk_enter)) {
+            var _handled = false;
+            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
+                _handled = _ui_inst.handle_confirm_input();
+            }
+            if (_handled) {
+                keyboard_clear(vk_enter);
+                show_debug_message("UI管理器: Enter鍵確認輸入被UI處理並消耗");
+            }
+        }
+        // 滑鼠左鍵點擊
+        if (mouse_check_button_pressed(mb_left)) {
+            var mx = device_mouse_x_to_gui(0);
+            var my = device_mouse_y_to_gui(0);
+            var _handled = false;
+            if (variable_instance_exists(_ui_inst, "handle_mouse_click") && is_method(_ui_inst.handle_mouse_click)) {
+                _handled = _ui_inst.handle_mouse_click(mx, my);
+            }
+            if (_handled) {
+                mouse_clear(mb_left);
+                show_debug_message("UI管理器: 滑鼠左鍵點擊被UI處理並消耗");
+            }
+        }
+    }
+}
 
-// 優先處理 Popup 層
-var popup_list = active_ui[? "popup"];
-if (ds_list_size(popup_list) > 0) {
-    _top_ui_instance = popup_list[| ds_list_size(popup_list) - 1];
-} else {
-    var overlay_list = active_ui[? "overlay"];
-    if (ds_list_size(overlay_list) > 0) {
-        _top_ui_instance = overlay_list[| ds_list_size(overlay_list) - 1];
+// 更新UI管理器時鐘
+ui_manager_clock += 1;
+
+// 處理可見性過渡效果
+for (var i = 0; i < ds_list_size(ui_transition_queue); i++) {
+    var _transition_data = ui_transition_queue[| i];
+    var _ui_inst = _transition_data[? "ui_instance"];
+    var _target_alpha = _transition_data[? "target_alpha"];
+    var _transition_speed = _transition_data[? "transition_speed"];
+    var _on_complete = _transition_data[? "on_complete"];
+    var _completed = false;
+    
+    if (instance_exists(_ui_inst)) {
+        if (_ui_inst.ui_alpha < _target_alpha) {
+            _ui_inst.ui_alpha = min(_ui_inst.ui_alpha + _transition_speed, _target_alpha);
+            if (_ui_inst.ui_alpha >= _target_alpha) _completed = true;
+        } else if (_ui_inst.ui_alpha > _target_alpha) {
+            _ui_inst.ui_alpha = max(_ui_inst.ui_alpha - _transition_speed, _target_alpha);
+            if (_ui_inst.ui_alpha <= _target_alpha) _completed = true;
+        } else {
+            _completed = true;
+        }
+        
+        // 根據alpha值設置可見性
+        _ui_inst.visible = (_ui_inst.ui_alpha > 0);
+        
+        // 如果過渡完成且有回調函數
+        if (_completed && _on_complete != undefined && is_method(_on_complete)) {
+            _on_complete(_ui_inst, _target_alpha);
+        }
+        
+        // 如果過渡完成，從佇列中移除
+        if (_completed) {
+            ds_map_destroy(_transition_data);
+            ds_list_delete(ui_transition_queue, i);
+            i--;
+        }
     } else {
-        var main_list = active_ui[? "main"];
-        if (ds_list_size(main_list) > 0) {
-             _top_ui_instance = main_list[| ds_list_size(main_list) - 1];
-        }
+        // 如果UI實例不存在，從佇列中移除
+        ds_map_destroy(_transition_data);
+        ds_list_delete(ui_transition_queue, i);
+        i--;
     }
 }
-
-// 如果找到了頂層 UI，檢查通用輸入
-if (instance_exists(_top_ui_instance)) {
-    // 標記允許處理內部輸入 (將在 Step 事件末尾設置)
-    // Initialize the flag on the instance if it doesn't exist to avoid errors
-    if (!variable_instance_exists(_top_ui_instance, "process_internal_input_flag")) {
-        _top_ui_instance.process_internal_input_flag = false;
-    }
-
-    // 1. 檢查空格鍵 (通用確認 - 例如召喚, 或關閉戰鬥結果)
-    if (keyboard_check_pressed(vk_space)) {
-        // --- 修改：優先處理 obj_battle_ui 的關閉 --- 
-        if (object_get_name(_top_ui_instance.object_index) == "obj_battle_ui" &&
-            variable_instance_exists(_top_ui_instance, "handle_close_input") && 
-            typeof(variable_instance_get(_top_ui_instance, "handle_close_input")) == "method")
-        {
-            show_debug_message("[UI Manager] Space pressed. Calling handle_close_input for obj_battle_ui.");
-            _top_ui_instance.handle_close_input(); 
-            _input_handled_by_manager = true;
-        } 
-        // --- 如果不是 obj_battle_ui 或沒有 handle_close_input，則檢查通用確認 --- 
-        else if (variable_instance_exists(_top_ui_instance, "handle_confirm_input") && 
-                 typeof(variable_instance_get(_top_ui_instance, "handle_confirm_input")) == "method") 
-        {
-            show_debug_message("[UI Manager] Space pressed. Calling handle_confirm_input for: " + object_get_name(_top_ui_instance.object_index));
-            _top_ui_instance.handle_confirm_input(); 
-            _input_handled_by_manager = true;
-        } 
-        // --- 如果兩者都沒有 --- 
-        else {
-            show_debug_message("[UI Manager] Space pressed, but top UI " + object_get_name(_top_ui_instance.object_index) + " has neither specific close logic nor handle_confirm_input method.");
-        }
-        // --- 結束修改 ---
-    }
-    // 2. 檢查 ESC 鍵 (通用關閉)
-    else if (keyboard_check_pressed(vk_escape)) { 
-         // 使用替代方案檢查 handle_close_input 方法
-        if (variable_instance_exists(_top_ui_instance, "handle_close_input") && 
-            typeof(variable_instance_get(_top_ui_instance, "handle_close_input")) == "method") 
-        {
-            show_debug_message("[UI Manager] Escape pressed. Calling handle_close_input for: " + object_get_name(_top_ui_instance.object_index));
-            _top_ui_instance.handle_close_input(); 
-            _input_handled_by_manager = true;
-        } else {
-            show_debug_message("[UI Manager] Escape pressed, but top UI " + object_get_name(_top_ui_instance.object_index) + " has no handle_close_input method or variable.");
-        }
-    }
-    // 3. 檢查 Enter 鍵 (通用確認)
-    else if (keyboard_check_pressed(vk_enter)) { 
-        // 使用替代方案檢查 handle_confirm_input 方法
-        if (variable_instance_exists(_top_ui_instance, "handle_confirm_input") && 
-            typeof(variable_instance_get(_top_ui_instance, "handle_confirm_input")) == "method") 
-        {
-            show_debug_message("[UI Manager] Enter pressed. Calling handle_confirm_input for: " + object_get_name(_top_ui_instance.object_index));
-            _top_ui_instance.handle_confirm_input(); 
-            _input_handled_by_manager = true;
-        } else {
-             show_debug_message("[UI Manager] Enter pressed, but top UI " + object_get_name(_top_ui_instance.object_index) + " has no handle_confirm_input method or variable.");
-        }
-    }
-    // 4. 檢查鼠標左鍵點擊
-    else if (mouse_check_button_pressed(mb_left)) { 
-        // 使用替代方案檢查 handle_mouse_click 方法
-        if (variable_instance_exists(_top_ui_instance, "handle_mouse_click") && 
-            typeof(variable_instance_get(_top_ui_instance, "handle_mouse_click")) == "method") 
-        {
-            var _mx = device_mouse_x_to_gui(0);
-            var _my = device_mouse_y_to_gui(0);
-            show_debug_message("[UI Manager] Left Click detected. Calling handle_mouse_click for: " + object_get_name(_top_ui_instance.object_index));
-            // 直接調用，返回值賦給 _input_handled_by_manager
-            _input_handled_by_manager = _top_ui_instance.handle_mouse_click(_mx, _my); 
-        } else {
-             show_debug_message("[UI Manager] Left Click detected, but top UI " + object_get_name(_top_ui_instance.object_index) + " has no handle_mouse_click method or variable.");
-        }
-    }
-
-    // 如果通用輸入未處理，則允許 UI 處理內部輸入
-    if (!_input_handled_by_manager) {
-        _top_ui_instance.process_internal_input_flag = true;
-        // show_debug_message("[UI Manager] Allowing internal input processing for: " + object_get_name(_top_ui_instance.object_index));
-    }
-}
-
-// 如果沒有頂層 UI 或者輸入已被管理器處理，則考慮將輸入傳遞給遊戲世界 (例如玩家)
-// 注意： obj_player 的輸入啟用/禁用邏輯也需要考慮
-// if (!_input_handled_by_manager && !instance_exists(_top_ui_instance) && instance_exists(obj_player) && obj_player.can_move) {
-//    // Pass input to player or handle world interaction
-// }

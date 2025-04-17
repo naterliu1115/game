@@ -13,6 +13,7 @@ function battle_event_subscribe() {
             show_debug_message("正在訂閱單位相關事件...");
             subscribe_to_event("unit_stats_updated", other.id, "on_unit_stats_updated");
             subscribe_to_event("unit_died", other.id, "on_unit_died");
+            subscribe_to_event("unit_captured", other.id, "on_unit_captured");
             show_debug_message("正在訂閱戰鬥階段相關事件...");
             subscribe_to_event("battle_ending", other.id, "on_battle_ending");
             subscribe_to_event("battle_result_confirmed", other.id, "on_battle_result_confirmed");
