@@ -164,7 +164,7 @@ if (mouse_check_button_pressed(mb_left)) {
             if (slot_index != noone) {
                 var item = global.player_inventory[| slot_index];
                 if (item != undefined) {
-                    var item_data = obj_item_manager.get_item(item.id);
+                    var item_data = obj_item_manager.get_item(item.item_id);
                     if (item_data != undefined) {
                         if (global.game_debug_mode) {
                             show_debug_message("道具UI - 選擇物品: " + item_data.Name + " (索引: " + string(slot_index) + ")");
@@ -186,7 +186,7 @@ if (mouse_check_button_pressed(mb_right)) {
         if (global.game_debug_mode) {
             var item = global.player_inventory[| slot_index];
             if (item != undefined) {
-                var item_data = obj_item_manager.get_item(item.id);
+                var item_data = obj_item_manager.get_item(item.item_id);
                 if (item_data != undefined) {
                     show_debug_message("道具UI - 嘗試使用物品: " + item_data.Name);
                 }

@@ -1,4 +1,4 @@
 // 清理数据结构
-ds_list_destroy(skills);
-ds_map_destroy(skill_cooldowns);
+skills = []; // 已結構化為 array，直接清空即可
+skill_cooldowns = {}; // 已結構化為 struct，直接清空即可
 path_delete(path);

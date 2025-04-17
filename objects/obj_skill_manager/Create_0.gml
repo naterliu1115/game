@@ -97,7 +97,7 @@ load_skills_from_csv = function() {
                       show_debug_message("  因ID為空或無效，跳過行 " + string(i+1));
                      break; // 跳出內層 j 循環
                  } else {
-                     _skill_id = trimmed_value_str; // 記錄有效的 ID
+                     _skill_id = real(trimmed_value_str); // 直接轉為數字ID
                  }
             }
 
@@ -107,7 +107,7 @@ load_skills_from_csv = function() {
             // 根據欄位名稱轉換類型
             switch (field_name) {
                 case "id":
-                    skill[$ field_name] = _skill_id; // 使用已驗證的 ID
+                    skill[$ field_name] = _skill_id; // 使用已驗證的數字ID
                     break;
                 case "damage_multiplier":
                 case "range":
@@ -163,7 +163,7 @@ load_skills_from_csv = function() {
         
         // 如果是有效行，添加到數據庫
         if (_valid_row && _skill_id != "") {
-            ds_map_add(skill_database, _skill_id, skill);
+            ds_map_add(skill_database, _skill_id, skill); // 以數字ID為key
             skills_loaded_count++;
         } else if (!_valid_row && _skill_id == "") {
             // 只有當是因為ID無效而跳過時才顯示此信息
@@ -185,28 +185,26 @@ load_skills_from_csv = function() {
 
 // 取得技能資料
 get_skill = function(skill_id) {
+    skill_id = real(skill_id); // 強制轉為數字
     if (!ds_map_exists(skill_database, skill_id)) {
-        show_debug_message("警告：找不到技能 - " + skill_id);
+        show_debug_message("警告：找不到技能 - " + string(skill_id));
         return undefined;
     }
-    
     return ds_map_find_value(skill_database, skill_id);
 };
 
 // 複製技能資料 (避免修改原始資料)
 copy_skill = function(skill_id, unit_data_or_id) {
+    skill_id = real(skill_id); // 強制轉為數字
     var skill_template = get_skill(skill_id);
     if (skill_template == undefined) return undefined;
-
     var skill_copy = {};
     var field_names = variable_struct_get_names(skill_template);
     for (var i = 0; i < array_length(field_names); i++) {
         var field = field_names[i];
         skill_copy[$ field] = skill_template[$ field];
     }
-
-    show_debug_message("[SkillManager] Copied skill template: " + skill_id);
-
+    show_debug_message("[SkillManager] Copied skill template: " + string(skill_id));
     return skill_copy;
 };
 

@@ -8,6 +8,10 @@ template_id = 4001;
 battle_cooldown = 0;
 battle_cooldown_max = room_speed * 3; // 3秒冷卻
 
+// 技能系統欄位（全部改為 array/struct）
+skills = [];
+skill_cooldowns = {};
+
 // 初始化函數（根據 template_id 從工廠讀取數據）
 initialize = function() {
     // 呼叫父對象的初始化方法
@@ -35,7 +39,7 @@ initialize = function() {
         team = 1;
         // 清空技能或其他可能存在的數據
         if (ds_exists(skills, ds_type_list)) ds_list_clear(skills);
-        if (ds_exists(skill_cooldowns, ds_type_map)) ds_map_clear(skill_cooldowns);
+        skill_cooldowns = {};
         return; // 結束初始化
     }
     
@@ -72,62 +76,34 @@ initialize = function() {
     enemy_rank = _template.rank;
     
     // 技能設置
-    if (ds_exists(skills, ds_type_list)) {
-        ds_list_clear(skills); // 清空父類可能添加的基礎技能
-        // skill_ids 列表似乎不再需要，因為 skills 列表本身存儲完整數據
-        // if (ds_exists(skill_ids, ds_type_list)) {
-        //     ds_list_clear(skill_ids);
-        // }
-        if (ds_exists(skill_cooldowns, ds_type_map)) {
-            ds_map_clear(skill_cooldowns); // 清空舊的冷卻數據
-        } else {
-            skill_cooldowns = ds_map_create(); // 如果不存在則創建
-        }
-        
-        if (instance_exists(obj_skill_manager) && array_length(_template.skills) > 0) {
-            show_debug_message("    開始從模板加載技能...");
-            for (var i = 0; i < array_length(_template.skills); i++) {
-                var skill_id_to_add = _template.skills[i];
-                var add_this_skill = false;
-                
-                // 檢查等級解鎖條件
-                if (i < array_length(_template.skill_unlock_levels)) {
-                    if (_actual_level >= _template.skill_unlock_levels[i]) {
-                        add_this_skill = true;
+    skills = [];
+    skill_cooldowns = {};
+    if (instance_exists(obj_skill_manager) && array_length(_template.skills) > 0) {
+        show_debug_message("    開始從模板加載技能...");
+        for (var i = 0; i < array_length(_template.skills); i++) {
+            var skill_id_to_add = real(_template.skills[i]); // 強制轉為數字
+            show_debug_message("      嘗試加載技能 ID: " + string(skill_id_to_add));
+            var full_skill_data = obj_skill_manager.copy_skill(skill_id_to_add, self);
+            if (full_skill_data != undefined) {
+                var exists = false;
+                for (var k = 0; k < array_length(skills); k++) {
+                    if (variable_struct_exists(skills[k], "id") && skills[k].id == skill_id_to_add) {
+                        exists = true;
+                        show_debug_message("        警告：技能 " + string(skill_id_to_add) + " 已存在，跳過重複添加。");
+                        break;
                     }
-                } else {
-                    add_this_skill = true; // 如果沒有對應的解鎖等級，默認添加
                 }
-                
-                if (add_this_skill) {
-                    // --- 修改後的技能加載邏輯 ---
-                    show_debug_message("      嘗試加載技能 ID: " + string(skill_id_to_add));
-                    // 調用 Skill Manager 獲取完整技能數據副本
-                    var full_skill_data = obj_skill_manager.copy_skill(skill_id_to_add, self);
-                    
-                    if (full_skill_data != undefined) {
-                        // 檢查是否已存在 (可選，以防模板重複)
-                        if (!has_skill(skill_id_to_add)) {
-                            // 將完整的技能數據添加到列表
-                            ds_list_add(skills, full_skill_data);
-                            // 將技能ID和初始冷卻添加到 map
-                            ds_map_add(skill_cooldowns, skill_id_to_add, 0);
-                            show_debug_message("        成功添加技能: " + string(skill_id_to_add));
-                            // --- 新增：打印完整技能數據 --- 
-                            show_debug_message("          完整技能數據: " + json_stringify(full_skill_data));
-                            // --- 新增結束 ---
-                        } else {
-                             show_debug_message("        警告：技能 " + string(skill_id_to_add) + " 已存在，跳過重複添加。");
-                        }
-                    } else {
-                        show_debug_message("        錯誤：無法從 Skill Manager 獲取 ID 為 " + string(skill_id_to_add) + " 的技能數據。");
-                    }
-                    // --- 修改結束 ---
+                if (!exists) {
+                    array_push(skills, full_skill_data);
+                    skill_cooldowns[skill_id_to_add] = 0;
+                    show_debug_message("        成功添加技能: " + string(skill_id_to_add));
                 }
+            } else {
+                show_debug_message("        錯誤：無法從 Skill Manager 獲取 ID 為 " + string(skill_id_to_add) + " 的技能數據。");
             }
-        } else if (!instance_exists(obj_skill_manager)) {
-            show_debug_message("    錯誤：obj_skill_manager 不存在，無法加載技能。");
         }
+    } else if (!instance_exists(obj_skill_manager)) {
+        show_debug_message("    錯誤：obj_skill_manager 不存在，無法加載技能。");
     }
     
     // 設置獎勵
@@ -175,14 +151,12 @@ initialize = function() {
     show_debug_message("    AI Mode: " + string(ai_mode) + " (From Type: " + string(ai_type) + ")");
     
     // --- 增加除錯訊息：打印添加的技能 --- 
-    if (ds_exists(skills, ds_type_list) && ds_list_size(skills) > 0) {
+    if (array_length(skills) > 0) {
         show_debug_message("    添加的技能列表:");
-        for (var j = 0; j < ds_list_size(skills); j++) {
-            var _skill_data = skills[| j];
-            if (is_struct(_skill_data)) { // 確保是結構
-                 // --- 修改：打印完整技能數據而非僅 ID ---
-                 show_debug_message("      - 數據: " + json_stringify(_skill_data));
-                 // --- 修改結束 ---
+        for (var j = 0; j < array_length(skills); j++) {
+            var _skill_data = skills[j];
+            if (is_struct(_skill_data)) {
+                show_debug_message("      - 數據: " + json_stringify(_skill_data));
             } else {
                 show_debug_message("      - 無效的技能數據格式");
             }

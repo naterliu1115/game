@@ -1,6 +1,19 @@
 // 檢測移動狀態並更新動畫 (保持在最開頭)
 is_moving = (x != last_x || y != last_y);
 
+var _wander_warn = [];
+if (!variable_instance_exists(self, "wander_timer")) { wander_timer = 0; array_push(_wander_warn, "wander_timer"); }
+if (!variable_instance_exists(self, "wander_radius")) { wander_radius = 64; array_push(_wander_warn, "wander_radius"); }
+if (!variable_instance_exists(self, "wander_target_x")) { wander_target_x = x; array_push(_wander_warn, "wander_target_x"); }
+if (!variable_instance_exists(self, "wander_target_y")) { wander_target_y = y; array_push(_wander_warn, "wander_target_y"); }
+if (!variable_instance_exists(self, "wander_state")) { wander_state = 0; array_push(_wander_warn, "wander_state"); }
+if (!variable_instance_exists(self, "wander_pause_duration")) { wander_pause_duration = 1 * game_get_speed(gamespeed_fps); array_push(_wander_warn, "wander_pause_duration"); }
+if (!variable_instance_exists(self, "spawn_x")) { spawn_x = x; array_push(_wander_warn, "spawn_x"); }
+if (!variable_instance_exists(self, "spawn_y")) { spawn_y = y; array_push(_wander_warn, "spawn_y"); }
+if (array_length(_wander_warn) > 0) {
+    show_debug_message("[警告] 遊蕩參數未初始化: " + array_join(_wander_warn, ", ") + "。物件:" + object_get_name(object_index) + " id:" + string(id) + "，請檢查子類是否有正確呼叫 event_inherited()。");
+}
+
 // --- 修改：判斷是否處於任何戰鬥相關階段 (非 INACTIVE) ---
 var _is_battle_initiated = (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE);
 
@@ -195,8 +208,7 @@ if (_is_battle_initiated) {
         skill_animation_playing = false;
         attack_cooldown_timer = 0;
         state_buffer_timer = 0;
-        // 清空技能冷卻？(可選)
-        // var _skill_keys = ds_map_keys_to_array(skill_cooldowns);
+        // var _skill_keys = is_struct(skill_cooldowns) ? variable_struct_get_names(skill_cooldowns) : ds_map_keys_to_array(skill_cooldowns); // 型別安全取得 key
         // for (var i = 0; i < array_length(_skill_keys); i++) { ds_map_set(skill_cooldowns, _skill_keys[i], 0); }
 
         // --- 結束：非戰鬥時的遊蕩邏輯 ---

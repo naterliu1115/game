@@ -127,35 +127,7 @@ show = function() {
     update_max_scroll();
     
     // 檢查物品列表是否為空，如果為空添加測試物品
-    if (!variable_global_exists("player_inventory")) {
-        global.player_inventory = ds_list_create();
-    }
-    
-    if (ds_list_size(global.player_inventory) == 0) {
-        show_debug_message("物品列表為空，添加測試物品");
-        
-        with (obj_item_manager) {
-            // 消耗品
-            add_item_to_inventory(1001, 5);  // 小型回復藥水
-            add_item_to_inventory(1002, 3);  // 中型回復藥水
-            add_item_to_inventory(1003, 1);  // 大型回復藥水
-            
-            // 裝備
-            add_item_to_inventory(2001, 1);  // 銅劍
-            add_item_to_inventory(2002, 1);  // 鐵劍
-            
-            // 捕捉道具
-            add_item_to_inventory(3001, 10); // 普通球
-            add_item_to_inventory(3002, 5);  // 高級球
-            
-            // 材料
-            add_item_to_inventory(4001, 20); // 銅礦石
-            add_item_to_inventory(4002, 10); // 鐵礦石
-            
-            // 工具
-            add_item_to_inventory(5001, 1);  // 採礦稿
-        }
-    }
+    // [已移除] UI 不再自動加測試道具，背包初始化由 game_controller 負責
     
     show_debug_message("道具UI已顯示");
 };
@@ -199,7 +171,7 @@ get_slot_at_position = function(mouse_x, mouse_y) {
     for (var i = 0; i < ds_list_size(global.player_inventory); i++) {
         var item = global.player_inventory[| i];
         if (item != undefined) {
-            var item_data = obj_item_manager.get_item(item.id);
+            var item_data = obj_item_manager.get_item(item.item_id);
             if (item_data != undefined) {
                 var item_category = -1;
                 if (variable_struct_exists(item_data, "Category")) {
@@ -215,7 +187,7 @@ get_slot_at_position = function(mouse_x, mouse_y) {
                     
                     // 調試輸出每個槽位的計算位置
                     if (global.game_debug_mode) {
-                        show_debug_message("檢查物品 " + string(i) + ": ID " + string(item.id) + " (" + item_data.Name + ")");
+                        show_debug_message("檢查物品 " + string(i) + ": ID " + string(item.item_id) + " (" + item_data.Name + ")");
                         show_debug_message("    預計繪製位置（表面座標）：" + string(slot_draw_x) + ", " + string(slot_draw_y));
                         show_debug_message("    槽位大小：" + string(slot_size));
                     }
@@ -255,12 +227,12 @@ use_selected_item = function() {
     if (item == undefined) return;
     
     // 檢查是否可以使用該物品
-    var item_data = obj_item_manager.get_item(item.id);
+    var item_data = obj_item_manager.get_item(item.item_id);
     if (item_data == undefined) return;
     
     // 只有消耗品可以直接使用
     if (item_data.type == ITEM_TYPE.CONSUMABLE) {
-        if (obj_item_manager.use_item(item.id)) {
+        if (obj_item_manager.use_item(item.item_id)) {
             // 使用成功，更新UI
             surface_needs_update = true;
             
@@ -281,7 +253,7 @@ update_max_scroll = function() {
     for (var i = 0; i < ds_list_size(global.player_inventory); i++) {
         var item = global.player_inventory[| i];
         if (item != undefined) {
-            var item_data = obj_item_manager.get_item(item.id);
+            var item_data = obj_item_manager.get_item(item.item_id);
             if (item_data != undefined) {
                 if (variable_struct_exists(item_data, "Category")) {
                     if (item_data.Category == current_category) {

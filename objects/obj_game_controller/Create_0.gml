@@ -51,6 +51,21 @@ if (!instance_exists(obj_main_hud)) {
 // 初始化全局道具相關變量
 if (!variable_global_exists("player_inventory")) {
     global.player_inventory = ds_list_create();
+    // 預設道具初始化（只在遊戲啟動時加入一次）
+    if (instance_exists(obj_item_manager)) {
+        with (obj_item_manager) {
+            add_item_to_inventory(1001, 5);  // 小型回復藥水
+            add_item_to_inventory(1002, 3);  // 中型回復藥水
+            add_item_to_inventory(1003, 1);  // 大型回復藥水
+            add_item_to_inventory(2001, 1);  // 銅劍
+            add_item_to_inventory(2002, 1);  // 鐵劍
+            add_item_to_inventory(3001, 10); // 普通球
+            add_item_to_inventory(3002, 5);  // 高級球
+            add_item_to_inventory(4001, 20); // 銅礦石
+            add_item_to_inventory(4002, 10); // 鐵礦石
+            add_item_to_inventory(5001, 1);  // 採礦稿
+        }
+    }
 }
 
 // 添加缺失的变量初始化 - 解决警告
@@ -251,6 +266,7 @@ if (array_length(global.player_monsters) == 0) {
                 attack: _attack,
                 defense: _defense,
                 spd: _spd,
+                exp: 0, // <--- 補上經驗值欄位
                 skills: [] // <-- 初始化為空陣列
             };
 

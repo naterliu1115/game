@@ -278,7 +278,7 @@ function add_item_to_inventory(item_id, quantity) {
     var inventory_size = ds_list_size(global.player_inventory);
     for (var i = 0; i < inventory_size; i++) {
         var inv_item = global.player_inventory[| i];
-        if (inv_item.id == item_id) {
+        if (inv_item.item_id == item_id) {
             // 更新數量
             inv_item.quantity += quantity;
             show_debug_message("更新物品數量：ID=" + string(item_id) + " 新數量=" + string(inv_item.quantity));
@@ -306,7 +306,7 @@ function add_item_to_inventory(item_id, quantity) {
 
     // 添加新物品
     var new_item = {
-        id: item_id,
+        item_id: item_id,
         quantity: quantity
     };
     ds_list_add(global.player_inventory, new_item);
@@ -343,7 +343,7 @@ function use_item(item_id) {
     var inventory_size = ds_list_size(global.player_inventory);
     for (var i = 0; i < inventory_size; i++) {
         var inv_item = global.player_inventory[| i];
-        if (inv_item.id == item_id && inv_item.quantity > 0) {
+        if (inv_item.item_id == item_id && inv_item.quantity > 0) {
             var item_data = items_data[? item_id];
 
             // 執行使用效果
@@ -535,7 +535,7 @@ get_selected_tool = function() {
     var item_instance = global.player_inventory[| inventory_index];
     if (item_instance == undefined) return noone;
 
-    var item_id = item_instance.id;
+    var item_id = item_instance.item_id;
     var item_data = get_item(item_id);
 
     // 檢查是否為工具類型

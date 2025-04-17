@@ -1,3 +1,25 @@
+## 全域資料與多存檔設計原則
+
+本專案所有遊戲資料（如背包、金錢、怪物等）統一以 `global` 變數管理，例如：
+- `global.player_inventory`：玩家背包（唯一資料來源）
+- `global.player_gold`：玩家金錢
+- `global.player_monsters`：玩家怪物列表
+
+### 設計原則
+- **全專案只在一個地方（global 變數）實作與紀錄這些資訊，所有函數、物件、UI 都直接取用 global 變數。**
+- **reward system 及所有物品相關腳本，統一只操作 `global.player_inventory`，不再使用 `player_items` 或其他變數。**
+- 嚴格檢查所有初始化、重設、清空的地方，避免重複建立或覆蓋 global 變數。
+
+### 多存檔支援建議
+- 遊戲運行時，所有資料都放在 global 變數，方便各系統直接存取。
+- 存檔時，將所有 global 變數（如 `global.player_inventory`、`global.player_gold`、`global.player_monsters` 等）序列化成一個 struct 或 JSON，存到檔案或雲端。
+- 讀檔時，先清空現有 global 內容，再把存檔資料還原到 global 變數。
+- 切換存檔時，先存下現有 global 狀態（如有需要），再載入新存檔內容到 global。
+
+此設計可兼顧開發便利性與未來多存檔擴充需求。
+
+---
+
 ## 核心系統
 
 ### 1. 角色動畫系統 (Animation System)
@@ -317,6 +339,11 @@ if (instance_exists(obj_dialogue_manager) && obj_dialogue_manager.is_active) { /
 ```
 
 ### 6. 道具系統 (Item System)
+
+**背包初始化與 UI 流程重構說明：**  
+- 玩家背包（`global.player_inventory`）的初始化與預設道具，現已統一由 `obj_game_controller` 在遊戲啟動時負責，只執行一次。  
+- 物品欄 UI（`obj_inventory_ui`）僅負責顯示背包內容，不再自動新增任何道具。  
+- 這樣設計可確保背包內容不會因 UI 開啟或戰鬥流程被清空，資料初始化與 UI 顯示完全分離，架構更穩定。
 
 道具系統管理遊戲中的所有物品，包括消耗品、裝備、捕捉道具、材料和工具。
 
@@ -742,3 +769,33 @@ UI 系統管理遊戲中的各種用戶界面元素。
 - 建議以 id 或 type+name 作為唯一 key 進行對應。
 - 若 struct 缺少 exp 欄位，則補上。
 - UI 讀取 global.player_monsters 時，資料必須即時正確。
+
+### 技能系統
+
+- **技能資料（skills）**：array，每個元素為 struct，包含技能 id、名稱、冷卻等欄位。
+- **技能冷卻（skill_cooldowns）**：array，與 skills 完全一一對應，所有操作都用數字索引。
+- **技能查找**：如需根據技能 id 查找冷卻，需先在 skills array 找到對應 index，再用該 index 存取 skill_cooldowns。
+- **不再使用 struct/ds_map 方式存取技能冷卻。**
+
+**典型用法：**
+```gml
+// 新增技能
+array_push(skills, skill_data);
+array_push(skill_cooldowns, 0);
+
+// 根據 id 查找冷卻
+var idx = -1;
+for (var i = 0; i < array_length(skills); i++) {
+    if (skills[i].id == target_id) { idx = i; break; }
+}
+if (idx != -1) {
+    var cd = skill_cooldowns[idx];
+}
+```
+
+## 背包初始化與 UI 流程重構
+
+- 預設道具初始化邏輯已移至 `obj_game_controller`，只在遊戲啟動時執行一次。
+- `obj_inventory_ui` 不再自動加道具，僅負責顯示背包內容。
+- 測試確認：無論 UI 是否開啟過，背包內容皆正確，戰鬥後不會被清空。
+- 此設計確保遊戲資料初始化與 UI 顯示分離，架構更穩定。

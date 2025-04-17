@@ -234,6 +234,7 @@ calculate_defeat_penalties = function() {
 
 // 發放獎勵
 grant_rewards = function() {
+    show_debug_message("[DEBUG] 發獎勵前背包數量：" + string(ds_list_size(global.player_inventory)));
     if (!battle_result.victory) {
         handle_defeat_effects(); // 失敗時調用失敗處理
         return; // 失敗不執行後續的獎勵發放
@@ -250,34 +251,25 @@ grant_rewards = function() {
     // 分配經驗值
     distribute_experience();
     
-    // 添加物品到庫存 (需要修改以處理新的 item_drops 格式)
-    if (variable_global_exists("player_items")) {
+    // 統一只操作 global.player_inventory，移除 player_items 判斷
+    if (variable_global_exists("player_inventory")) {
         for (var i = 0; i < array_length(battle_result.item_drops); i++) {
             var drop = battle_result.item_drops[i];
             if (is_struct(drop) && variable_struct_exists(drop, "item_id") && variable_struct_exists(drop, "quantity")) {
-                 var _item_id = drop.item_id;
-                 var _quantity = drop.quantity;
-                 
-                 // 調用物品管理器添加物品 (假設有 add_item_to_inventory 函數)
-                 obj_item_manager.add_item_to_inventory(_item_id, _quantity); 
-                 show_debug_message("獎勵系統: 添加 " + string(_quantity) + " 個物品 ID: " + string(_item_id) + " 到庫存");
-            } else {
-                 show_debug_message("獎勵系統: 警告: item_drops 中發現無效的條目: " + json_stringify(drop));
+                var _item_id = drop.item_id;
+                var _quantity = drop.quantity;
+                obj_item_manager.add_item_to_inventory(_item_id, _quantity);
             }
         }
-    } else {
-        for (var i = 0; i < array_length(battle_result.item_drops); i++) {
-            var drop = battle_result.item_drops[i];
-            if (is_struct(drop) && variable_struct_exists(drop, "item_id") && variable_struct_exists(drop, "quantity")) {
-                 var _item_id = drop.item_id;
-                 var _quantity = drop.quantity;
-                 
-                 // 調用物品管理器添加物品 (假設有 add_item_to_inventory 函數)
-                 obj_item_manager.add_item_to_inventory(_item_id, _quantity); 
-                 show_debug_message("獎勵系統: 添加 " + string(_quantity) + " 個物品 ID: " + string(_item_id) + " 到庫存");
-            } else {
-                 show_debug_message("獎勵系統: 警告: item_drops 中發現無效的條目: " + json_stringify(drop));
-            }
+    }
+    show_debug_message("[DEBUG] 發獎勵後背包數量：" + string(ds_list_size(global.player_inventory)));
+    // 新增：列印背包所有物品內容
+    for (var i = 0; i < ds_list_size(global.player_inventory); i++) {
+        var item = global.player_inventory[| i];
+        if (is_struct(item) && variable_struct_exists(item, "item_id") && variable_struct_exists(item, "quantity")) {
+            show_debug_message("[DEBUG] 背包物品 " + string(i) + ": ID=" + string(item.item_id) + ", 數量=" + string(item.quantity));
+        } else {
+            show_debug_message("[警告] 背包第 " + string(i) + " 格不是合法物品資料: " + string(item));
         }
     }
     

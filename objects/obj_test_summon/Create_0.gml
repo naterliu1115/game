@@ -34,9 +34,8 @@ initialize = function() {
         spd = 1;
         team = 0; // 玩家隊伍
         // 清空父類可能初始化的技能列表
-        if (ds_exists(skills, ds_type_list)) ds_list_clear(skills);
-        if (ds_exists(skill_ids, ds_type_list)) ds_list_clear(skill_ids);
-        if (ds_exists(skill_cooldowns, ds_type_map)) ds_map_clear(skill_cooldowns);
+        skills = [];
+        skill_ids = [];
         return; // 結束初始化
     }
     show_debug_message("    [Summon Init] 成功獲取模板: " + _template.name);
@@ -80,25 +79,20 @@ initialize = function() {
     show_debug_message("    [Summon Init] 強制設置 team = " + string(team));
     
     // 技能設置 (使用父類的 add_skill)
-    if (ds_exists(skills, ds_type_list)) {
-        ds_list_clear(skills); 
-        if (ds_exists(skill_ids, ds_type_list)) {
-            ds_list_clear(skill_ids);
-        }
-        if (ds_exists(skill_cooldowns, ds_type_map)) ds_map_clear(skill_cooldowns);
-        
-        if (variable_struct_exists(_template, "skills") && array_length(_template.skills) > 0) {
-            var skill_levels = variable_struct_exists(_template, "skill_unlock_levels") ? _template.skill_unlock_levels : [];
-            for (var i = 0; i < array_length(_template.skills); i++) {
-                var skill_id = _template.skills[i];
-                var unlock_level = (i < array_length(skill_levels)) ? skill_levels[i] : 1;
-                
-                if (_actual_level >= unlock_level) {
-                    if (variable_instance_exists(id, "add_skill")) {
-                        add_skill(skill_id);
-                    } else {
-                        show_debug_message("    [Summon Init] 警告: add_skill 方法不存在!");
-                    }
+    skills = [];
+    skill_ids = [];
+    
+    if (variable_struct_exists(_template, "skills") && array_length(_template.skills) > 0) {
+        var skill_levels = variable_struct_exists(_template, "skill_unlock_levels") ? _template.skill_unlock_levels : [];
+        for (var i = 0; i < array_length(_template.skills); i++) {
+            var skill_id = real(_template.skills[i]); // 強制轉為數字
+            var unlock_level = (i < array_length(skill_levels)) ? skill_levels[i] : 1;
+            
+            if (_actual_level >= unlock_level) {
+                if (variable_instance_exists(id, "add_skill")) {
+                    add_skill(skill_id);
+                } else {
+                    show_debug_message("    [Summon Init] 警告: add_skill 方法不存在!");
                 }
             }
         }

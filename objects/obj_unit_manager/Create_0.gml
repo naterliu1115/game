@@ -266,9 +266,9 @@ summon_monster = function(monster_type, position_x, position_y) {
 }
 
 // 生成敵人單位
-spawn_enemy = function(enemy_type, position_x, position_y) {
+spawn_enemy = function(enemy_template_id, position_x, position_y, level) {
     show_debug_message("===== 開始生成敵人 =====");
-    show_debug_message("- 敵人類型: " + object_get_name(enemy_type));
+    show_debug_message("- 敵人模板ID: " + string(enemy_template_id));
     show_debug_message("- 位置: (" + string(position_x) + ", " + string(position_y) + ")");
     show_debug_message("- 當前敵人列表大小: " + string(ds_list_size(enemy_units)));
     
@@ -278,8 +278,17 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
         return noone;
     }
     
-    var enemy_inst = instance_create_layer(position_x, position_y, "Instances", enemy_type);
-    show_debug_message("- 敵人實例創建完成，ID: " + string(enemy_inst));
+    // 確保敵人工廠存在
+    if (!instance_exists(obj_enemy_factory)) {
+        show_debug_message("錯誤：敵人工廠不存在，無法生成敵人");
+        return noone;
+    }
+    
+    var enemy_inst = noone;
+    with (obj_enemy_factory) {
+        enemy_inst = create_enemy_instance(enemy_template_id, position_x, position_y, is_undefined(level) ? 1 : level);
+    }
+    show_debug_message("- 工廠建立敵人實例完成，ID: " + string(enemy_inst));
     
     if (!instance_exists(enemy_inst)) {
         show_debug_message("錯誤：敵人實例創建失敗");
@@ -289,14 +298,11 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
     total_enemy_units_created++;
     show_debug_message("- 總敵人創建數: " + string(total_enemy_units_created));
     
-    // 設置敵人屬性
+    // 設置敵人屬性（初始化已由工廠與 initialize 完成，這裡僅做必要補充）
     with (enemy_inst) {
-        show_debug_message("- 初始化前team值: " + string(team));
-        initialize(); // 先調用敵人自身的初始化方法
         show_debug_message("- 初始化後team值: " + string(team));
-        team = 1;    // 然後再設置team值，確保不會被初始化覆蓋
+        team = 1;    // 確保是敵方
         show_debug_message("- 最終team值: " + string(team));
-        
         // 確認其他重要屬性
         show_debug_message("- 確認敵人屬性：");
         show_debug_message("  * HP: " + string(hp) + "/" + string(max_hp));
@@ -321,7 +327,7 @@ spawn_enemy = function(enemy_type, position_x, position_y) {
     // 發送敵人生成事件
     _event_broadcaster("enemy_spawned", {
         enemy: enemy_inst,
-        type: enemy_type,
+        template_id: enemy_template_id,
         position: {x: position_x, y: position_y}
     });
     

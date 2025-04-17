@@ -282,55 +282,30 @@ switch_tab = function(new_tab) {
 
 /// 獲取怪物的技能列表 (修正版 - 處理 Array)
 get_monster_skills = function(monster_data) {
-    // 檢查 monster_data 是否有效，以及 skills 欄位是否存在且為陣列
     if (is_struct(monster_data) && variable_struct_exists(monster_data, "skills") && is_array(monster_data.skills)) {
-
-        // 直接從 monster_data 複製技能陣列 (創建副本以防外部修改)
         var skills_array_copy = [];
         var original_array = monster_data.skills;
         for (var i = 0; i < array_length(original_array); i++) {
-             var skill_data = original_array[i];
-             if (is_struct(skill_data)) {
-                // 深拷貝結構體 (防止修改副本影響原數據)
-                var skill_copy = {};
-                var names = variable_struct_get_names(skill_data);
-                for(var n=0; n<array_length(names); n++){
-                    skill_copy[$ names[n]] = skill_data[$ names[n]];
+            var skill_id = original_array[i]; // 直接用數字ID
+            if (instance_exists(obj_skill_manager)) {
+                var full_skill_data = obj_skill_manager.copy_skill(skill_id, monster_data);
+                if (full_skill_data != undefined) {
+                    array_push(skills_array_copy, full_skill_data);
+                } else {
+                    show_debug_message("警告：在 get_monster_skills 中找不到技能 ID: " + string(skill_id));
                 }
-                array_push(skills_array_copy, skill_copy);
-             } else {
-                 // 如果陣列中存的不是結構體 (例如只有 ID)，這裡需要處理
-                 // 嘗試用 ID 去 Skill Manager 查詢完整數據 (需要 obj_skill_manager 存在)
-                 var skill_id_str = string(skill_data); // 確保是字符串 ID
-                 if (instance_exists(obj_skill_manager)) {
-                     // var context_unit_id = ... // 不再需要計算 context_unit_id
-                     // 直接傳遞 monster_data 結構體
-                     var full_skill_data = obj_skill_manager.copy_skill(skill_id_str, monster_data); 
-                     if (full_skill_data != undefined) {
-                         array_push(skills_array_copy, full_skill_data);
-                     } else {
-                         show_debug_message("警告：在 get_monster_skills 中找不到技能 ID: " + skill_id_str);
-                     }
-                 } else {
-                      show_debug_message("警告：在 get_monster_skills 中 Skill Manager 不存在");
-                 }
-             }
+            } else {
+                show_debug_message("警告：在 get_monster_skills 中 Skill Manager 不存在");
+            }
         }
         return skills_array_copy;
-
-    } else {
-        // 如果 monster_data 無效或沒有技能陣列，返回空陣列
-        // 避免在 monster_data 無效時嘗試讀取 name
-        if (!is_struct(monster_data)) {
-             show_debug_message("警告：無法獲取技能，傳入的 monster_data 不是有效的結構體。");
-        } else if (!variable_struct_exists(monster_data, "skills")) {
-            show_debug_message("警告：無法獲取技能，monster_data 中缺少 'skills' 欄位。Name: " + (variable_struct_exists(monster_data, "name") ? monster_data.name : "未知"));
-        } else if (!is_array(monster_data.skills)){
-            show_debug_message("警告：無法獲取技能，monster_data.skills 不是陣列。Name: " + (variable_struct_exists(monster_data, "name") ? monster_data.name : "未知"));
-        }
-        return [];
+    } else if (!variable_struct_exists(monster_data, "skills")) {
+        show_debug_message("警告：無法獲取技能，monster_data 中缺少 'skills' 欄位。Name: " + (variable_struct_exists(monster_data, "name") ? monster_data.name : "未知"));
+    } else if (!is_array(monster_data.skills)){
+        show_debug_message("警告：無法獲取技能，monster_data.skills 不是陣列。Name: " + (variable_struct_exists(monster_data, "name") ? monster_data.name : "未知"));
     }
-}
+    return [];
+};
 
 /// 繪製怪物卡片
 /// @param {real} x 卡片x座標

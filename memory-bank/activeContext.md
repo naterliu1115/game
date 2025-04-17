@@ -6,6 +6,7 @@
 - (次要) 根據物品稀有度改變飛行道具外框顏色
 - (長遠) 採集系統掉落工廠化
 - (長遠) 怪物/採集掉落工廠化規劃
+- **(已完成)** 背包初始化與 UI 流程重構，背包內容不再因 UI 或戰鬥被清空，預設道具初始化已移至 obj_game_controller，UI 僅負責顯示。
 
 ## 近期決策與備忘
 - 【戰鬥事件 callback 重構】
@@ -33,6 +34,10 @@
 - **調查並解決初始化戰鬥時 `戰鬥已經在進行中` 的警告。**
 
 ## 近期變更
+- **背包初始化與 UI 流程重構：**
+    - 預設道具初始化邏輯已移至 `obj_game_controller`，只在遊戲啟動時執行一次。
+    - `obj_inventory_ui` 不再自動加道具，僅負責顯示背包內容。
+    - 測試確認：無論 UI 是否開啟過，背包內容皆正確，戰鬥後不會被清空。
 - **戰鬥 callback function 重構與測試通過：**
     - 完全移除 obj_battle_manager Create 事件內的 callback function 定義，統一由 battle_callbacks.gml 管理。
     - Method Bindings 綁定順序已修正，所有事件流程測試通過。
@@ -161,4 +166,7 @@
 - struct 缺少 exp 欄位則補上。
 - UI 讀取 global.player_monsters 時資料即時正確。
 - 捕獲、初始化、經驗分配、升級等所有流程都必須補齊 exp 欄位，並即時同步所有關鍵欄位。
-- 未來將設計 player_monster.gml 腳本，集中管理 struct 欄位與同步，優化資料流。 
+- 未來將設計 player_monster.gml 腳本，集中管理 struct 欄位與同步，優化資料流。
+
+## 技能系統已重構為 array 索引模式：skills 與 skill_cooldowns 均為 array，完全一一對應，所有操作皆用數字索引，不再用 struct/ds_map。
+- 技能系統重構尚未完成，目前 bug 包含 struct/array 混用導致的 unable to convert string ... to int64 錯誤，初始化、技能新增、冷卻查找等流程皆有型別不一致問題。大部分技能相關操作仍在修正與驗證中。近期重點：徹底統一技能系統資料結構，消除所有型別錯誤。每次 build 幾乎都會遇到技能冷卻相關崩潰，重構尚未穩定。 

@@ -87,7 +87,7 @@ if (surface_needs_update) {
             var item = global.player_inventory[| i];
             if (item == undefined) continue;
             
-            var item_data = obj_item_manager.get_item(item.id);
+            var item_data = obj_item_manager.get_item(item.item_id);
             if (item_data == undefined) continue;
             
             // 檢查是否匹配當前分類
@@ -123,7 +123,7 @@ draw_surface(ui_surface, ui_x, ui_y);
 if (drag_item != noone) {
     var item = global.player_inventory[| drag_item];
     if (item != undefined) {
-        var item_data = obj_item_manager.get_item(item.id);
+        var item_data = obj_item_manager.get_item(item.item_id);
         if (item_data != undefined) {
             draw_ui_dragged_item(
                 mouse_x - drag_offset_x,
