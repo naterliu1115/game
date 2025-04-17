@@ -1,4 +1,53 @@
-# progress.md
+# Memory Bank: Progress (progress.md)
+
+This document tracks the development progress, planned features, and known issues of the TurnBasedBattle project, primarily based on `README.md`.
+
+## Completed Features
+
+*   **Animation:** 8-direction animation system for Player and battle units.
+*   **Event System:** Core event manager (`obj_event_manager`) for pub/sub communication.
+*   **Battle System:** Basic state machine (`obj_battle_manager`), win/loss conditions, battle result event flow (refactored), floating text/hurt effects, damage calculation (refactored & verified).
+*   **Unit System:** Parent classes (`obj_battle_unit_parent`, `obj_player_summon_parent`, `obj_enemy_parent`), basic states (Idle, Attack, Hurt, Die), Wander behavior (non-combat), ATB charging (only in `ACTIVE` state), animation control (manual `image_index`).
+*   **Enemy Factory:** (`obj_enemy_factory`) loading from `enemies.csv`, template management (`global.enemy_templates`), instance creation (`obj_test_enemy`), and initialization delegation.
+*   **Experience & Leveling:** Enemy XP rewards (`enemies.csv`), XP distribution (`obj_battle_manager`), level curve (`levels.csv`, `obj_level_manager`), unit leveling (`level_up` in `obj_player_summon_parent`), skill learning based on level, visual effects, and immediate data sync to `global.player_monsters`.
+*   **Item System:** CSV loading (`items.csv`), basic inventory (`global.player_inventory`), item data management (`obj_item_manager`), multiple item types/rarity, sprite ID handling (refactored with default sprite), hotbar management (`global.player_hotbar`, assign/unassign logic in `obj_item_manager`).
+*   **UI System:** Main HUD (`obj_main_hud` with hotbar display, selection, drag-and-drop, bag icon, interaction prompt), Inventory UI (`obj_inventory_ui` with tabs, grid display, scrolling, interaction), Item Info Popup (`obj_item_info_popup` with details, smart positioning, hotbar assignment button), Battle UI (`obj_battle_ui` reward display fixed), standardized monster sprite handling (`display_sprite` field).
+*   **Gathering System:** Diggable ore (`obj_stone` with durability, interaction, feedback), flying item animation (`obj_flying_item` with state machine including Scatter/Bounce, world coordinates, outline, quantity display).
+*   **Enemy Placer (`obj_enemy_placer`):** Fixed initialization timing issues via `managers_initialized` event.
+*   **Data Handling:** Standardized `global.player_monsters` structure, initial monster creation (`obj_game_controller`), capture logic (`obj_capture_ui`), skill data structure (`skills` and `skill_cooldowns` arrays).
+*   **Bug Fixes:** Numerous runtime errors resolved (CSV parsing, `ds_list` usage, event callbacks, loot table parsing, `unit_died` event data, duplicate logic removal, UI crashes, sprite display issues).
+*   **Utilities:** Custom `is_numeric_safe`, `array_join` functions.
+
+## In Progress / To-Do List
+
+*   **(High Priority) Event Manager:** Implement/fix `trigger_event` function in `obj_event_manager`.
+*   **Gathering System:** Further extensions (reserved).
+*   **Persistence:** Save/load `global.player_hotbar` (part of broader save system).
+*   **UX:** Consider moving interaction prompts closer to targets.
+*   **Performance Optimization:** General performance improvements.
+*   **Audio:** Add sound effects and music.
+*   **Level Design:** Design game levels and overall flow.
+*   **Enemy Death/Reward Flow:**
+    *   Verify Battle Result UI correctly displays all queued drops.
+    *   (Reserved) Refactor battle states to wait for animations (drops, leveling) before showing results UI.
+*   **Visuals:** Change `obj_flying_item` outline color based on item rarity.
+*   **Battle Log:** Add HUD button, UI panel (`obj_battle_log_ui`), improve log data structure, implement display/formatting.
+*   **Battle System Depth:** (Reserved) More status effects, buffs/debuffs, elemental weaknesses, AoE skills, advanced AI, ATB/turn order refinements.
+*   **Item/Equipment Expansion:** (Reserved) More consumables, equipment slots (armor, accessories), equipment effects.
+*   **Monster Catching/Raising:** (Reserved) Refine capture mechanics, add evolution, skill management, potential/affinity systems.
+*   **Crafting System:** (Reserved) Implement crafting using gathered materials.
+*   **World Interaction:** (Reserved) More NPCs, quests, shops, exploration elements (chests, gather points, secrets), mini-games.
+*   **UI/UX Optimization:** (Reserved) Improve battle info clarity, enhance management UIs (sort, filter, compare), consider non-combat hotbar usage.
+*   **Code Structure:** Design `player_monster.gml` for centralized data management.
+*   **Data Flow Optimization:** Ongoing review for consistency and synchronization.
+
+## Known Issues
+
+*   **Event Manager:** `trigger_event` function is missing or incorrectly called, causing warnings (e.g., in reward system).
+*   **Flying Item (`obj_flying_item`):**
+    *   Initial coordinates (`world_to_gui_coords`) might be inaccurate with camera movement/zoom (legacy issue, currently uses world coords).
+    *   Targeting `Player.x`, `Player.y` directly in `FLYING_TO_PLAYER` state might cause visual lag with fast camera movement.
+*   **UI:** Warnings about hiding `obj_battle_ui` multiple times.
 
 ## 已完成/運作中
 

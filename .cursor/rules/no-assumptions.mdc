@@ -6,7 +6,7 @@ alwaysApply: true
 ---
 description: "Prevent making unverified assumptions about code elements (variables, functions, resources, etc.)"
 globs: ["**/*"]
-alwaysApply: true
+alwaysApply: false
 ---
 
 # No Assumptions Rule

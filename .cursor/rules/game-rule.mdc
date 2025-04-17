@@ -1,12 +1,12 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 ---
 description: "GameMaker Project Rules - Project Development Rules"
 globs: ["**/*.gml", "**/*.yy"]
-alwaysApply: true
+alwaysApply: always
 ---
 
 # GameMaker Pro
@@ -24,3 +24,30 @@ alwaysApply: true
 - **GML Considerations:**
   - **Avoid using the built-in `speed` variable**: GameMaker has a built-in `speed` variable for simple movement, which can easily conflict with custom speed logic. Prioritize using `hspeed` and `vspeed` or custom speed variables.
   - **`string_format()` Argument Matching**: When using `string_format()`, ensure the number and type of arguments provided exactly match the format string (`%s`, `%d`, `%.2f`, etc.). Directly passing instance IDs or Enum values is generally safe and does not require wrapping with `string()` explicitly.
+
+  # GameMaker Pro
+
+- Based on @README.md
+- Encoding using GML
+- Always use Traditional Chinese for communication and comments.
+- Use GameMaker for game development.
+- AI agent must remember the project architecture when adjusting code.
+- Design should be based on the premise of the project architecture.
+- Must refer to GML specifications and consult official documentation via web search when necessary.
+- Make precise corrections for the problem at hand; avoid unnecessary optimizations.
+- Before proposing a solution, perform a complete project search; do not make unverified assumptions.
+- Primarily use "fnt_dialogue" as the standard font resource. This font should be prioritized when setting fonts.
+- **GML Considerations:**
+  - **Avoid using the built-in `speed` variable**: GameMaker has a built-in `speed` variable for simple movement, which can easily conflict with custom speed logic. Prioritize using `hspeed` and `vspeed` or custom speed variables.
+  - **`string_format()` Argument Matching**: When using `string_format()`, ensure the number and type of arguments provided exactly match the format string (`%s`, `%d`, `%.2f`, etc.). Directly passing instance IDs or Enum values is generally safe and does not require wrapping with `string()` explicitly.
+
+# Memory Bank Management
+
+- When the user requests an "update memory bank", the AI MUST review and potentially update ALL core memory bank files:
+    - `memory-bank/projectbrief.md`
+    - `memory-bank/productContext.md`
+    - `memory-bank/activeContext.md`
+    - `memory-bank/systemPatterns.md`
+    - `memory-bank/techContext.md`
+    - `memory-bank/progress.md`
+- Focus particularly on `activeContext.md` and `progress.md` to reflect the latest state, but ensure all files are checked for consistency and accuracy.

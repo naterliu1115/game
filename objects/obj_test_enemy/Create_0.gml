@@ -109,6 +109,7 @@ initialize = function() {
     // 設置獎勵
     exp_reward = _template.exp_reward;
     gold_reward = _template.gold_reward;
+    experience = 0; // 新增：初始化經驗值欄位，與 monster_data_manager 標準一致
     
     // AI設置
     ai_type = _template.ai_type; // 保留原始的 ai_type 數字

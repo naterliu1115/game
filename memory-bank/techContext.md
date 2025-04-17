@@ -1,25 +1,47 @@
-# techContext.md
+# Memory Bank: techContext.md
 
-## 使用技術
-- GameMaker Studio 2
-- GML（GameMaker Language）
-- 主要使用 fnt_dialogue 作為標準字體
+This file outlines the specific technologies, development setup, constraints, and dependencies for the TurnBasedBattle project.
 
-## 開發環境
-- Windows 10
-- 推薦使用 Cursor IDE 或 GameMaker IDE
+## Core Technologies
 
-## 技術限制
-- 需要有效管理物件層級（Instances、GUI 等），避免混用座標導致視覺或邏輯錯誤。
-- GML 缺乏原生類型檢查，需要依賴註解和防禦性程式設計來確保穩定性。
-- 在 `with` 區塊中使用變數前必須先宣告。
-- **開發實踐：對於涉及物理模擬、動畫或複雜狀態機的問題，必須優先使用 `show_debug_message` 或 GameMaker 的除錯工具進行逐步驗證，以確保邏輯符合預期，避免視覺錯誤或狀態卡死。**
+*   **Game Engine:** GameMaker Studio (Version inferred from runtime: 2024.13.0.238)
+*   **Programming Language:** GameMaker Language (GML)
+*   **Data Format:** CSV for initial data loading (items, enemies, levels, skills).
 
-## 依賴與資源
-- 物品資料、掉落表由 obj_item_manager 管理
-- 採用全局變數與結構體傳遞跨物件資料
-- 粒子系統用於視覺特效
+## Development Setup
 
-## 其他
-- 專案規範：所有新功能需以世界層為主，避免 GUI/世界混用
-- 掉落工廠統一化為未來優化目標 
+*   **IDE:** GameMaker Studio IDE, potentially with external editors.
+*   **Version Control:** (Not specified, assume Git unless stated otherwise)
+*   **Platform:** Windows (Target inferred from build logs)
+
+## Technical Constraints & Considerations
+
+*   **Initialization Order:** Issues are common and require careful management (e.g., using event systems or alarms for delayed execution).
+*   **Global Variables:** Reliance on global variables (`global.enemy_templates`, `global.player_monsters`) requires careful synchronization and is a target for refactoring (especially `global.player_monsters`).
+*   **Type Safety:** GML lacks native type checking; rely on clear comments and defensive programming.
+*   **`with` Scoping:** Variables must be declared before use within `with` blocks.
+*   **Layer Management:** Object layer management (Instances, GUI, etc.) needs care to avoid coordinate misuse and visual/logic errors.
+*   **Debugging:** Prioritize `show_debug_message` or GameMaker's debugger for step-by-step verification of complex logic (physics, animation, state machines).
+
+## Dependencies
+
+*   **Core Scripts/Objects:**
+    *   `load_csv()` script (assumed custom or built-in extension).
+    *   `obj_event_manager` for event handling.
+    *   `obj_item_manager` manages item data, inventory, and hotbar.
+*   **Data Sources:** CSV files for items, enemies, levels, skills.
+
+## GameMaker/GML Specifics (From game-rule.mdc)
+
+*   Refer to official GML specifications and documentation via web search when necessary.
+*   **Avoid `speed` Variable:** Do not use the built-in `speed` variable. Prioritize `hspeed`, `vspeed`, or custom speed variables.
+*   **`string_format()` Usage:** Ensure argument count and types match the format string. Passing instance IDs or Enum values directly is generally safe.
+
+## Project Standards
+
+*   **Development Communication/Comments:** Always use Traditional Chinese.
+*   **Standard Font:** Primarily use `fnt_dialogue` for UI elements.
+*   **World Layer Focus:** New features should primarily operate on the world layer, avoiding mixing GUI/world coordinates unless necessary.
+*   **Future Optimizations:** Consider unifying drop factories.
+
+// The Chinese sections below this line are duplicates and should be removed. 

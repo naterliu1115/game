@@ -2,7 +2,7 @@
 show_debug_message("===== 敵人工廠初始化開始 =====");
 
 // 敵人模板庫
-enemy_templates = ds_map_create();
+global.enemy_templates = ds_map_create();
 
 // 初始化敵人庫
 initialize = function() {
@@ -27,29 +27,29 @@ initialize = function() {
         show_error("嚴重錯誤：無法載入敵人數據 'enemies.csv'！遊戲無法繼續。", true);
     }
     
-    show_debug_message("敵人工廠初始化完成，共 " + string(ds_map_size(enemy_templates)) + " 個敵人模板");
+    show_debug_message("敵人工廠初始化完成，共 " + string(ds_map_size(global.enemy_templates)) + " 個敵人模板");
 }
 
 // 註冊單個敵人模板
 register_enemy_template = function(enemy_id, template_data) {
-    if (ds_map_exists(enemy_templates, enemy_id)) {
+    if (ds_map_exists(global.enemy_templates, enemy_id)) {
         show_debug_message("警告：重複註冊敵人模板 ID: " + string(enemy_id));
         return false;
     }
     
-    ds_map_add(enemy_templates, enemy_id, template_data);
+    ds_map_add(global.enemy_templates, enemy_id, template_data);
     show_debug_message("註冊敵人模板: " + string(enemy_id) + " - " + template_data.name);
     return true;
 }
 
 // 根據ID獲取敵人模板
 get_enemy_template = function(enemy_id) {
-    if (!ds_map_exists(enemy_templates, enemy_id)) {
+    if (!ds_map_exists(global.enemy_templates, enemy_id)) {
         show_debug_message("錯誤：嘗試獲取不存在的敵人模板 ID: " + string(enemy_id));
         return undefined;
     }
     
-    var template_to_return = enemy_templates[? enemy_id];
+    var template_to_return = global.enemy_templates[? enemy_id];
     
     // === 新增除錯：打印將要返回的模板結構 ===
     // show_debug_message("[get_enemy_template] Returning template for ID " + string(enemy_id) + ": " + json_stringify(template_to_return));
@@ -100,6 +100,9 @@ create_enemy_instance = function(_enemy_id, _x_pos, _y_pos, _level_param) {
             show_debug_message("        [Factory with(inst)] 準備設置 level = " + string(_actual_level));
             level = _actual_level; // 確保 level 被正確設置
             show_debug_message("        [Factory with(inst)] 實際設置後 level = " + string(level));
+
+            // 新增：初始化經驗值欄位，與 monster_data_manager 標準一致
+            experience = 0;
 
             // 直接調用目標實例的 initialize 函數
             show_debug_message("        [Factory with(inst)] 準備直接調用 inst.initialize()...");
@@ -293,8 +296,8 @@ on_game_load = function(data) {
 // 清理資源
 cleanup = function() {
     show_debug_message("清理敵人工廠資源");
-    if (ds_exists(enemy_templates, ds_type_map)) {
-        ds_map_destroy(enemy_templates);
+    if (ds_exists(global.enemy_templates, ds_type_map)) {
+        ds_map_destroy(global.enemy_templates);
     }
 }
 
@@ -335,20 +338,28 @@ load_enemies_from_csv = function(file_name) {
         enemy_data.hp_base = real(csv_grid_get(grid, "hp_base", i));
         enemy_data.attack_base = real(csv_grid_get(grid, "attack_base", i));
         enemy_data.defense_base = real(csv_grid_get(grid, "defense_base", i));
-        enemy_data.speed_base = real(csv_grid_get(grid, "speed_base", i));
+        enemy_data.spd_base = real(csv_grid_get(grid, "speed_base", i));
         
         // 讀取成長係數
         enemy_data.hp_growth = real(csv_grid_get(grid, "hp_growth", i));
         enemy_data.attack_growth = real(csv_grid_get(grid, "attack_growth", i));
         enemy_data.defense_growth = real(csv_grid_get(grid, "defense_growth", i));
-        enemy_data.speed_growth = real(csv_grid_get(grid, "speed_growth", i));
+        enemy_data.spd_growth = real(csv_grid_get(grid, "speed_growth", i));
         
         // 讀取精靈
         var sprite_idle_name = csv_grid_get(grid, "sprite_idle", i);
         var sprite_move_name = csv_grid_get(grid, "sprite_move", i);
         var sprite_attack_name = csv_grid_get(grid, "sprite_attack", i);
         
+        // --- 加入詳細日誌 --- 
+        // show_debug_message("    [Factory Load] Row " + string(i) + ": Raw sprite_idle read = '" + string(sprite_idle_name) + "', Type = " + typeof(sprite_idle_name));
+        // --- 日誌結束 ---
+
         if (sprite_idle_name != "") enemy_data.sprite_idle = asset_get_index(sprite_idle_name);
+        // --- 加入日誌，顯示存儲到模板的值 --- 
+        // show_debug_message("    [Factory Load] Row " + string(i) + ": Value stored in enemy_data.sprite_idle = " + string(enemy_data.sprite_idle));
+        // --- 日誌結束 ---
+
         if (sprite_move_name != "") enemy_data.sprite_move = asset_get_index(sprite_move_name);
         if (sprite_attack_name != "") enemy_data.sprite_attack = asset_get_index(sprite_attack_name);
         

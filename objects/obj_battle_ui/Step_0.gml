@@ -304,6 +304,15 @@ if (reward_visible) {
 } // end if reward_visible
 // --- 結束修改 --- 
 
+// === 新增：處理戰鬥結果關閉輸入 ===
+if (is_showing_results) { // 確保只在顯示結果時響應
+    if (keyboard_check_pressed(vk_space)) {
+        show_debug_message("[Battle UI] Space pressed, handling close input.");
+        handle_close_input();
+    }
+}
+// === 結束：處理戰鬥結果關閉輸入 ===
+
 // 檢查surface是否丟失
 if (active && !surface_exists(ui_surface)) {
     surface_needs_update = true;

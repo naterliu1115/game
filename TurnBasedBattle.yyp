@@ -109,6 +109,7 @@
     {"id":{"name":"battle_event_subscribe","path":"scripts/battle_event_subscribe/battle_event_subscribe.yy",},},
     {"id":{"name":"battle_init","path":"scripts/battle_init/battle_init.yy",},},
     {"id":{"name":"dialogue_functions","path":"scripts/dialogue_functions/dialogue_functions.yy",},},
+    {"id":{"name":"monster_data_manager","path":"scripts/monster_data_manager/monster_data_manager.yy",},},
     {"id":{"name":"scr_battle_ui_show_result","path":"scripts/scr_battle_ui_show_result/scr_battle_ui_show_result.yy",},},
     {"id":{"name":"scr_coordinate_utils","path":"scripts/scr_coordinate_utils/scr_coordinate_utils.yy",},},
     {"id":{"name":"scr_csv_parser","path":"scripts/scr_csv_parser/scr_csv_parser.yy",},},
