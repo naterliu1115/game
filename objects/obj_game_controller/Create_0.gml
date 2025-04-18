@@ -1,5 +1,7 @@
 // obj_game_controller - Create_0.gml
 
+randomize();
+
 // 初始化全局調試模式變數
 if (!variable_global_exists("game_debug_mode")) {
     global.game_debug_mode = false; // 預設關閉調試模式
