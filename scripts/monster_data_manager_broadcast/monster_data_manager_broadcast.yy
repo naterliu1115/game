@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"monster_data_manager_broadcast",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"monster_data_manager_broadcast",
+  "parent":{
+    "name":"脚本",
+    "path":"folders/脚本.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

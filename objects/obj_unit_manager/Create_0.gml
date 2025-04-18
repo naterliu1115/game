@@ -186,26 +186,28 @@ set_battle_area = function(center_x, center_y, radius) {
     });
 }
 
-/// @function summon_monster(monster_type, position_x, position_y, template_id, level)
+/// @function summon_monster(monster_type, position_x, position_y, template_id, level, _uid)
 /// @description 召喚怪物到戰場上
 /// @param {Asset.GMObject} monster_type 怪物類型
 /// @param {Real} position_x X座標
 /// @param {Real} position_y Y座標
 /// @param {Real} template_id 怪物模板ID
 /// @param {Real} level 怪物等級
+/// @param {Real} [_uid=undefined] 要同步的怪物UID
 /// @returns {Bool} 召喚是否成功
-summon_monster = function(monster_type, position_x, position_y, template_id = -1, level = 1) {
-    show_debug_message("===== 開始召喚怪物 =====");
+summon_monster = function(monster_type, position_x, position_y, template_id = -1, level = 1, _uid = undefined) {
+    show_debug_message("===== 開始召喚怪物 (Unit Manager) =====");
     show_debug_message("- 怪物類型: " + string(object_get_name(monster_type)));
     show_debug_message("- 位置: (" + string(position_x) + ", " + string(position_y) + ")");
     show_debug_message("- 模板ID: " + string(template_id));
     show_debug_message("- 等級: " + string(level));
+    show_debug_message("- UID: " + string(_uid));
     show_debug_message("- 當前玩家單位數: " + string(ds_list_size(player_units)));
     show_debug_message("- 最大玩家單位數: " + string(max_player_units));
     show_debug_message("- 當前召喚冷卻: " + string(global_summon_cooldown));
     
     // 檢查是否在戰鬥中
-    if (!global.in_battle) {
+    if (variable_global_exists("in_battle") && !global.in_battle) {
         show_debug_message("警告：不在戰鬥狀態中，無法召喚怪物");
         return false;
     }
@@ -236,25 +238,50 @@ summon_monster = function(monster_type, position_x, position_y, template_id = -1
         return false;
     }
     
-    // 設置怪物屬性
+    // --- 核心修正：在 with 之前設定好基本屬性 ---
+    monster_inst.uid = _uid;
+    monster_inst.template_id = template_id; // <-- 直接使用函數參數
+    monster_inst.level = level;             // <-- 直接使用函數參數
+    monster_inst.team = 0;                  // <-- 設定隊伍
+    show_debug_message("    成功設置 instance uid = " + string(monster_inst.uid));
+    show_debug_message("    成功設置 instance template_id = " + string(monster_inst.template_id));
+    show_debug_message("    成功設置 instance level = " + string(monster_inst.level));
+    show_debug_message("    成功設置 instance team = " + string(monster_inst.team));
+
+    // 初始化怪物（現在 uid, template_id, level 已被設定）
     with (monster_inst) {
-        show_debug_message("設置怪物屬性：");
-        team = 0; // 玩家隊伍
-        monster_inst.template_id = template_id; 
-        monster_inst.level = level;
-        
-        // 初始化怪物（將在initialize函數中設置屬性）
-        initialize();
-        
+        show_debug_message("設置怪物屬性（調用 initialize）："); // 更新訊息
+        // team = 0; // <-- 移到 with 之前設定
+        // template_id = other.template_id; // <-- 移除，已在外部設定
+        // level = other.level;             // <-- 移除，已在外部設定
+
+        if (variable_instance_exists(id, "initialize")) {
+            show_debug_message("    準備呼叫 instance initialize...");
+            initialize();
+            show_debug_message("    instance initialize 完成。");
+        } else {
+             show_debug_message("    警告：instance initialize 不存在!");
+        }
+
+        // 顯示確認訊息 (保留之前的安全獲取方式)
         show_debug_message("怪物初始化後屬性：");
-        show_debug_message("- HP: " + string(hp) + "/" + string(max_hp));
-        show_debug_message("- 攻擊: " + string(attack));
-        show_debug_message("- 防禦: " + string(defense));
-        show_debug_message("- 速度: " + string(spd));
-        show_debug_message("- 隊伍: " + string(team));
+        var _hp_str = variable_instance_exists(id, "hp") ? string(variable_instance_get(id, "hp")) : "N/A";
+        var _max_hp_str = variable_instance_exists(id, "max_hp") ? string(variable_instance_get(id, "max_hp")) : "N/A";
+        var _attack_str = variable_instance_exists(id, "attack") ? string(variable_instance_get(id, "attack")) : "N/A";
+        var _defense_str = variable_instance_exists(id, "defense") ? string(variable_instance_get(id, "defense")) : "N/A";
+        var _spd_str = variable_instance_exists(id, "spd") ? string(variable_instance_get(id, "spd")) : "N/A";
+        var _team_str = variable_instance_exists(id, "team") ? string(variable_instance_get(id, "team")) : "N/A";
+        var _uid_str = variable_instance_exists(id, "uid") ? string(variable_instance_get(id, "uid")) : "N/A";
+
+        show_debug_message("- HP: " + _hp_str + "/" + _max_hp_str);
+        show_debug_message("- 攻擊: " + _attack_str);
+        show_debug_message("- 防禦: " + _defense_str);
+        show_debug_message("- 速度: " + _spd_str);
+        show_debug_message("- 隊伍: " + _team_str);
+        show_debug_message("- UID確認: " + _uid_str);
     }
     
-    // 添加怪物到玩家單位列表
+    // 添加到玩家單位列表
     ds_list_add(player_units, monster_inst);
     show_debug_message("怪物添加到玩家單位列表，當前數量：" + string(ds_list_size(player_units)));
     
@@ -262,14 +289,15 @@ summon_monster = function(monster_type, position_x, position_y, template_id = -1
     global_summon_cooldown = max_global_cooldown;
     show_debug_message("設置全局召喚冷卻：" + string(global_summon_cooldown));
     
-    // 發送怪物召喚事件
+    // 發送怪物召喚事件 (保留原有，但可考慮加入 uid)
     _event_broadcaster("monster_summoned", {
         monster: monster_inst,
         type: monster_type,
-        position: {x: position_x, y: position_y}
+        position: {x: position_x, y: position_y},
+        uid: _uid // <-- 建議加入 uid 到事件數據
     });
     
-    show_debug_message("怪物召喚成功！ID：" + string(monster_inst));
+    show_debug_message("怪物召喚成功！Instance ID：" + string(monster_inst) + ", UID: " + string(monster_inst.uid));
     return true;
 }
 

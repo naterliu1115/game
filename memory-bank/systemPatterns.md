@@ -69,3 +69,11 @@ This file describes the system architecture, key technical decisions, design pat
 - 所有玩家怪物資料初始化、升級、同步、顯示，必須經由 monster_data_manager。
 - 嚴禁直接操作 global.player_monsters。
 - 資料來源唯一，確保一致性與防禦性。 
+
+## [2024/06/XX] 架構進度與挑戰
+- 玩家怪物資料流已完全模組化，所有資料存取經由 monster_data_manager API，禁止直接操作 global 變數。
+- 事件系統採用集中式事件管理（obj_event_manager），所有事件註冊/廣播/取消皆統一接口。
+- 目前挑戰：
+  - 子類（如 obj_test_summon）遺留直接呼叫 subscribe_to_event，導致 scope 錯誤。
+  - 需確保所有事件註冊皆經由 obj_event_manager，並清理錯誤寫法。
+- 架構優化方向：進一步抽象事件註冊流程，減少重複與人為錯誤。 

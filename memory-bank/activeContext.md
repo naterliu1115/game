@@ -195,15 +195,25 @@
 **Active Decisions:**
 *   Use `template_id` consistently for monster template identification throughout the relevant codebase.
 
-## 2024/04/18 UI 管理器初始化修正
+##  UI 管理器初始化修正
 - 已將 active_ui_instances、ui_manager_clock 的初始化移到 Create 事件最前面。
 - 目前 Step 事件仍出現 ui_transition_queue 未初始化錯誤，需比照處理。
 - 下一步：檢查所有 Step 事件會用到的變數，統一在 Create 事件最前面初始化。
 
-## 2024/05/XX 怪物資料流與屬性公式統一
+##  怪物資料流與屬性公式統一
 
 - 所有玩家怪物的初始化、升級、同步都必須經過 monster_data_manager。
 - monster_data_manager.gml 內的屬性計算公式已修正為正確的等級成長公式（ceil(基礎值 + (基礎值 × 成長 × (等級-1)))）。
 - UI 只讀取管理器產生的資料，資料來源唯一且正確。
 - 初始化流程、戰鬥召喚、升級等都已經走正確的資料流。
-- 若有新功能（如自動召喚、捕獲、存檔/讀檔），也必須走管理器 API。 
+- 若有新功能（如自動召喚、捕獲、存檔/讀檔），也必須走管理器 API。
+
+## 目前活躍焦點與進度
+- 玩家怪物資料流重構已完成，所有資料存取統一經由 monster_data_manager。
+- 事件系統已統一，所有事件註冊必須透過 obj_event_manager。
+- 目前主要阻塞於召喚相關子類（如 obj_test_summon）遺留的錯誤事件註冊，導致 scope 報錯。
+- 測試重點：召喚流程、事件註冊、資料同步。
+- 下一步：
+  1. 清理所有子類直接呼叫 subscribe_to_event 的殘留。
+  2. 確認所有事件註冊皆經由 obj_event_manager。
+  3. 完成召喚流程測試，進行 UI/經驗分配等後續優化。 

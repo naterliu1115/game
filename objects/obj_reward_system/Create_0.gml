@@ -324,8 +324,9 @@ handle_defeat_effects = function() {
         }
 
         // 遍歷全局怪物列表
-        for (var i = 0; i < array_length(global.player_monsters); i++) {
-            var monster_data = global.player_monsters[i];
+        var player_monsters = get_player_monsters();
+        for (var i = 0; i < array_length(player_monsters); i++) {
+            var monster_data = player_monsters[i];
             // 檢查怪物是否參與了戰鬥
             var participated = false;
             var identifier_to_check = (variable_struct_exists(monster_data, "id")) ? monster_data.id : monster_data.object_index; // 優先使用 id
@@ -370,39 +371,23 @@ distribute_experience = function() {
     if (player_units_count <= 0) return;
     
     var exp_per_unit = battle_result.exp_gained / player_units_count;
+    show_debug_message("[RewardSystem][LOG] distribute_experience: player_units_count=" + string(player_units_count) + ", exp_per_unit=" + string(exp_per_unit));
+    // 輸出 global.player_monsters 狀態
+    show_debug_message("[RewardSystem][LOG] distribute_experience: global.player_monsters=" + json_stringify(global.player_monsters));
     
     with (obj_unit_manager) {
         for (var i = 0; i < ds_list_size(player_units); i++) {
             var unit = player_units[| i];
-            if (instance_exists(unit) && variable_instance_exists(unit, "gain_exp")) {
-                unit.gain_exp(exp_per_unit);
-                
-                // 更新玩家怪物數據
-                if (variable_global_exists("player_monsters")) {
-                    for (var j = 0; j < array_length(global.player_monsters); j++) {
-                        var monster_data = global.player_monsters[j];
-                        if (monster_data.template_id == unit.template_id) {
-                            // 更新經驗值（游戲可能有自己的升級邏輯）
-                            if (!variable_struct_exists(monster_data, "exp")) {
-                                monster_data.exp = 0;
-                            }
-                            monster_data.exp += exp_per_unit;
-                            
-                            // 檢查是否達到升級條件
-                            var next_level_exp = monster_data.level * 100;
-                            if (monster_data.exp >= next_level_exp) {
-                                level_up_monster(monster_data, unit);
-                            }
-                            
-                            break;
-                        }
-                    }
-                }
+            if (instance_exists(unit) && variable_instance_exists(unit, "uid")) {
+                show_debug_message("[RewardSystem][LOG] distribute_experience: 對單位 instance id=" + string(unit.id) + ", uid=" + string(unit.uid) + " 分配經驗 " + string(exp_per_unit));
+                add_experience(unit.uid, exp_per_unit);
+            } else {
+                show_debug_message("[RewardSystem][LOG] distribute_experience: 跳過無效單位 instance id=" + string(unit));
             }
         }
     }
     
-    show_debug_message("獎勵系統: 每單位分配 " + string(exp_per_unit) + " 經驗值");
+    show_debug_message("獎勵系統: 每單位分配 " + string(exp_per_unit) + " 經驗值 (經由 monster_data_manager)");
 };
 
 // 升級怪物

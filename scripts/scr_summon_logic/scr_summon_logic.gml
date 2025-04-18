@@ -146,14 +146,19 @@ function summon_ui_handle_confirm(summon_ui_inst) {
         return false;
     }
     
-    // 獲取選中的怪物數據
+    // 獲取選中的怪物數據，並檢查 uid
     var monster_data = global.player_monsters[selected_index];
+    if (!is_struct(monster_data) || !variable_struct_exists(monster_data, "uid")) {
+        show_debug_message("錯誤：選中的怪物數據無效或缺少 UID");
+        return false;
+    }
+    var monster_uid = monster_data.uid;
     show_debug_message("選中的怪物數據：");
-    show_debug_message("- 類型：" + string(monster_data.type));
-    show_debug_message("- 名稱：" + string(monster_data.name));
-    show_debug_message("- 等級：" + string(monster_data.level));
-    
-    // 獲取模板ID和等級 
+    if(variable_struct_exists(monster_data, "name")) show_debug_message("- 名稱：" + string(monster_data.name));
+    if(variable_struct_exists(monster_data, "level")) show_debug_message("- 等級：" + string(monster_data.level));
+    show_debug_message("- UID：" + string(monster_uid));
+
+    // 獲取模板ID和等級
     var template_id = -1;
     if (variable_struct_exists(monster_data, "template_id")) {
         template_id = monster_data.template_id;
@@ -165,14 +170,10 @@ function summon_ui_handle_confirm(summon_ui_inst) {
         show_debug_message("錯誤：未找到有效的template_id或id");
         return false;
     }
-    
-    var level = 1;
-    if (variable_struct_exists(monster_data, "level")) {
-        level = monster_data.level;
-    }
-    show_debug_message("- 模板ID：" + string(template_id));
-    show_debug_message("- 等級：" + string(level));
-    
+    var level = variable_struct_get_or_default(monster_data, "level", 1);
+    show_debug_message("- 模板ID確認：" + string(template_id));
+    show_debug_message("- 等級確認：" + string(level));
+
     // 檢查單位管理器是否存在
     if (!instance_exists(obj_unit_manager)) {
         show_debug_message("錯誤：單位管理器不存在，無法召喚怪物");
@@ -182,40 +183,39 @@ function summon_ui_handle_confirm(summon_ui_inst) {
     // 確定一個合適的召喚位置（基於玩家位置）
     var summon_x = 0;
     var summon_y = 0;
-    
-    if (instance_exists(Player)) {
-        // 在玩家前方位置召喚
-        summon_x = Player.x + 64; // 在玩家右側64像素
-        summon_y = Player.y;
-        
-        // 檢查房間邊界
+    var player_inst = instance_find(Player, 0);
+    if (instance_exists(player_inst)) {
+        summon_x = player_inst.x + 64;
+        summon_y = player_inst.y;
         summon_x = clamp(summon_x, 32, room_width - 32);
         summon_y = clamp(summon_y, 32, room_height - 32);
-        
         show_debug_message("使用玩家位置進行召喚：(" + string(summon_x) + ", " + string(summon_y) + ")");
     } else {
-        // 如果找不到玩家，使用預設位置
         summon_x = room_width / 2;
         summon_y = room_height / 2;
         show_debug_message("使用預設位置進行召喚：(" + string(summon_x) + ", " + string(summon_y) + ")");
     }
     
-    // 獲取怪物類型對象
-    var monster_type = asset_get_index(monster_data.type);
-    if (monster_type == -1) {
-        show_debug_message("錯誤：無法解析怪物類型 - " + string(monster_data.type));
-        monster_type = obj_test_summon; // 使用默認類型
-    }
-    
+    // --- 移除從 monster_data 獲取 type 的邏輯 ---
+    // var monster_type_name = variable_struct_get_or_default(monster_data, "type", "obj_test_summon");
+    // var monster_type = asset_get_index(monster_type_name);
+    // if (monster_type == -1) {
+    //     show_debug_message("警告：無法解析怪物類型 - \" + monster_type_name + \"，使用預設類型 obj_test_summon");
+    //     monster_type = obj_test_summon;
+    // }
+    // --- 直接固定使用 obj_test_summon ---
+    var monster_type = obj_test_summon;
+    show_debug_message("固定使用怪物類型: obj_test_summon");
+
     show_debug_message("將使用以下參數召喚怪物：");
-    show_debug_message("- 怪物類型：" + string(monster_type) + " (" + string(monster_data.type) + ")");
+    show_debug_message("- 怪物類型：" + object_get_name(monster_type));
     show_debug_message("- 位置：(" + string(summon_x) + ", " + string(summon_y) + ")");
     show_debug_message("- 模板ID：" + string(template_id));
     show_debug_message("- 等級：" + string(level));
-    
-    // 使用單位管理器的summon_monster函數召喚怪物
-    // 確保傳遞正確的模板ID和等級參數
-    var success = obj_unit_manager.summon_monster(monster_type, summon_x, summon_y, template_id, level);
+    show_debug_message("- UID：" + string(monster_uid));
+
+    // 使用單位管理器的 summon_monster 函數召喚怪物，並傳遞 uid
+    var success = obj_unit_manager.summon_monster(monster_type, summon_x, summon_y, template_id, level, monster_uid); // <-- 傳遞 monster_uid
     
     if (success) {
         show_debug_message("怪物成功召喚到戰場！");
@@ -238,7 +238,7 @@ function summon_ui_handle_confirm(summon_ui_inst) {
                 reason = "冷卻中 (" + string(obj_unit_manager.global_summon_cooldown) + ")";
             } else if (ds_list_size(obj_unit_manager.player_units) >= obj_unit_manager.max_player_units) {
                 reason = "已達到最大單位數 (" + string(obj_unit_manager.max_player_units) + ")";
-            } else if (!global.in_battle) {
+            } else if (variable_global_exists("in_battle") && !global.in_battle) {
                 reason = "不在戰鬥中";
             }
         }

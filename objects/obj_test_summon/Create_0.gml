@@ -194,6 +194,8 @@ initialize = function() {
     
     // 初始化完成後同步數據到global.player_monsters
     sync_data_to_global();
+
+
 }
 
 // 在創建時調用一次初始化
@@ -206,4 +208,17 @@ level_up = function() {
     
     // 在升級後同步數據
     sync_data_to_global();
+}
+
+// 升級事件 callback
+function on_monster_leveled_up(event_data) {
+    // 需先確保本實例有 uid 變數，且與事件資料一致
+    if (variable_instance_exists(id, "uid") && event_data.uid == uid) {
+        show_debug_message("[obj_test_summon] 收到升級事件，觸發升級動畫/特效！");
+        // 這裡可以呼叫現有的 create_level_up_effect 或自訂動畫
+        if (variable_instance_exists(id, "create_level_up_effect")) {
+            create_level_up_effect();
+        }
+        // 也可播放音效、顯示 UI 提示等
+    }
 }

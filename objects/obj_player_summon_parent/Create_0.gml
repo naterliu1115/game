@@ -208,10 +208,23 @@ function gain_exp(exp_amount) {
     }
 }
 
+// === [事件系統註冊：僅玩家方召喚物] ===
+if (team == 0 && instance_exists(obj_event_manager)) {
+    with (obj_event_manager) {
+        subscribe_to_event("monster_leveled_up", other.id, "on_monster_leveled_up");
+    }
+    event_registered = true;
+} else {
+    show_debug_message("[警告] obj_event_manager 不存在，無法註冊事件！");
+    event_registered = false;
+}
+
 // 覆盖初始化函数 (保持不變)
 initialize = function() {
     // 调用父类的初始化
     event_inherited();
     // 添加入场动画或效果的代码可以放这里
     show_debug_message("玩家召唤物初始化完成: " + string(id));
+
+
 }

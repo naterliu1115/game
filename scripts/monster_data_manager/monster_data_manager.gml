@@ -193,74 +193,108 @@ function remove_monster(uid) {
 /// @desc 增加經驗值並自動升級
 /// @returns {Bool} 是否成功處理
 function add_experience(uid, experience) {
-    // 獲取怪物 Struct 的引用
     var m_ref = get_monster_by_uid(uid);
-    if (is_undefined(m_ref)) return false; // 未找到怪物
-
-    // 確保 experience 欄位存在
+    if (is_undefined(m_ref)) {
+        show_debug_message("[Monster Data Manager][LOG] add_experience: 未找到怪物 UID=" + string(uid));
+        return false;
+    }
     if (!variable_struct_exists(m_ref, "experience")) {
-        m_ref.experience = 0; // 如果不存在則初始化
+        m_ref.experience = 0;
+        show_debug_message("[Monster Data Manager][LOG] add_experience: 怪物 UID=" + string(uid) + " 無 experience 欄位，已初始化為 0");
     }
     m_ref.experience += experience;
+    show_debug_message("[Monster Data Manager][LOG] add_experience: 怪物 UID=" + string(uid) + " 當前經驗=" + string(m_ref.experience) + " (本次獲得=" + string(experience) + ")");
 
-    // 依賴 global.level_exp_map
+    // --- 恢復原有的 global.level_exp_map 檢查 --- (保留縮排)
     if (!variable_global_exists("level_exp_map")) {
-        show_debug_message("[Monster Data Manager] Error: global.level_exp_map does not exist! Cannot process level up.");
-        return false; // 無法處理升級
+        show_debug_message("[Monster Data Manager][LOG][DEBUG] Error: global.level_exp_map does not exist! Cannot process level up.");
+        return false;
     }
-    var level_exp_map = global.level_exp_map; // 假設已載入
+    var level_exp_map = global.level_exp_map; // 取得引用
+    // --- 加入 ds_map 類型檢查 (這是好的實踐，但不是原始碼的一部分，保留它) --- (保留縮排)
+    if (!ds_exists(level_exp_map, ds_type_map)) {
+        show_debug_message("[Monster Data Manager][LOG][DEBUG] Error: global.level_exp_map is not a valid ds_map!");
+        return false;
+    }
 
-    // 處理升級 (確保 level 欄位存在)
     if (!variable_struct_exists(m_ref, "level")) {
-        m_ref.level = 1; // 如果不存在則初始化
+        m_ref.level = 1;
+        show_debug_message("[Monster Data Manager][LOG] add_experience: 怪物 UID=" + string(uid) + " 無 level 欄位，已初始化為 1");
     }
 
     var leveled_up = false;
-    // 檢查是否達到最大等級 (假設 level_exp_map 的長度代表最大等級 + 1)
-    while (m_ref.level < array_length(level_exp_map) && m_ref.experience >= level_exp_map[m_ref.level]) {
-        m_ref.experience -= level_exp_map[m_ref.level];
+    var old_level = m_ref.level;
+
+    // --- 保留加入的 Log 點 --- (保留縮排)
+    show_debug_message("    [Monster Data Manager][LOG][DEBUG] 檢查升級條件：UID=" + string(uid) + ", 當前 Level=" + string(m_ref.level) + ", 當前 Exp=" + string(m_ref.experience));
+
+    var required_exp = undefined; // 先設為 undefined
+    if (ds_map_exists(level_exp_map, m_ref.level)) {
+        required_exp = level_exp_map[? m_ref.level]; // <-- 使用 Map Accessor 讀取
+        show_debug_message("        [Monster Data Manager][LOG][DEBUG] 等級 " + string(m_ref.level) + " 升級所需經驗 (從 Map 讀取): " + string(required_exp));
+    } else {
+        show_debug_message("        [Monster Data Manager][LOG][DEBUG] 在 level_exp_map 中找不到等級 " + string(m_ref.level) + " 的升級經驗！");
+    }
+
+    // --- 使用讀取到的值進行判斷 --- (保留縮排)
+    if (!is_undefined(required_exp) && m_ref.experience >= required_exp) {
+        show_debug_message("        [Monster Data Manager][LOG][DEBUG] 經驗值滿足升級條件，準備進入 while 迴圈...");
+    } else {
+        show_debug_message("        [Monster Data Manager][LOG][DEBUG] 經驗值 (" + string(m_ref.experience) + ") 未滿足升級條件 (" + string(required_exp) + ") 或所需經驗未定義。");
+    }
+
+    // --- 保持原有的 while 迴圈，但內部也加上 Log --- (保留縮排)
+    while (!is_undefined(required_exp) && m_ref.experience >= required_exp) { // 條件也使用讀取的值
+        show_debug_message("        [Monster Data Manager][LOG][DEBUG] 進入升級迴圈：扣除經驗 " + string(required_exp));
+        m_ref.experience -= required_exp; // 使用讀取的值
         m_ref.level += 1;
         leveled_up = true;
-        show_debug_message("[Monster Data Manager] Monster UID " + string(uid) + " leveled up to " + string(m_ref.level));
+        // 保留原有的升級訊息
+        show_debug_message("        [Monster Data Manager][LOG] 怪物 UID=" + string(uid) + " 升級至 " + string(m_ref.level) + " 級 (原等級=" + string(old_level) + ")");
 
-        // 屬性成長 (需要怪物模板)
+        // --- 更新下一次迴圈所需的經驗值 --- (保留縮排)
+        old_level = m_ref.level - 1; // 更新舊等級記錄以供下次循環log
+        if (ds_map_exists(level_exp_map, m_ref.level)) {
+             required_exp = level_exp_map[? m_ref.level];
+             show_debug_message("            [Monster Data Manager][LOG][DEBUG] 下一級 (" + string(m_ref.level) + ") 升級所需經驗: " + string(required_exp) + ", 剩餘經驗: " + string(m_ref.experience));
+        } else {
+             show_debug_message("            [Monster Data Manager][LOG][DEBUG] 找不到下一級 (" + string(m_ref.level) + ") 的升級經驗，跳出迴圈。");
+             required_exp = undefined; // 設為 undefined 以跳出迴圈
+        }
+
+        // --- 屬性成長邏輯不變 --- (保留縮排)
         var template = get_template_by_id(m_ref.template_id);
         if (!is_undefined(template)) {
-            // 安全地更新屬性
-            var hp_base = variable_struct_exists(template, "hp_base") ? template.hp_base : 10;
-            var hp_growth = variable_struct_exists(template, "hp_growth") ? template.hp_growth : 1;
+            var hp_base = variable_struct_get_or_default(template, "hp_base", 10);
+            var hp_growth = variable_struct_get_or_default(template, "hp_growth", 1);
             m_ref.max_hp = ceil(hp_base + (hp_base * hp_growth * (m_ref.level - 1)));
-            m_ref.hp = m_ref.max_hp; // 升級補滿血
-
-            var attack_base = variable_struct_exists(template, "attack_base") ? template.attack_base : 5;
-            var attack_growth = variable_struct_exists(template, "attack_growth") ? template.attack_growth : 1;
+            m_ref.hp = m_ref.max_hp;
+            var attack_base = variable_struct_get_or_default(template, "attack_base", 5);
+            var attack_growth = variable_struct_get_or_default(template, "attack_growth", 1);
             m_ref.attack = ceil(attack_base + (attack_base * attack_growth * (m_ref.level - 1)));
-
-            var defense_base = variable_struct_exists(template, "defense_base") ? template.defense_base : 5;
-            var defense_growth = variable_struct_exists(template, "defense_growth") ? template.defense_growth : 1;
+            var defense_base = variable_struct_get_or_default(template, "defense_base", 5);
+            var defense_growth = variable_struct_get_or_default(template, "defense_growth", 1);
             m_ref.defense = ceil(defense_base + (defense_base * defense_growth * (m_ref.level - 1)));
-
-            var spd_base = variable_struct_exists(template, "spd_base") ? template.spd_base : 5;
-            var spd_growth = variable_struct_exists(template, "spd_growth") ? template.spd_growth : 1;
+            var spd_base = variable_struct_get_or_default(template, "spd_base", 5);
+            var spd_growth = variable_struct_get_or_default(template, "spd_growth", 1);
             m_ref.spd = ceil(spd_base + (spd_base * spd_growth * (m_ref.level - 1)));
-
             // TODO: 處理技能解鎖
-            // ...
-
         } else {
-            show_debug_message("[Monster Data Manager] Warning: Template not found for ID " + string(m_ref.template_id) + ". Cannot apply stat growth.");
+            show_debug_message("        [Monster Data Manager][LOG] Warning: Template not found for ID " + string(m_ref.template_id) + ". Cannot apply stat growth.");
         }
     }
 
-    // 因為 m_ref 是引用，修改已直接生效於 global.player_monsters 中的 Struct
-    // 不需要 global.player_monsters[i] = m;
-
+    // ... (廣播事件邏輯不變) ...
     if (leveled_up) {
-        // 廣播事件 (如果需要)
-        // monster_data_manager_broadcast("monster_leveled_up", {uid: uid, monster: m_ref});
-    } else {
-         // 廣播經驗值變更事件 (如果需要)
-         // monster_data_manager_broadcast("monster_exp_changed", {uid: uid, monster: m_ref});
+        show_debug_message("    [Monster Data Manager][LOG] 準備發送 monster_leveled_up 事件: UID=" + string(uid) + ", old_level=" + string(old_level) + ", new_level=" + string(m_ref.level));
+        if (is_undefined(monster_data_manager_broadcast)) {
+            show_debug_message("    [Monster Data Manager][LOG] Warning: monster_data_manager_broadcast 未定義，無法廣播升級事件。");
+        } else {
+            monster_data_manager_broadcast("monster_leveled_up", {uid: uid, old_level: old_level, new_level: m_ref.level, monster: m_ref});
+            show_debug_message("    [Monster Data Manager][LOG] 已發送 monster_leveled_up 事件: UID=" + string(uid) + ", new_level=" + string(m_ref.level));
+        }
+    } else { // <-- 如果迴圈從未執行
+        show_debug_message("    [Monster Data Manager][LOG] 本次未升級，僅經驗變更: UID=" + string(uid) + ", level=" + string(m_ref.level) + ", exp=" + string(m_ref.experience));
     }
 
     return true;

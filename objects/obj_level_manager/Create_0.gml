@@ -58,3 +58,32 @@ show_debug_message("===== obj_level_manager 初始化完成 =====");
 
 // **重要提示:** 確保此對象是 Persistent (持久化)
 // **重要提示:** 確保此對象在遊戲啟動時被創建 (例如放在第一個房間) 
+
+// === 升級事件統一處理 ===
+with (obj_event_manager) {
+    subscribe_to_event("monster_leveled_up", function(event_data) {
+        show_debug_message("[obj_level_manager][LOG] 收到 monster_leveled_up 事件: " + json_stringify(event_data));
+        var uid = event_data.uid;
+        var new_level = event_data.new_level;
+        var monster = event_data.monster;
+        // 嘗試找到對應怪物實例（假設有 uid 屬性）
+        var found = false;
+        with (obj_player_summon_parent) {
+            if (variable_instance_exists(id, "uid") && uid == event_data.uid) {
+                found = true;
+                // 產生升級特效
+                var eff = instance_create_layer(x, y, "Effects", obj_levelup_effect);
+                if (!is_undefined(eff)) {
+                    eff.target_uid = uid;
+                    eff.new_level = new_level;
+                    eff.monster_name = is_undefined(monster.name) ? "?" : monster.name;
+                }
+                show_debug_message("[obj_level_manager][LOG] 已於 (" + string(x) + "," + string(y) + ") 產生 obj_levelup_effect，UID=" + string(uid));
+            }
+        }
+        if (!found) {
+            show_debug_message("[obj_level_manager][LOG] 未找到對應怪物實例，UID=" + string(uid));
+        }
+        // 這裡可加 UI/音效等其他表現
+    });
+} 

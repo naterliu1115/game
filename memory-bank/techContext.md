@@ -62,3 +62,9 @@ This file outlines the specific technologies, development setup, constraints, an
 ## Technical Constraints
 *   (List any performance limitations, platform targets, or specific GML features to avoid/use carefully.)
 
+## 技術限制與阻塞
+- GML 事件系統無法全域註冊函式，必須透過 obj_event_manager 集中管理。
+- 子類直接呼叫 subscribe_to_event 會因 scope 問題導致錯誤，需全部改為 with(obj_event_manager) 註冊。
+- 目前重構已避開 global 變數直接操作，所有資料流經由 API 管理。
+- 需持續檢查專案內是否有遺留不合規的事件註冊或資料操作方式。
+

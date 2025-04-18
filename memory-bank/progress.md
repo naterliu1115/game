@@ -208,3 +208,19 @@ This document tracks the development progress, planned features, and known issue
 - [進行中] 採集系統掉落工廠化
 - [進行中] 技能系統 array 索引重構
 - [待辦] 戰鬥結果 UI 關閉邏輯遷移到 UI 層 
+
+## 進度追蹤
+
+### 已完成
+- monster_data_manager 重構，統一所有玩家怪物資料流。
+- UI、捕獲、經驗分配等主要流程已完成重構。
+- 事件系統統一，所有事件註冊改為經由 obj_event_manager。
+
+### 進行中
+- 測試召喚流程與事件註冊正確性。
+- 清理子類（如 obj_test_summon）遺留的錯誤事件註冊。
+
+### 阻塞/待辦
+- 子類直接呼叫 subscribe_to_event 的殘留需全部清理。
+- 全專案檢查是否還有錯誤事件註冊寫法。
+- 召喚流程測試通過後，進行 UI/經驗分配等後續優化。 
