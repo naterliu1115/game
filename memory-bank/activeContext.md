@@ -84,6 +84,9 @@
     - 修改了 `obj_battle_ui` 的 `handle_close_input` 方法，移除了其中直接請求 `obj_ui_manager` 隱藏自身的代碼。
     - 現在 UI 的關閉統一由 `obj_ui_manager` 響應 `battle_end` 事件觸發的 `close_all_ui` 流程處理。
     - 解決了戰鬥結束時 `obj_battle_ui` 被重複隱藏的警告。
+- **(已解決) 道具系統ID與分類不一致問題：**
+    - 修正了 `obj_main_hud` 的 `Draw` 和 `Step` 事件，將讀取玩家背包物品 ID 的 `item.id`/`item.ID` 改為正確的 `item.item_id`，解決快捷欄指派/拖拽時的崩潰。
+    - 修正了 `obj_inventory_ui` 中處理物品分類的邏輯，移除了對小寫 `category` 的兼容檢查，現在只識別大寫 `Category` 欄位，並確認 `items_data.csv` 使用的是大寫 `Category`。
 
 ## 下一步行動
 1.  **調查並解決初始化戰鬥時 `戰鬥已經在進行中` 的警告。**

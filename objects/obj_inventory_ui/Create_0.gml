@@ -176,8 +176,6 @@ get_slot_at_position = function(mouse_x, mouse_y) {
                 var item_category = -1;
                 if (variable_struct_exists(item_data, "Category")) {
                     item_category = real(item_data.Category);
-                } else if (variable_struct_exists(item_data, "category")) {
-                    item_category = real(item_data.category);
                 }
                 
                 if (item_category == real(current_category)) {
@@ -257,10 +255,6 @@ update_max_scroll = function() {
             if (item_data != undefined) {
                 if (variable_struct_exists(item_data, "Category")) {
                     if (item_data.Category == current_category) {
-                        items_in_category++;
-                    }
-                } else if (variable_struct_exists(item_data, "category")) {
-                    if (item_data.category == current_category) {
                         items_in_category++;
                     }
                 }

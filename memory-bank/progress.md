@@ -15,7 +15,10 @@ This document tracks the development progress, planned features, and known issue
 *   **Gathering System:** Diggable ore (`obj_stone` with durability, interaction, feedback), flying item animation (`obj_flying_item` with state machine including Scatter/Bounce, world coordinates, outline, quantity display).
 *   **Enemy Placer (`obj_enemy_placer`):** Fixed initialization timing issues via `managers_initialized` event.
 *   **Data Handling:** Standardized `global.player_monsters` structure, initial monster creation (`obj_game_controller`), capture logic (`obj_capture_ui`), skill data structure (`skills` and `skill_cooldowns` arrays).
-*   **Bug Fixes:** Numerous runtime errors resolved (CSV parsing, `ds_list` usage, event callbacks, loot table parsing, `unit_died` event data, duplicate logic removal, UI crashes, sprite display issues).
+*   **Bug Fixes:** 
+    * Numerous runtime errors resolved (CSV parsing, `ds_list` usage, event callbacks, loot table parsing, `unit_died` event data, duplicate logic removal, UI crashes, sprite display issues).
+    * Fixed item ID (`id` vs `item_id`) inconsistency in `obj_main_hud` (Draw/Step events), resolving hotbar assignment/drag crash.
+    * Fixed item category (`Category` vs `category`) inconsistency in `obj_inventory_ui` (Create/Draw events) and confirmed CSV uses uppercase `Category`.
 *   **Utilities:** Custom `is_numeric_safe`, `array_join` functions.
 
 ## In Progress / To-Do List
