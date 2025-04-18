@@ -59,31 +59,95 @@ show_debug_message("===== obj_level_manager 初始化完成 =====");
 // **重要提示:** 確保此對象是 Persistent (持久化)
 // **重要提示:** 確保此對象在遊戲啟動時被創建 (例如放在第一個房間) 
 
-// === 升級事件統一處理 ===
-with (obj_event_manager) {
-    subscribe_to_event("monster_leveled_up", function(event_data) {
-        show_debug_message("[obj_level_manager][LOG] 收到 monster_leveled_up 事件: " + json_stringify(event_data));
-        var uid = event_data.uid;
-        var new_level = event_data.new_level;
-        var monster = event_data.monster;
-        // 嘗試找到對應怪物實例（假設有 uid 屬性）
-        var found = false;
-        with (obj_player_summon_parent) {
-            if (variable_instance_exists(id, "uid") && uid == event_data.uid) {
-                found = true;
-                // 產生升級特效
-                var eff = instance_create_layer(x, y, "Effects", obj_levelup_effect);
-                if (!is_undefined(eff)) {
-                    eff.target_uid = uid;
-                    eff.new_level = new_level;
-                    eff.monster_name = is_undefined(monster.name) ? "?" : monster.name;
+// === 升級事件處理方法 ===
+function handle_monster_leveled_up(event_data) {
+    show_debug_message("[obj_level_manager][METHOD] 收到 monster_leveled_up 事件: " + json_stringify(event_data));
+    var uid = event_data.uid;
+    var new_level = event_data.new_level;
+    var monster = event_data.monster; // monster 結構體包含了升級後的資訊
+    var found = false;
+
+    with (obj_player_summon_parent) { // 找到升級的那個怪物實例
+        if (variable_instance_exists(id, "uid") && uid == event_data.uid) {
+            found = true;
+            show_debug_message("[obj_level_manager][METHOD] 找到怪物實例 UID=" + string(uid) + " at (" + string(x) + "," + string(y) + ")，準備創建升級特效...");
+
+            // --- 特效邏輯開始 (從 obj_player_summon_parent 移入) ---
+
+            // --- 1. 顯示 "Level Up!" 浮動文字 ---
+            if (object_exists(obj_floating_text)) {
+                // 使用當前找到的怪物實例的 x, y 座標
+                var _text_effect = instance_create_layer(x, y - 32, "Effects", obj_floating_text);
+                if (instance_exists(_text_effect)) {
+                    _text_effect.display_text = "Level Up!";
+                    _text_effect.text_color = c_yellow;
+                    _text_effect.scale = 1.3;
+                    _text_effect.float_speed = 0.7;
+                    // 將持續時間從遊戲速度改為秒 (更可靠)
+                    _text_effect.duration = 1.5 * game_get_speed(gamespeed_fps); // 持續 1.5 秒
+                    show_debug_message("    創建了 'Level Up!' 浮動文字。");
+                } else {
+                    show_debug_message("    警告：未能創建 Level Up 文字特效實例。");
                 }
-                show_debug_message("[obj_level_manager][LOG] 已於 (" + string(x) + "," + string(y) + ") 產生 obj_levelup_effect，UID=" + string(uid));
+            } else {
+                show_debug_message("    警告：obj_floating_text 物件資源不存在，無法創建 Level Up 文字特效。");
             }
+
+            // --- 2. 創建粒子效果或物件特效 ---
+            var effect_created = false;
+            // 檢查全局粒子系統和類型是否存在
+            if (variable_global_exists("particle_system") && part_system_exists(global.particle_system)) {
+                if (variable_global_exists("pt_level_up_sparkle") && part_type_exists(global.pt_level_up_sparkle)) {
+                     // 使用當前找到的怪物實例的 x, y 座標
+                    part_particles_create(global.particle_system, x, y, global.pt_level_up_sparkle, 25);
+                    show_debug_message("    創建了 Level Up 火花粒子。");
+                    effect_created = true;
+                } else {
+                    show_debug_message("    警告：全局升級火花粒子類型 pt_level_up_sparkle 未定義或無效。");
+                }
+            } else {
+                show_debug_message("    警告：全局粒子系統 global.particle_system 不存在或無效，無法創建升級粒子特效。");
+            }
+
+            // 若無法產生粒子，則創建 obj_levelup_effect 作為後備
+            if (!effect_created) {
+                if (object_exists(obj_levelup_effect)) {
+                    // 使用當前找到的怪物實例的 x, y 座標
+                    var eff = instance_create_layer(x, y, "Effects", obj_levelup_effect);
+                     if (!is_undefined(eff)) {
+                         // 可以傳遞一些數據給特效物件 (可選)
+                         eff.target_uid = uid;
+                         eff.new_level = new_level;
+                         eff.monster_name = is_undefined(monster.name) ? "?" : monster.name;
+                         show_debug_message("    使用 obj_levelup_effect 物件產生後備火花動畫。");
+                     } else {
+                         show_debug_message("    警告：無法創建後備特效 obj_levelup_effect 實例！");
+                     }
+                } else {
+                    show_debug_message("    警告：obj_levelup_effect 物件不存在，無法產生後備火花動畫。");
+                }
+            }
+             // --- 特效邏輯結束 ---
+
+             // --- 3. 音效 (如果需要的話，可以從 player_summon 移過來) ---
+             // (這裡可以加入播放升級音效的代碼)
+             // 例如: if (audio_exists(snd_level_up)) { audio_play_sound(snd_level_up, 10, false); }
+
+             // --- 4. (可選) UI 更新觸發 ---
+             // 如果有怪物管理 UI 需要立即更新，可以在這裡觸發事件
+             // 例如: broadcast_event("ui_update_monster_stats", { uid: uid });
         }
-        if (!found) {
-            show_debug_message("[obj_level_manager][LOG] 未找到對應怪物實例，UID=" + string(uid));
-        }
-        // 這裡可加 UI/音效等其他表現
-    });
+    }
+
+    if (!found) {
+        show_debug_message("[obj_level_manager][METHOD] 未找到對應怪物實例，無法創建特效，UID=" + string(uid));
+    }
+}
+
+
+// === 訂閱升級事件 ===
+with (obj_event_manager) {
+    // 使用方法名稱字串作為回呼
+    subscribe_to_event("monster_leveled_up", other.id, "handle_monster_leveled_up");
+    show_debug_message("[obj_level_manager][Create] 已嘗試訂閱 monster_leveled_up 事件，回調方法: handle_monster_leveled_up");
 } 
