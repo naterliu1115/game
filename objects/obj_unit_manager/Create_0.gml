@@ -392,38 +392,37 @@ apply_monster_stats = function(monster_inst, monster_type) {
     }
     
     // 查找怪物在玩家怪物列表中的數據
-    if (variable_global_exists("player_monsters")) {
-        for (var i = 0; i < array_length(global.player_monsters); i++) {
-            var monster_data = global.player_monsters[i];
-            if (monster_data.type == monster_type) {
-                show_debug_message("找到匹配的怪物數據：" + object_get_name(monster_type));
+    var player_monsters = get_player_monsters();
+    for (var i = 0; i < array_length(player_monsters); i++) {
+        var monster_data = player_monsters[i];
+        if (monster_data.template_id == monster_type) {
+            show_debug_message("找到匹配的怪物數據：" + object_get_name(monster_type));
+            
+            // 設置屬性
+            with (monster_inst) {
+                level = monster_data.level;
+                hp = monster_data.hp;
+                max_hp = monster_data.max_hp;
+                attack = monster_data.attack;
+                defense = monster_data.defense;
+                spd = monster_data.spd;
                 
-                // 設置屬性
-                with (monster_inst) {
-                    level = monster_data.level;
-                    hp = monster_data.hp;
-                    max_hp = monster_data.max_hp;
-                    attack = monster_data.attack;
-                    defense = monster_data.defense;
-                    spd = monster_data.spd;
-                    
-                    // 確保team值正確設置
-                    team = 0; // 玩家隊伍
-                    show_debug_message("已設置team值為: " + string(team));
-                    
-                    // 其他初始化
-                    atb_current = 0;
-                    atb_ready = false;
-                    
-                    // 如果有技能數據，也可以複製
-                    if (variable_struct_exists(monster_data, "skills") && is_array(monster_data.skills)) {
-                        // 這裡可以添加技能設置邏輯
-                    }
+                // 確保team值正確設置
+                team = 0; // 玩家隊伍
+                show_debug_message("已設置team值為: " + string(team));
+                
+                // 其他初始化
+                atb_current = 0;
+                atb_ready = false;
+                
+                // 如果有技能數據，也可以複製
+                if (variable_struct_exists(monster_data, "skills") && is_array(monster_data.skills)) {
+                    // 這裡可以添加技能設置邏輯
                 }
-                
-                show_debug_message("怪物屬性設置完成");
-                break;
             }
+            
+            show_debug_message("怪物屬性設置完成");
+            break;
         }
     }
     
@@ -580,10 +579,10 @@ save_player_units_state = function() {
         var unit = player_units[| i];
         if (instance_exists(unit)) {
             // 更新玩家怪物數據
-            for (var j = 0; j < array_length(global.player_monsters); j++) {
-                var monster_data = global.player_monsters[j];
-                if (monster_data.type == unit.object_index) {
-                    // 更新怪物數據
+            var player_monsters = get_player_monsters();
+            for (var j = 0; j < array_length(player_monsters); j++) {
+                var monster_data = player_monsters[j];
+                if (monster_data.template_id == unit.object_index) {
                     monster_data.hp = unit.hp;
                     monster_data.max_hp = unit.max_hp;
                     monster_data.attack = unit.attack;
