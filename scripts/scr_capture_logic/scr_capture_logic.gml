@@ -78,7 +78,9 @@ function finalize_capture_action(target_enemy_instance, capture_success_flag) {
                  if (variable_struct_exists(_template, "skills")) {
                      var _skills_data = variable_struct_get(_template, "skills");
                      if (is_array(_skills_data)) {
-                         _template_skills = array_clone(_skills_data);
+                         var _len = array_length(_skills_data);
+                         _template_skills = (_len > 0) ? array_create(_len, 0) : [];
+                         if (_len > 0) array_copy(_template_skills, 0, _skills_data, 0, _len);
                      } else if (is_string(_skills_data)) {
                          var _skill_ids_str = string_split(_skills_data, ";");
                          for(var i = 0; i < array_length(_skill_ids_str); i++) {
@@ -92,7 +94,9 @@ function finalize_capture_action(target_enemy_instance, capture_success_flag) {
                  if (variable_struct_exists(_template, "skill_unlock_levels")) {
                       var _levels_data = variable_struct_get(_template, "skill_unlock_levels");
                      if (is_array(_levels_data)) {
-                         _template_unlock_levels = array_clone(_levels_data);
+                         var _len2 = array_length(_levels_data);
+                         _template_unlock_levels = (_len2 > 0) ? array_create(_len2, 0) : [];
+                         if (_len2 > 0) array_copy(_template_unlock_levels, 0, _levels_data, 0, _len2);
                      } else if (is_string(_levels_data)) {
                          var _levels_str = string_split(_levels_data, ";");
                          for(var i = 0; i < array_length(_levels_str); i++) {

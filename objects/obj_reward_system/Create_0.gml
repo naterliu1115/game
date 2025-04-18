@@ -381,7 +381,7 @@ distribute_experience = function() {
                 if (variable_global_exists("player_monsters")) {
                     for (var j = 0; j < array_length(global.player_monsters); j++) {
                         var monster_data = global.player_monsters[j];
-                        if (monster_data.type == unit.object_index) {
+                        if (monster_data.template_id == unit.template_id) {
                             // 更新經驗值（游戲可能有自己的升級邏輯）
                             if (!variable_struct_exists(monster_data, "exp")) {
                                 monster_data.exp = 0;
