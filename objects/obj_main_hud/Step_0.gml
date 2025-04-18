@@ -28,7 +28,7 @@ if (mouse_check_button_pressed(mb_left)) {
                 // 獲取物品 ID 和 圖示
                 var item_instance = global.player_inventory[| inventory_index];
                 if (item_instance != undefined) {
-                     var item_id = item_instance.id;
+                     var item_id = item_instance.item_id;
                      dragged_item_sprite = obj_item_manager.get_item_sprite(item_id);
                 } else {
                     dragged_item_sprite = -1; // 找不到物品實例？
@@ -201,7 +201,7 @@ if (!is_dragging_hotbar_item) {
                 if (inventory_index != noone) {
                     var item_instance = global.player_inventory[| inventory_index];
                     if (item_instance != undefined) {
-                        var item_id = item_instance.id;
+                        var item_id = item_instance.item_id;
                         var item_data = obj_item_manager.get_item(item_id);
 
                         // 如果是工具類型，使用工具

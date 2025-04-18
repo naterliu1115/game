@@ -71,7 +71,7 @@ for (var i = 0; i < hotbar_slots; i++) {
         if (inventory_index != noone && inventory_index >= 0 && inventory_index < ds_list_size(global.player_inventory)) {
             var item = global.player_inventory[| inventory_index];
             if (item != undefined) {
-                var current_item_id = item.id;
+                var current_item_id = item.item_id;
                 var current_item_quantity = item.quantity;
                 with (obj_item_manager) {
                     var item_sprite = get_item_sprite(current_item_id);

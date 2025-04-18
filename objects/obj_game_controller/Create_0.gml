@@ -310,6 +310,8 @@ toggle_monster_manager_ui = function() {
 
     // 獲取或創建怪物管理UI實例
     var monster_ui_inst;
+    var is_new_instance = false; // 添加一個標記
+
     if (instance_exists(obj_monster_manager_ui)) {
         monster_ui_inst = instance_find(obj_monster_manager_ui, 0);
         show_debug_message("找到現有的怪物管理UI實例");
@@ -323,17 +325,23 @@ toggle_monster_manager_ui = function() {
             ui_cooldown = 5;
             return;
         }
+        // UI存在但未開啟，準備顯示
     } else {
         show_debug_message("創建新的怪物管理UI實例");
         monster_ui_inst = instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
+        is_new_instance = true; // 標記為新實例
     }
 
     // 使用UI管理器顯示UI
     show_debug_message("顯示怪物管理UI");
     with (obj_ui_manager) {
-        register_ui(monster_ui_inst, "main");
-        show_ui(monster_ui_inst, "main");
-        show_debug_message("怪物管理UI已註冊並顯示");
+        // 只在新創建實例時註冊
+        if (is_new_instance) {
+            register_ui(monster_ui_inst, "main");
+            show_debug_message("新怪物管理UI已註冊");
+        }
+        show_ui(monster_ui_inst, "main"); // 無論如何都要顯示
+        show_debug_message("怪物管理UI已顯示");
     }
 
     ui_cooldown = 5;
@@ -483,6 +491,8 @@ toggle_inventory_ui = function() {
 
     // 獲取或創建物品欄UI實例
     var inventory_ui_inst;
+    var is_new_instance = false; // 添加標記
+
     if (instance_exists(obj_inventory_ui)) {
         inventory_ui_inst = instance_find(obj_inventory_ui, 0);
         show_debug_message("找到現有的道具UI實例");
@@ -496,17 +506,23 @@ toggle_inventory_ui = function() {
             ui_cooldown = 5;
             return;
         }
+        // UI存在但未開啟，準備顯示
     } else {
         show_debug_message("創建新的道具UI實例");
         inventory_ui_inst = instance_create_layer(0, 0, "Instances", obj_inventory_ui);
+        is_new_instance = true; // 標記為新實例
     }
 
     // 使用UI管理器顯示UI
     show_debug_message("顯示道具UI");
     with (obj_ui_manager) {
-        register_ui(inventory_ui_inst, "main");
-        show_ui(inventory_ui_inst, "main");
-        show_debug_message("UI已註冊並顯示");
+        // 只在新創建實例時註冊
+        if (is_new_instance) {
+            register_ui(inventory_ui_inst, "main");
+            show_debug_message("新道具UI已註冊");
+        }
+        show_ui(inventory_ui_inst, "main"); // 無論如何都要顯示
+        show_debug_message("道具UI已顯示");
     }
 
     // 添加一些測試物品（如果背包為空）
