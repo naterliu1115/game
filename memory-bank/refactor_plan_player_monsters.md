@@ -1,19 +1,16 @@
 # 重構 Player Monsters 數據管理計劃
 
-> **技能資料結構重構已完成，所有技能資料已統一為 array，並移除 struct/ds_map 混用。未來如有異動請重新檢查。**
-> ** 召喚流程 scope bug 已解決，callback 內 array 複製已統一用 array_copy 或手動複製，未來如有異動請重新檢查。**
-> **事件註冊已全面統一，經驗分配/升級流程補強中。**
 
 此計劃旨在將所有對 `global.player_monsters` 的操作集中到 `scripts/monster_data_manager/monster_data_manager.gml` 中。
 
-## 進度說明（2024/06/XX 更新）
+## 進度說明
 - [x] 玩家怪物資料流重構已完成大部分，monster_data_manager 已統一資料流。
 - [x] 召喚流程 scope bug 已解決，callback 內 array 複製已統一用 array_copy 或手動複製。
 - [x] 事件系統已統一，所有事件註冊必須透過 obj_event_manager，禁止直接呼叫 subscribe_to_event，部分子類遺留錯誤寫法需清理。
 - [x] 測試阻塞於召喚事件註冊錯誤，需先修正子類註冊。
 - [ ] 需檢查全專案有無直接呼叫 subscribe_to_event 的殘留。
 - [x] 其他資料流、UI、捕獲、經驗分配等流程已完成大部分重構，剩餘步驟見 checklist。
-- [ ] 經驗分配/升級流程補強中，需加強 LOG 追蹤與驗證。
+- [X] 經驗分配/升級流程補強中，需加強 LOG 追蹤與驗證。
 
 ## 步驟
 
@@ -33,7 +30,7 @@
     - [x] **(已完成)** 技能資料結構已統一為 array，移除 struct/ds_map 混用。
     - [x] **(已完成)** 召喚流程 scope bug 已解決，callback 內 array 複製已統一用 array_copy 或手動複製。
     - [x] **(已完成)** 事件註冊已全面統一。
-    - [ ] **(進行中)** 經驗分配/升級流程補強中，需加強 LOG 追蹤與驗證。
+    - [X] **(進行中)** 經驗分配/升級流程補強中，需加強 LOG 追蹤與驗證。
 
 - [x] **3. 逐步替換 `obj_game_controller` 中的引用：**
     - [x] 將 `Create_0.gml` 中的 `global.player_monsters = []` 替換為調用 `initialize_player_monsters()`。
