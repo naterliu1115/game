@@ -1,4 +1,7 @@
 // obj_monster_manager_ui - Step_0.gml
+
+event_inherited();
+
 if (!active) {
     if (visible && open_animation <= 0) {
         hide();
@@ -31,18 +34,6 @@ if (active && open_animation > 0 && !visible) {
 if (mouse_check_button_pressed(mb_left)) {
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
-    
-
-    // 檢查是否點擊了關閉按鈕
-    if (point_in_rectangle(
-        mx, my,
-        close_btn_x, close_btn_y,
-        close_btn_x + close_btn_size, close_btn_y + close_btn_size
-    )) {
-        // 關閉UI
-        hide();
-        return;
-    }
     
     // 檢查是否點擊了分頁標籤
     for (var i = 0; i < 4; i++) {
@@ -281,3 +272,6 @@ if (active && !surface_exists(ui_surface)) {
 if (active && !surface_exists(ui_details_surface)) {
     details_needs_update = true;
 }
+
+// --- 新增：O 鍵快捷鍵 toggle 行為 ---
+// 此段已移除，統一由 obj_game_controller 集中管理 UI 熱鍵邏輯。

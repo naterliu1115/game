@@ -1,5 +1,7 @@
 // obj_main_hud - Step_0.gml
 
+if (global.ui_input_block) exit; // <<-- 新增：如果 UI 正在阻斷輸入，則跳過
+
 // 調試：檢查 Step 事件是否執行
 //show_debug_message("HUD Step: Active = " + string(active));
 // 暫時註解掉，避免刷屏，如果完全沒反應再打開

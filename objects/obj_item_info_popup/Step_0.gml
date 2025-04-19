@@ -17,44 +17,39 @@ var mouse_gui_y = device_mouse_y_to_gui(0);
 x = ui_x;
 y = ui_y;
 
+// [彈窗Step] active=...、[彈窗Step] 觸發關閉判斷、[彈窗Step] close() 準備被呼叫 (非按鈕點擊)
+// 物品資訊彈窗 - 檢測到ESC按下、物品資訊彈窗狀態 - active: ...、物品資訊彈窗 - 檢測到滑鼠點擊
+// routine debug 訊息全部註解
+
+// Step 事件開頭加強 log
 if (global.game_debug_mode) {
-    if (keyboard_check_pressed(vk_escape)) {
-        show_debug_message("物品資訊彈窗 - 檢測到ESC按下");
-        show_debug_message("物品資訊彈窗狀態 - active: " + string(active) + ", visible: " + string(visible));
-    }
-    
-    if (mouse_check_button_pressed(mb_left)) {
-        show_debug_message("物品資訊彈窗 - 檢測到滑鼠點擊");
-        show_debug_message("滑鼠位置: " + string(mouse_gui_x) + ", " + string(mouse_gui_y));
-        show_debug_message("彈窗範圍: " + string(x) + ", " + string(y) + " 到 " + 
-                         string(x + width) + ", " + string(y + height));
-        show_debug_message("點擊是否在範圍外: " + 
-            string(!point_in_rectangle(mouse_gui_x, mouse_gui_y, x, y, x + width, y + height)));
-    }
+    show_debug_message("[彈窗Step] active=" + string(active) + ", visible=" + string(visible));
 }
 
 // 檢查ESC鍵或滑鼠點擊範圍外以關閉
 if (keyboard_check_pressed(vk_escape) || 
     (mouse_check_button_pressed(mb_left) && 
      !point_in_rectangle(mouse_gui_x, mouse_gui_y, x, y, x + width, y + height))) {
-    
+    if (global.game_debug_mode) {
+        show_debug_message("[彈窗Step] 觸發關閉判斷");
+        show_debug_message("  滑鼠座標: " + string(mouse_gui_x) + ", " + string(mouse_gui_y));
+        show_debug_message("  彈窗範圍: x=" + string(x) + ", y=" + string(y) + ", w=" + string(width) + ", h=" + string(height));
+        show_debug_message("  point_in_rectangle 結果: " + string(point_in_rectangle(mouse_gui_x, mouse_gui_y, x, y, x + width, y + height)));
+        show_debug_message("  assign_button_x=" + string(assign_button_x) + ", assign_button_y=" + string(assign_button_y) + ", w=" + string(assign_button_width) + ", h=" + string(assign_button_height));
+    }
     // 檢查點擊是否在按鈕上，如果是，則不關閉
     var clicked_on_button = false;
-    // 檢查 assign_button_x, assign_button_y 是否已在 Draw 事件中計算
-    // 注意：Step 事件在 Draw 事件之前執行，這裡的 assign_button_x/y 可能是上一幀的值
-    // 更好的做法是在 Create 中初始化按鈕位置，或傳遞 Draw 計算的值
-    // 暫時使用當前值，但在複雜情況下可能有問題
     if (point_in_rectangle(mouse_gui_x, mouse_gui_y, 
                          assign_button_x, assign_button_y, 
                          assign_button_x + assign_button_width, assign_button_y + assign_button_height)) {
         clicked_on_button = true;
     }
-    
+    if (global.game_debug_mode) {
+        show_debug_message("  clicked_on_button: " + string(clicked_on_button));
+    }
     if (!clicked_on_button) {
         if (global.game_debug_mode) {
-            show_debug_message("物品資訊彈窗 - 準備關閉 (非按鈕點擊)");
-            show_debug_message("關閉觸發條件: " + 
-                (keyboard_check_pressed(vk_escape) ? "ESC按下" : "點擊範圍外"));
+            show_debug_message("[彈窗Step] close() 準備被呼叫 (非按鈕點擊)");
         }
         close();
         exit;

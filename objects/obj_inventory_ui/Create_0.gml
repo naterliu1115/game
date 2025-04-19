@@ -59,11 +59,6 @@ on_item_used = function(data) {
     show_debug_message("物品已使用，更新UI");
 };
 
-// 確保在UI管理器中註冊
-with (obj_ui_manager) {
-    register_ui(other.id, "main");
-}
-
 // UI 尺寸和位置
 ui_width = display_get_gui_width() * 0.8;
 ui_height = display_get_gui_height() * 0.8;
@@ -102,6 +97,16 @@ drag_offset_y = 0;
 scroll_offset = 0;
 max_scroll = 0;
 
+// --- 新增：定義關閉按鈕區域 --- 
+var _close_btn_size = 30; // 局部變數
+var _close_btn_padding = 10; // 局部變數
+var _close_btn_rel_x1 = ui_width - _close_btn_size - _close_btn_padding; // 相對 X1
+var _close_btn_rel_y1 = _close_btn_padding; // 相對 Y1
+var _close_btn_rel_x2 = _close_btn_rel_x1 + _close_btn_size; // 相對 X2
+var _close_btn_rel_y2 = _close_btn_rel_y1 + _close_btn_size; // 相對 Y2
+close_button_rect = [_close_btn_rel_x1, _close_btn_rel_y1, _close_btn_rel_x2, _close_btn_rel_y2];
+// --- 結束新增 ---
+
 // 重寫顯示UI方法
 show = function() {
     // 再次檢查系統依賴
@@ -134,9 +139,11 @@ show = function() {
 
 // 重寫隱藏UI方法
 hide = function() {
+    show_debug_message("正在執行 obj_inventory_ui 的 hide 方法 (ID: " + string(id) + ")"); // DEBUG
     visible = false;
     active = false;
     allow_player_movement = true;  // 確保在隱藏UI時重置移動控制
+    show_debug_message("obj_inventory_ui 的 active 狀態已設為 false"); // DEBUG
     
     // 清理表面
     if (surface_exists(ui_surface)) {
@@ -154,13 +161,6 @@ get_slot_at_position = function(mouse_x, mouse_y) {
     // 計算相對於UI左上角的點擊位置 (表面座標系)
     var cx = mouse_x - ui_x;
     var cy = mouse_y - ui_y;
-    
-    // 調試輸出點擊位置 (表面座標系)
-    if (global.game_debug_mode) {
-        show_debug_message("原始點擊位置：" + string(mouse_x) + ", " + string(mouse_y));
-        show_debug_message("UI起始位置：" + string(ui_x) + ", " + string(ui_y));
-        show_debug_message("點擊相對UI位置（表面座標）：" + string(cx) + ", " + string(cy));
-    }
     
     // 計算物品槽區域的起始Y座標 (與Draw_64一致)
     var buttons_y = 60;
@@ -183,23 +183,10 @@ get_slot_at_position = function(mouse_x, mouse_y) {
                     var slot_draw_x = 20 + (items_drawn mod slots_per_row) * (slot_size + slot_padding);
                     var slot_draw_y = slots_area_y - scroll_offset + floor(items_drawn / slots_per_row) * (slot_size + slot_padding);
                     
-                    // 調試輸出每個槽位的計算位置
-                    if (global.game_debug_mode) {
-                        show_debug_message("檢查物品 " + string(i) + ": ID " + string(item.item_id) + " (" + item_data.Name + ")");
-                        show_debug_message("    預計繪製位置（表面座標）：" + string(slot_draw_x) + ", " + string(slot_draw_y));
-                        show_debug_message("    槽位大小：" + string(slot_size));
-                    }
-                    
                     // 使用表面座標檢查點擊是否在這個槽位的繪製範圍內
                     if (point_in_rectangle(cx, cy,
                         slot_draw_x, slot_draw_y,
                         slot_draw_x + slot_size, slot_draw_y + slot_size)) {
-                        
-                        if (global.game_debug_mode) {
-                            show_debug_message("--> 點擊命中物品 " + string(i));
-                        }
-                        // 移除過時的調試輸出
-                        //ds_list_destroy(valid_slots); // valid_slots 未被使用，可以移除
                         return i;
                     }
                     
@@ -209,11 +196,6 @@ get_slot_at_position = function(mouse_x, mouse_y) {
         }
     }
     
-    if (global.game_debug_mode) {
-        show_debug_message("點擊未命中任何物品");
-    }
-    
-    //ds_list_destroy(valid_slots); // valid_slots 未被使用，可以移除
     return noone;
 };
 
@@ -280,8 +262,13 @@ function show_item_info(item_data, inventory_index, mouse_x, mouse_y) {
     }
     
     // 先清理現有彈窗
-    with(obj_item_info_popup) {
-        close();
+    var old_popup = instance_find(obj_item_info_popup, 0);
+    if (old_popup != noone) {
+        if (variable_instance_exists(old_popup, "close") && is_method(old_popup.close)) {
+            old_popup.close();
+        } else {
+            with (old_popup) instance_destroy();
+        }
     }
     
     // 創建新的彈窗實例

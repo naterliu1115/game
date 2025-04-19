@@ -77,3 +77,8 @@ This file describes the system architecture, key technical decisions, design pat
   - 子類（如 obj_test_summon）遺留直接呼叫 subscribe_to_event，導致 scope 錯誤。
   - 需確保所有事件註冊皆經由 obj_event_manager，並清理錯誤寫法。
 - 架構優化方向：進一步抽象事件註冊流程，減少重複與人為錯誤。 
+
+# 系統設計模式
+
+- UI routine log 採「註解保留」策略，遇到 bug 可快速恢復。
+- UI 管理器、物品欄、彈窗等物件間的互動模式已標準化，所有 UI 關閉/切換均透過 UI 管理器協調。 

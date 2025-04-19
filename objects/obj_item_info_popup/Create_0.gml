@@ -144,22 +144,19 @@ function show() {
 // 重寫父類的 hide 方法
 function hide() {
     if (global.game_debug_mode) {
-        show_debug_message("物品資訊彈窗 - hide() 被調用");
+        show_debug_message("物品資訊彈窗 - hide() 被調用（只設狀態，不呼叫父類）");
     }
-    
-    // 調用父類的 hide
-    event_inherited();
+    visible = false;
+    active = false;
+    last_active_state = false;
+    // 不再呼叫 event_inherited() 或 parent_ui.hide
 }
 
 // 關閉彈窗
 function close() {
     if (global.game_debug_mode) {
-        show_debug_message("物品資訊彈窗 - close() 被調用");
+        show_debug_message("物品資訊彈窗 - close() 被調用（只釋放資源與銷毀，不呼叫 hide/parent_ui）");
     }
-    
-    // 先隱藏UI
-    hide();
-    
     // 清理資源
     if (ds_exists(rarity_colors, ds_type_map)) {
         ds_map_destroy(rarity_colors);
@@ -167,7 +164,6 @@ function close() {
     if (ds_exists(effect_descriptions, ds_type_map)) {
         ds_map_destroy(effect_descriptions);
     }
-    
     // 最後銷毀實例
     instance_destroy();
 } 

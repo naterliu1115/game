@@ -1,7 +1,8 @@
 // obj_debug_inventory_tool - Draw_64.gml (Draw GUI)
 
-// 如果不可見，則不繪製
-if (!is_visible) exit;
+// 繪製 DEBUG UI 到 GUI 層
+
+if (!visible) exit;
 
 // --- 計算當前幀的滑鼠狀態 (供 draw_button 方法使用) ---
 self.mouse_gui_x = device_mouse_x_to_gui(0);

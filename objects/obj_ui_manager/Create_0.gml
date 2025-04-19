@@ -1,5 +1,7 @@
 // obj_ui_manager - Create_0.gml
 
+global.ui_input_block = false; // <<-- 新增：初始化全局輸入阻斷旗標
+
 if (!variable_instance_exists(id, "active_ui_instances")) {
     active_ui_instances = ds_map_create();
 }
@@ -87,7 +89,7 @@ function register_ui(ui_instance, layer_name) {
     ds_list_add(ui_list, ui_instance);
     ui_instance.depth = layer_depths[? layer_name];
     
-    show_debug_message("UI註冊: " + object_get_name(ui_instance.object_index) + " 到層級 " + layer_name + "，深度 = " + string(ui_instance.depth));
+    // show_debug_message("UI註冊: " + object_get_name(ui_instance.object_index) + " 到層級 " + layer_name + "，深度 = " + string(ui_instance.depth));
 }
 
 // 顯示UI
@@ -96,54 +98,46 @@ function show_ui(ui_instance, layer_name) {
         show_debug_message("錯誤: 嘗試顯示不存在的UI實例");
         return;
     }
-    
     if (!ds_map_exists(ui_layers, layer_name)) {
         show_debug_message("錯誤: 嘗試在不存在的層級顯示UI: " + layer_name);
         return;
     }
-    
     // 確保UI已註冊
     var ui_list = ui_layers[? layer_name];
     var registered = false;
-    
     for (var i = 0; i < ds_list_size(ui_list); i++) {
         if (ui_list[| i] == ui_instance) {
             registered = true;
             break;
         }
     }
-    
     if (!registered) {
         register_ui(ui_instance, layer_name);
     }
-    
     // 處理互斥層
     if (layer_name == "main" || layer_name == "popup") {
+        show_debug_message("[UI管理器] show_ui: 先隱藏層級 " + layer_name);
         hide_layer(layer_name);
     }
-    
     // 顯示UI
     with (ui_instance) {
         visible = true;
         active = true;
+        show_debug_message("[UI管理器] show_ui: 設定 visible/active = true, object_index=" + string(object_index) + ", id=" + string(id));
         if (variable_instance_exists(id, "show") && is_method(variable_instance_get(id, "show"))) {
             var show_method = variable_instance_get(id, "show");
             show_method();
         }
     }
-    
     // 添加到活躍UI列表
     var active_list = active_ui[? layer_name];
     ds_list_add(active_list, ui_instance);
-    
-    show_debug_message("UI顯示: " + object_get_name(ui_instance.object_index) + " 在層級 " + layer_name);
+    show_debug_message("[UI管理器] show_ui: 完成, object_index=" + string(ui_instance.object_index) + ", id=" + string(ui_instance.id) + ", visible=" + string(ui_instance.visible) + ", active=" + string(ui_instance.active));
 }
 
 // 隱藏UI
 function hide_ui(ui_instance) {
     if (!instance_exists(ui_instance)) return;
-
-    // --- 步驟 1：先從活躍列表中移除 ---
     var _removed = false;
     var _removed_from_layer = "unknown";
     var keys = ds_map_keys_to_array(active_ui);
@@ -153,45 +147,34 @@ function hide_ui(ui_instance) {
         var index = ds_list_find_index(active_list, ui_instance);
         if (index != -1) {
             ds_list_delete(active_list, index);
-            _removed = true; // 標記已移除
+            _removed = true;
             _removed_from_layer = layer_name;
-            show_debug_message("從活躍列表移除: " + object_get_name(ui_instance.object_index) + " (層級: " + layer_name + ")");
-            // 假設 UI 只在一個層級，找到即可跳出
-             break; 
+            break;
         }
     }
-    
-    // 如果根本沒在活躍列表裡，打印警告但繼續執行 UI 的 hide
     if (!_removed) {
         show_debug_message("警告：hide_ui 嘗試隱藏一個不在活躍列表中的 UI: " + object_get_name(ui_instance.object_index));
     }
-
     // --- 步驟 2：然後再調用 UI 自己的 hide 方法 --- 
-    // 即使 UI 不在活躍列表（可能已被移除），仍嘗試調用其 hide 清理內部狀態
     with (ui_instance) {
-        // 注意：這裡的 hide() 仍然會調用管理器，但管理器現在不會再次刪除
-        if (variable_instance_exists(id, "hide") && typeof(variable_instance_get(id, "hide")) == "method") { // Use safer check
+        show_debug_message("[UI管理器] hide_ui: 設定 visible/active = false, object_index=" + string(object_index) + ", id=" + string(id));
+        if (variable_instance_exists(id, "hide") && typeof(variable_instance_get(id, "hide")) == "method") {
             var hide_method = variable_instance_get(id, "hide");
-            show_debug_message("調用 " + object_get_name(object_index) + " 自身的 hide 方法...");
             hide_method(); 
         } else {
-            // 如果沒有繼承或自定義 hide，執行基礎隱藏邏輯
-            show_debug_message("設置 " + object_get_name(object_index) + " visible=false, active=false (無自定義或繼承 hide)");
             visible = false;
             active = false;
-             // 備選：如果沒有 hide，可能需要管理器直接釋放表面？
             if (variable_instance_exists(id, "ui_surface") && surface_exists(ui_surface)) {
-                 surface_free(ui_surface);
-                 // variable_instance_set(id, "ui_surface", -1); // Set surface to -1 on the instance
-                 try {
-                     ui_surface = -1; // Try setting directly, might fail if called outside with
-                 } catch(e) {
-                     variable_instance_set(id, "ui_surface", -1);
-                 }
-                 show_debug_message("Manager 手動釋放表面 for " + object_get_name(object_index));
+                surface_free(ui_surface);
+                try {
+                    ui_surface = -1;
+                } catch(e) {
+                    variable_instance_set(id, "ui_surface", -1);
+                }
             }
         }
     }
+    show_debug_message("[UI管理器] hide_ui: 完成, object_index=" + string(ui_instance.object_index) + ", id=" + string(ui_instance.id) + ", visible=" + string(ui_instance.visible) + ", active=" + string(ui_instance.active));
 }
 
 // 隱藏指定層級的所有UI
@@ -218,7 +201,7 @@ function hide_layer(layer_name) {
     // 清理臨時列表
     ds_list_destroy(temp_list);
     
-    show_debug_message("隱藏層級: " + layer_name + "，UI數量: " + string(count));
+    // show_debug_message("隱藏層級: " + layer_name + "，UI數量: " + string(count));
 }
 
 // 關閉所有UI
@@ -457,7 +440,7 @@ function remove_ui(ui_instance) {
             var index = ds_list_find_index(ui_list, ui_instance);
             if (index != -1) {
                 ds_list_delete(ui_list, index);
-                show_debug_message("UI已從層級 " + layer_name + " 移除");
+                // show_debug_message("UI已從層級 " + layer_name + " 移除");
             }
         }
     }
@@ -471,7 +454,7 @@ function remove_ui(ui_instance) {
             var index = ds_list_find_index(active_list, ui_instance);
             if (index != -1) {
                 ds_list_delete(active_list, index);
-                show_debug_message("UI已從活躍列表中移除");
+                // show_debug_message("UI已從活躍列表中移除");
             }
         }
     }

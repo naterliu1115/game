@@ -110,7 +110,7 @@ if (mouse_check_button_pressed(mb_left)) {
         }
         
         // 檢查是否選擇了不同的捕獲方法
-        if (target_enemy != noone && instance_exists(target_enemy)) {
+        if (target_enemy != noone && instance_exists(target_enemy) && array_length(capture_methods) > 0) {
             var method_count = array_length(capture_methods);
             var method_x = ui_x + 180;
             var method_y = ui_y + 180;
@@ -123,8 +123,21 @@ if (mouse_check_button_pressed(mb_left)) {
                     method_x - 20, option_y - 10,
                     method_x + 300, option_y + 10
                 )) {
-                    selected_method = i;
-                    calculate_capture_chance(); // 更新捕獲率
+                    if (selected_method != i) { // 僅在選擇改變時更新
+                        selected_method = i;
+                        // 更新捕獲率顯示 (調用新腳本)
+                        var current_item_id = capture_methods[selected_method].item_id; // 從動態列表中獲取 ID
+                        
+                        var new_chance = scr_calculate_capture_chance(target_enemy, current_item_id);
+                        if (new_chance != -1) { // 僅更新有效機率
+                            capture_chance = new_chance;
+                            surface_needs_update = true; // 觸發重繪
+                        } else {
+                            // 目標不可捕獲
+                            capture_chance = 0; 
+                            surface_needs_update = true;
+                        }
+                    }
                     break;
                 }
             }
@@ -138,12 +151,13 @@ if (keyboard_check_pressed(vk_escape)) {
     return;
 }
 
-if (capture_state == "ready") {
+if (capture_state == "ready" && array_length(capture_methods) > 0) { // 確保有方法可選
+    var selection_changed = false;
     if (keyboard_check_pressed(vk_up)) {
         // 向上選擇捕獲方法
         if (selected_method > 0) {
             selected_method--;
-            calculate_capture_chance(); // 更新捕獲率
+            selection_changed = true;
         }
     }
 
@@ -151,7 +165,21 @@ if (capture_state == "ready") {
         // 向下選擇捕獲方法
         if (selected_method < array_length(capture_methods) - 1) {
             selected_method++;
-            calculate_capture_chance(); // 更新捕獲率
+            selection_changed = true;
+        }
+    }
+    
+    // 如果選擇改變，更新捕獲率
+    if (selection_changed) {
+        var current_item_id = capture_methods[selected_method].item_id; // 從動態列表中獲取 ID
+        
+        var new_chance = scr_calculate_capture_chance(target_enemy, current_item_id);
+        if (new_chance != -1) {
+            capture_chance = new_chance;
+            surface_needs_update = true;
+        } else {
+            capture_chance = 0;
+            surface_needs_update = true;
         }
     }
 

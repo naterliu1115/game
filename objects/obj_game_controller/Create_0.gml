@@ -311,27 +311,32 @@ toggle_monster_manager_ui = function() {
     }
 
     // 獲取或創建怪物管理UI實例
-    var monster_ui_inst;
-    var is_new_instance = false; // 添加一個標記
+    var monster_ui_inst = noone;
+    var is_new_instance = false;
 
     if (instance_exists(obj_monster_manager_ui)) {
         monster_ui_inst = instance_find(obj_monster_manager_ui, 0);
-        show_debug_message("找到現有的怪物管理UI實例");
-
+        show_debug_message("[toggle_monster_manager_ui] 檢查實例 ID: " + string(monster_ui_inst) + ", active: " + string(monster_ui_inst.active)); // DEBUG
         // 如果UI已經開啟，則關閉它
         if (monster_ui_inst.active) {
+            show_debug_message("[toggle_monster_manager_ui] UI 已 active，準備呼叫 hide_ui..."); // DEBUG
             show_debug_message("關閉已開啟的怪物管理UI");
             with (obj_ui_manager) {
                 hide_ui(monster_ui_inst);
             }
-            ui_cooldown = 5;
             return;
         }
         // UI存在但未開啟，準備顯示
     } else {
-        show_debug_message("創建新的怪物管理UI實例");
+        show_debug_message("[toggle_monster_manager_ui] UI 實例不存在，準備創建..."); // DEBUG
         monster_ui_inst = instance_create_layer(0, 0, "Instances", obj_monster_manager_ui);
         is_new_instance = true; // 標記為新實例
+    }
+
+    show_debug_message("[toggle_monster_manager_ui] UI 未 active 或不存在，準備開啟..."); // DEBUG
+    // 在顯示新 UI 之前，先關閉所有其他受管理的 UI
+    with (obj_ui_manager) {
+        close_all_ui(); 
     }
 
     // 使用UI管理器顯示UI
@@ -346,7 +351,6 @@ toggle_monster_manager_ui = function() {
         show_debug_message("怪物管理UI已顯示");
     }
 
-    ui_cooldown = 5;
     show_debug_message("===== 怪物管理UI切換完成 =====");
 }
 
@@ -492,27 +496,34 @@ toggle_inventory_ui = function() {
     }
 
     // 獲取或創建物品欄UI實例
-    var inventory_ui_inst;
-    var is_new_instance = false; // 添加標記
+    var inventory_ui_inst = noone;
+    var is_new_instance = false;
 
     if (instance_exists(obj_inventory_ui)) {
         inventory_ui_inst = instance_find(obj_inventory_ui, 0);
+        show_debug_message("[toggle_inventory_ui] 檢查實例 ID: " + string(inventory_ui_inst) + ", active: " + string(inventory_ui_inst.active)); // DEBUG
         show_debug_message("找到現有的道具UI實例");
 
         // 如果UI已經開啟，則關閉它
         if (inventory_ui_inst.active) {
+            show_debug_message("[toggle_inventory_ui] UI 已 active，準備呼叫 hide_ui..."); // DEBUG
             show_debug_message("關閉已開啟的道具UI");
             with (obj_ui_manager) {
                 hide_ui(inventory_ui_inst);
             }
-            ui_cooldown = 5;
             return;
         }
         // UI存在但未開啟，準備顯示
     } else {
-        show_debug_message("創建新的道具UI實例");
+        show_debug_message("[toggle_inventory_ui] UI 實例不存在，準備創建..."); // DEBUG
         inventory_ui_inst = instance_create_layer(0, 0, "Instances", obj_inventory_ui);
         is_new_instance = true; // 標記為新實例
+    }
+
+    show_debug_message("[toggle_inventory_ui] UI 未 active 或不存在，準備開啟..."); // DEBUG
+    // 在顯示新 UI 之前，先關閉所有其他受管理的 UI
+    with (obj_ui_manager) {
+        close_all_ui(); 
     }
 
     // 使用UI管理器顯示UI
@@ -527,7 +538,6 @@ toggle_inventory_ui = function() {
         show_debug_message("道具UI已顯示");
     }
 
-    ui_cooldown = 5;
     show_debug_message("===== 道具UI切換完成 =====");
 };
 

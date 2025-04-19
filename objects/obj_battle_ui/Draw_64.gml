@@ -303,15 +303,8 @@ if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BA
                 draw_set_color(c_white);
             }
             // --- 結束新增 --- 
-            
-            // 添加關閉提示
-            var prompt_y = display_get_gui_height() - 30;
-            draw_set_font(fnt_dialogue); // 使用對話字體
-            draw_set_halign(fa_center);
-            draw_set_valign(fa_bottom);
-            draw_text_color(display_get_gui_width() / 2, prompt_y, "[按下空格鍵繼續]", c_yellow, c_yellow, c_yellow, c_yellow, 1);
-            draw_set_valign(fa_middle); // Reset alignment if needed elsewhere
         }
+            
     } else if (battle_victory_status == 0) { // 失敗
         result_text = "戰鬥失敗!";
         result_color = c_red;

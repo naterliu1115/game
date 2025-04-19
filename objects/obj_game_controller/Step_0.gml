@@ -1,7 +1,18 @@
 // obj_game_controller 的 Step_0.gml
 
+// --- 先檢查需要無視輸入阻斷的全局快捷鍵 ---
+if (keyboard_check_pressed(ord("O"))) {
+    toggle_monster_manager_ui();
+}
 
+if (keyboard_check_pressed(ord("I"))) {
+    toggle_inventory_ui();
+}
 
+// --- 然後再檢查是否需要阻斷後續的遊戲內輸入 ---
+if (global.ui_input_block) exit; // 如果 UI 開啟，阻斷後續的遊戲控制（召喚、捕捉等）
+
+// --- 只有在輸入未被阻斷時，才檢查其他按鍵 ---
 // 更新UI冷卻
 if (ui_cooldown > 0) ui_cooldown--;
 
@@ -12,14 +23,6 @@ if (keyboard_check_pressed(ord("1"))) {
 
 if (keyboard_check_pressed(ord("C"))) {
     toggle_capture_ui();
-}
-
-if (keyboard_check_pressed(ord("O"))) {
-    toggle_monster_manager_ui();
-}
-
-if (keyboard_check_pressed(ord("I"))) {
-    toggle_inventory_ui();
 }
 
 // 檢查UI管理器是否存在，如果不存在則創建

@@ -4,6 +4,30 @@
 
 // obj_ui_manager - Step_0.gml
 
+// --- 更新全局輸入阻斷旗標 (重構後) ---
+var should_block = false;
+if (variable_instance_exists(id, "active_ui")) { // 確保 active_ui 已初始化
+    // 檢查是否有任何活躍的 popup 或 main 層級 UI
+    // 這些層級的 UI 應該繼承 parent_ui 並透過管理器顯示/隱藏
+    if (ds_list_size(active_ui[? "popup"]) > 0 || ds_list_size(active_ui[? "main"]) > 0) {
+        should_block = true;
+    }
+    // 可以根據需要考慮是否檢查 overlay 層級
+    // else if (ds_list_size(active_ui[? "overlay"]) > 0) {
+    //     // 如果 overlay 層也需要阻斷，取消註解
+    //     should_block = true; 
+    // }
+}
+
+// // 檢查獨立的 Debug 工具是否可見 <<-- 移除：Debug 工具現在應繼承 parent_ui 並由管理器控制
+// if (instance_exists(obj_debug_inventory_tool) && obj_debug_inventory_tool.is_visible) {
+//      should_block = true;
+// }
+
+global.ui_input_block = should_block;
+// --- 旗標更新結束 ---
+
+
 // 防禦性檢查，確保 active_ui_instances 已初始化
 if (!variable_instance_exists(id, "active_ui_instances")) {
     active_ui_instances = ds_map_create();
@@ -51,62 +75,138 @@ if (queue_size > 0) {
     ds_queue_destroy(temp_queue);
 }
 
-// 處理UI輸入
-var main_ui_list = active_ui[? "main"];
-if (ds_list_size(main_ui_list) > 0) {
-    var _ui_inst = main_ui_list[| ds_list_size(main_ui_list) - 1]; // 取最上層UI
+// --- 處理UI輸入 (優先處理 Popup 層) ---
+var _input_handled = false; // 標記輸入是否已被處理
+
+// 檢查 Popup 層
+var popup_ui_list = active_ui[? "popup"];
+if (ds_list_size(popup_ui_list) > 0) {
+    var _ui_inst = popup_ui_list[| ds_list_size(popup_ui_list) - 1]; // 取最上層 Popup UI
     if (instance_exists(_ui_inst)) {
-        // Space鍵（確認）
-        if (keyboard_check_pressed(vk_space)) {
-            var _handled = false;
-            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
-                _handled = _ui_inst.handle_confirm_input();
-            }
-            if (_handled) {
-                keyboard_clear(vk_space);
-                show_debug_message("UI管理器: Space鍵確認輸入被UI處理並消耗");
-            }
-        }
-        // Escape鍵（關閉）
-        if (keyboard_check_pressed(vk_escape)) {
-            var _handled = false;
-            if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
-                _handled = _ui_inst.handle_close_input();
-            } else {
-                hide_ui(_ui_inst);
-                _handled = true;
-            }
-            if (_handled) {
-                keyboard_clear(vk_escape);
-                show_debug_message("UI管理器: Escape鍵關閉輸入被UI處理並消耗");
-            }
-        }
-        // Enter鍵（確認，作為Space的替代）
-        if (keyboard_check_pressed(vk_enter)) {
-            var _handled = false;
-            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
-                _handled = _ui_inst.handle_confirm_input();
-            }
-            if (_handled) {
-                keyboard_clear(vk_enter);
-                show_debug_message("UI管理器: Enter鍵確認輸入被UI處理並消耗");
-            }
-        }
+        
         // 滑鼠左鍵點擊
         if (mouse_check_button_pressed(mb_left)) {
             var mx = device_mouse_x_to_gui(0);
             var my = device_mouse_y_to_gui(0);
-            var _handled = false;
             if (variable_instance_exists(_ui_inst, "handle_mouse_click") && is_method(_ui_inst.handle_mouse_click)) {
-                _handled = _ui_inst.handle_mouse_click(mx, my);
+                if (_ui_inst.handle_mouse_click(mx, my)) {
+                    _input_handled = true;
+                    mouse_clear(mb_left);
+                    show_debug_message("UI管理器: 滑鼠左鍵點擊被 Popup UI 處理並消耗");
+                }
             }
-            if (_handled) {
-                mouse_clear(mb_left);
-                show_debug_message("UI管理器: 滑鼠左鍵點擊被UI處理並消耗");
+            // 注意：Popup 層通常需要處理點擊外部關閉，這應該在 Popup 物件自身 Step 處理
+        }
+
+        // Escape鍵（關閉）
+        if (!_input_handled && keyboard_check_pressed(vk_escape)) {
+             if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
+                 if (_ui_inst.handle_close_input()) {
+                     _input_handled = true;
+                     keyboard_clear(vk_escape);
+                     show_debug_message("UI管理器: Escape鍵關閉輸入被 Popup UI 處理並消耗 (自訂方法)");
+                 }
+             } else {
+                 // 如果 Popup 沒有自訂關閉方法，管理器預設幫它關閉
+                 hide_ui(_ui_inst);
+                 _input_handled = true;
+                 keyboard_clear(vk_escape);
+                 show_debug_message("UI管理器: Escape鍵關閉輸入，由管理器關閉 Popup UI");
+             }
+        }
+        
+        // Enter/Space 鍵 (確認) - Popup 通常不直接處理確認，除非有特殊按鈕
+        if (!_input_handled && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space))) {
+            var _key = keyboard_check_pressed(vk_enter) ? vk_enter : vk_space;
+            var _key_name = (_key == vk_enter) ? "Enter" : "Space";
+            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
+                if (_ui_inst.handle_confirm_input()) {
+                    _input_handled = true;
+                    keyboard_clear(_key);
+                    show_debug_message("UI管理器: " + _key_name + "鍵確認輸入被 Popup UI 處理並消耗");
+                }
             }
+             // Popup 通常點擊按鈕，不直接響應 Enter/Space，除非有設計
         }
     }
 }
+
+// === reward_visible 狀態下禁止 main 層滑鼠左鍵全域關閉 ===
+var reward_ui_found = false;
+var main_ui_list = active_ui[? "main"];
+for (var i = 0; i < ds_list_size(main_ui_list); i++) {
+    var _ui_inst = main_ui_list[| i];
+    if (instance_exists(_ui_inst) && variable_instance_exists(_ui_inst, "reward_visible") && _ui_inst.reward_visible) {
+        reward_ui_found = true;
+        break;
+    }
+}
+
+// [DEBUG] 追蹤 reward_ui_found 狀態
+if (reward_ui_found) {
+    show_debug_message("[DEBUG] Step_0.gml: 偵測到 reward_visible=true 的 UI，id=" + string(_ui_inst) + ", 物件=" + object_get_name(_ui_inst.object_index));
+}
+
+// 如果輸入未被 Popup 處理，再檢查 Main 層
+if (!_input_handled) {
+    var main_ui_list = active_ui[? "main"];
+    if (ds_list_size(main_ui_list) > 0) {
+        var _ui_inst = main_ui_list[| ds_list_size(main_ui_list) - 1]; // 取最上層 Main UI
+        if (instance_exists(_ui_inst)) {
+            // reward_visible 狀態下禁止滑鼠左鍵全域關閉
+            // [註解] 暫時移除 reward_visible 條件，協助追蹤彈窗被自動隱藏問題
+            // if (!reward_ui_found) {
+            if (mouse_check_button_pressed(mb_left)) {
+                var mx = device_mouse_x_to_gui(0);
+                var my = device_mouse_y_to_gui(0);
+                if (variable_instance_exists(_ui_inst, "handle_mouse_click") && is_method(_ui_inst.handle_mouse_click)) {
+                    if (_ui_inst.handle_mouse_click(mx, my)) {
+                        _input_handled = true; // 雖然是最後一層，還是標記一下
+                        mouse_clear(mb_left);
+                        show_debug_message("[DEBUG] UI管理器: 滑鼠左鍵點擊被 Main UI 處理並消耗，id=" + string(_ui_inst) + ", 物件=" + object_get_name(_ui_inst.object_index));
+                    }
+                }
+                // [DEBUG] 若未被 handle_mouse_click 處理，記錄將進行什麼操作
+                if (!_input_handled) {
+                    show_debug_message("[DEBUG] UI管理器: 滑鼠左鍵點擊未被 Main UI 處理，id=" + string(_ui_inst) + ", 物件=" + object_get_name(_ui_inst.object_index));
+                }
+            }
+            // }
+            
+            // Escape鍵（關閉）
+            if (!_input_handled && keyboard_check_pressed(vk_escape)) {
+                if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
+                     if (_ui_inst.handle_close_input()) {
+                         _input_handled = true;
+                         keyboard_clear(vk_escape);
+                         show_debug_message("UI管理器: Escape鍵關閉輸入被 Main UI 處理並消耗 (自訂方法)");
+                     }
+                } else {
+                     // 如果 Main UI 沒有自訂關閉方法，管理器預設幫它關閉
+                     hide_ui(_ui_inst);
+                     _input_handled = true;
+                     keyboard_clear(vk_escape);
+                     show_debug_message("UI管理器: Escape鍵關閉輸入，由管理器關閉 Main UI");
+                }
+            }
+
+            // Enter/Space 鍵 (確認)
+             if (!_input_handled && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space))) {
+                var _key = keyboard_check_pressed(vk_enter) ? vk_enter : vk_space;
+                var _key_name = (_key == vk_enter) ? "Enter" : "Space";
+                if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
+                    if (_ui_inst.handle_confirm_input()) {
+                        _input_handled = true;
+                        keyboard_clear(_key);
+                        show_debug_message("UI管理器: " + _key_name + "鍵確認輸入被 Main UI 處理並消耗");
+                    }
+                }
+             }
+        }
+    }
+}
+// --- 輸入處理結束 ---
+
 
 // 更新UI管理器時鐘
 ui_manager_clock += 1;

@@ -33,9 +33,11 @@ show = function() {
 };
 
 hide = function() {
+    show_debug_message("正在執行 obj_monster_manager_ui 的 hide 方法 (ID: " + string(id) + ")"); // DEBUG
     active = false;
     visible = false;
     allow_player_movement = true; // 隱藏UI時允許玩家移動
+    show_debug_message("obj_monster_manager_ui 的 active 狀態已設為 false"); // DEBUG
     
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
@@ -98,6 +100,14 @@ search_active = false;
 close_btn_x = ui_x + ui_width - 40;
 close_btn_y = ui_y + 10;
 close_btn_size = 30;
+
+// --- 新增：定義關閉按鈕相對矩形 ---
+var _close_btn_rel_x1 = ui_width - close_btn_size - 10; // 相對 X1 (基於 close_btn_x 和 ui_x)
+var _close_btn_rel_y1 = 10; // 相對 Y1 (基於 close_btn_y 和 ui_y)
+var _close_btn_rel_x2 = _close_btn_rel_x1 + close_btn_size;
+var _close_btn_rel_y2 = _close_btn_rel_y1 + close_btn_size;
+close_button_rect = [_close_btn_rel_x1, _close_btn_rel_y1, _close_btn_rel_x2, _close_btn_rel_y2];
+// --- 結束新增 ---
 
 // 分頁按鈕
 tab_width = ui_width / 4;

@@ -12,6 +12,36 @@ if (capture_result) {
     capture_state = "failed";
 }
 
+// --- 在處理結果前，先消耗使用的道具 --- 
+// 我們在 attempt_capture 中將使用的 ID 存入了 last_used_item_id
+if (last_used_item_id != noone && last_used_item_id != -1) {
+    // --- 直接調用計劃中的函數 --- 
+    var item_removed = false;
+    var item_manager_inst = instance_find(obj_item_manager, 0); // 查找第一個實例
+    if (instance_exists(item_manager_inst)) { 
+        // 直接調用，依賴於 obj_item_manager 未來實現此函數
+        item_removed = item_manager_inst.remove_item_from_inventory(last_used_item_id, 1);
+        if (item_removed) {
+            show_debug_message("Alarm 0: 已通過管理器消耗捕獲道具 ID: " + string(last_used_item_id));
+        } else {
+             show_debug_message("Alarm 0 警告: 管理器嘗試消耗道具 ID: " + string(last_used_item_id) + " 失敗! (可能數量不足或函數問題)");
+             // 這裡可以根據遊戲設計決定是否要因為消耗失敗而取消捕獲
+             // capture_result = false; 
+             // fail_reason = "道具消耗失敗";
+        }
+    } else {
+        show_debug_message("Alarm 0 警告: 未找到 obj_item_manager 實例。無法消耗道具。");
+    }
+    // --- 調用結束 ---
+    
+    // 重置 last_used_item_id，避免重複消耗
+    last_used_item_id = noone;
+    
+} else {
+     show_debug_message("Alarm 0: 未使用捕獲道具 (last_used_item_id is noone).");
+}
+// --- 道具消耗結束 ---
+
 // 調用 finalize_capture_action 並獲取其結果
 var _result = undefined;
 if (instance_exists(target_enemy)) {

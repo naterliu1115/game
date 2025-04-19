@@ -1,5 +1,7 @@
 // obj_summon_ui - Step_0.gml
 
+event_inherited();
+
 // 首先重置內部輸入標誌
 process_internal_input_flag = false;
 

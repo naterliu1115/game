@@ -8,7 +8,7 @@
 - [x] 召喚流程 scope bug 已解決，callback 內 array 複製已統一用 array_copy 或手動複製。
 - [x] 事件系統已統一，所有事件註冊必須透過 obj_event_manager，禁止直接呼叫 subscribe_to_event，部分子類遺留錯誤寫法需清理。
 - [x] 測試阻塞於召喚事件註冊錯誤，需先修正子類註冊。
-- [ ] 需檢查全專案有無直接呼叫 subscribe_to_event 的殘留。
+- [X] 需檢查全專案有無直接呼叫 subscribe_to_event 的殘留。
 - [x] 其他資料流、UI、捕獲、經驗分配等流程已完成大部分重構，剩餘步驟見 checklist。
 - [X] 經驗分配/升級流程補強中，需加強 LOG 追蹤與驗證。
 
@@ -39,7 +39,7 @@
 
 - [x] **4. 逐步替換 `obj_capture_ui` 中的引用：**
     - [x] 將 `Create_0.gml` 中的 `array_push(global.player_monsters, captured_monster_data)` 替換為調用 `add_player_monster()`。
-    - [ ] 修復 `Draw_64.gml` 中的動畫顯示問題，確保捕獲、成功和失敗狀態正確顯示。(待辦)
+    - [x] 修復 `Draw_64.gml` 中的動畫顯示問題，確保捕獲、成功和失敗狀態正確顯示。(待辦)
 
 - [ ] **5. 逐步替換 `obj_player_summon_parent` 中的引用：**
     - [ ] 將 `Create_0.gml` 中升級後直接修改 `global.player_monsters[i]` 的邏輯移除或重構，改為調用 `monster_data_manager` 的更新函數 (如 `add_experience` 或 `update_monster_data`)。(待辦)

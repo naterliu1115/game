@@ -61,6 +61,8 @@ hide = function() {
     active = false;
     last_active_state = false;
     
+    show_debug_message(">> parent_ui.hide executed for " + object_get_name(object_index) + ". active=" + string(active) + ", visible=" + string(visible));
+    
     // 釋放表面資源
     if (surface_exists(ui_surface)) {
         surface_free(ui_surface);

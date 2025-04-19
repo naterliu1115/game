@@ -15,6 +15,7 @@ capture_state = "ready"; // 使用字串而非數字，方便識別
 capture_animation = 0;
 capture_result = false;
 capture_chance = 0;
+last_used_item_id = noone;
 
 // 新增：動畫持續時間變數
 capture_animation_duration = 120; // 捕獲動畫持續幀數 (2 秒 @ 60fps)
@@ -29,7 +30,7 @@ visible = false;
 open_animation = 0;
 open_speed = 0.1;
 
-// 捕獲方法 - 使用陣列
+// 捕獲方法 - 使用陣列 (現在會動態填充)
 capture_methods = []; 
 selected_method = 0;
 
@@ -76,33 +77,68 @@ open_capture_ui = function(target) {
     capture_animation = 0;
     surface_needs_update = true;
 
-    // 重新初始化捕獲方法
-    capture_methods = []; // 清空陣列
+    // --- 動態填充 capture_methods --- 
+    capture_methods = []; // 清空舊列表
+    selected_method = -1; // 重置選擇
 
-    // 添加捕獲方法 (這裡可以根據玩家持有的球和敵人類型動態添加)
-    var method1 = {
-        name: "普通捕獲",
-        description: "用普通球捕獲怪物",
-        cost: { item: "普通球", amount: 1 },
-        bonus: 0
-    };
-
-    var method2 = {
-        name: "高級捕獲",
-        description: "用高級球捕獲怪物",
-        cost: { item: "高級球", amount: 1 },
-        bonus: 0.2
-    };
-
-    // 使用array_push添加到陣列
-    array_push(capture_methods, method1, method2);
-
-    // 初始選擇第一個方法
-    selected_method = 0;
-
-    // 計算初始捕獲率
-    calculate_capture_chance();
+    // 假設 obj_item_manager.get_inventory_items_by_type 返回一個陣列
+    // 每個元素包含 { item_id: ..., quantity: ..., name: ..., effect_value: ... }
+    var available_capture_items = []; 
+    var item_manager_inst = instance_find(obj_item_manager, 0); // 查找第一個實例
+    if (instance_exists(item_manager_inst)) { 
+        // 直接調用，依賴於 obj_item_manager 未來實現此函數
+        available_capture_items = item_manager_inst.get_inventory_items_by_type("CAPTURE"); 
+    } else {
+        show_debug_message("警告：找不到 obj_item_manager 實例，無法獲取捕獲道具。");
+    }
     
+    if (array_length(available_capture_items) == 0) {
+        show_debug_message("玩家沒有可用的捕獲道具！");
+        // 可以在這裡顯示提示給玩家並阻止 UI 打開
+         if (instance_exists(obj_battle_ui)) {
+             obj_battle_ui.show_info("沒有捕獲道具!");
+         }
+         // hide(); // 可以選擇直接關閉
+         // 或者允許打開，但在Draw中顯示提示
+         capture_chance = 0; // 沒有道具，機率為0 (如果目標可捕獲)
+         active = true; // 仍然激活UI以顯示消息
+         visible = true;
+         depth = -150;
+         // ... 更新UI尺寸和位置 ...
+         return; // 阻止後續的機率計算
+    }
+    
+    // 將可用的捕獲道具添加到 capture_methods
+    for (var i = 0; i < array_length(available_capture_items); i++) {
+        var item_info = available_capture_items[i];
+        // 創建 capture_methods 需要的結構
+        var method_entry = {
+            item_id: item_info.item_id,
+            name: item_info.name, // 從返回的數據獲取名稱
+            quantity: item_info.quantity, // 從返回的數據獲取數量
+            effect_value: item_info.effect_value, // 從返回的數據獲取效果值
+            description: "使用 " + item_info.name + " 捕獲 (剩餘: " + string(item_info.quantity) + ")" // 可以動態生成描述
+        };
+        array_push(capture_methods, method_entry);
+    }
+
+    // 初始選擇第一個可用方法
+    selected_method = 0; 
+
+    // 計算初始捕獲率 (使用第一個道具)
+    var initial_item_id = capture_methods[0].item_id; // 獲取第一個道具的 ID
+    capture_chance = scr_calculate_capture_chance(target_enemy, initial_item_id);
+    if (capture_chance == -1) {
+        show_debug_message("目標不可捕獲！");
+        if (instance_exists(obj_battle_ui)) {
+             obj_battle_ui.show_info("這個敵人無法被捕獲!");
+        }
+        // 允許 UI 打開以顯示目標圖像，但在 Draw 中處理不可捕獲狀態
+        capture_chance = 0; // 設置為 0 以免顯示錯誤機率
+        // hide(); // 或者選擇不打開
+    }
+    // --- 捕獲方法填充結束 ---
+
     // 通過UI管理器顯示
     if (instance_exists(obj_ui_manager)) {
         show_debug_message("使用UI管理器顯示捕獲UI");
@@ -118,61 +154,70 @@ open_capture_ui = function(target) {
     show_debug_message("===== 捕獲UI開啟完成 =====");
 };
 
-// 計算捕獲成功率
-calculate_capture_chance = function() {
-    if (!instance_exists(target_enemy)) {
-        capture_chance = 0;
-        return;
-    }
-    
-    // 基礎捕獲率計算
-    var hp_percent = target_enemy.hp / target_enemy.max_hp;
-    var base_chance = 0.8; // 80% 基礎捕獲率
-    var chance_modifier = 1 - hp_percent; // HP越低，成功率越高
-    
-    // 計算最終捕獲率
-    capture_chance = base_chance + (chance_modifier * 0.3); // 最高額外 +30%
-    
-    // 如果有選擇捕獲方法，加入其加成
-    if (selected_method >= 0 && selected_method < array_length(capture_methods)) {
-        capture_chance += capture_methods[selected_method].bonus;
-    }
-    
-    // 限制在合理範圍內
-    capture_chance = clamp(capture_chance, 0.1, 0.95);
-};
-
 // 嘗試捕獲 (重構後)
 attempt_capture = function() {
-    if (target_enemy != noone && instance_exists(target_enemy)) {
-        // 扣除物品 (實際遊戲中需要實作)
-        var can_capture = true; // 假設總是可以捕獲 (稍後實作檢查)
+    if (target_enemy != noone && instance_exists(target_enemy) && array_length(capture_methods) > 0 && selected_method != -1) {
+        // 獲取選擇的道具信息
+        var selected_capture_method = capture_methods[selected_method];
+        var selected_item_id = selected_capture_method.item_id;
         
-        if (!can_capture) {
-            // 顯示缺少物品的提示
-            // ...
+        // 檢查玩家是否確實擁有該物品 (數量檢查)
+        var current_item_count = 0;
+        var item_manager_inst = instance_find(obj_item_manager, 0); // 查找第一個實例
+        if (instance_exists(item_manager_inst)) { 
+            // 直接調用，依賴於 obj_item_manager 未來實現此函數
+            current_item_count = item_manager_inst.get_item_count_in_inventory(selected_item_id); 
+        } else {
+             show_debug_message("警告：找不到 obj_item_manager 實例，無法檢查物品數量。");
+             // 這裡可能需要報錯或假設數量為0
+             current_item_count = 0;
+        }
+
+        if (current_item_count <= 0) {
+            show_debug_message("缺少捕獲道具: " + selected_capture_method.name + " (ID: " + string(selected_item_id) + ")");
+            if (instance_exists(obj_battle_ui)) {
+                 obj_battle_ui.show_info("你沒有 " + selected_capture_method.name + " 了!"); // 顯示提示
+            }
+            // 需要刷新 capture_methods 列表嗎？或者僅阻止本次嘗試？
+            // 最好刷新列表
+            open_capture_ui(target_enemy); // 重新打開以刷新列表和選擇
+            return; // 缺少物品，無法捕獲
+        }
+        
+        // 1. 計算捕獲機率 (使用新腳本和選擇的道具ID)
+        var calculated_chance = scr_calculate_capture_chance(target_enemy, selected_item_id);
+        
+        // 檢查是否不可捕獲 (-1)
+        if (calculated_chance == -1) {
+            show_debug_message("嘗試捕獲失敗：目標不可捕獲。");
+             if (instance_exists(obj_battle_ui)) {
+                 obj_battle_ui.show_info("這個敵人無法被捕獲!"); // 顯示提示
+            }
             return;
         }
         
-        // 1. 計算捕獲機率 (確保使用最新的數據)
-        calculate_capture_chance(); 
+        // 更新顯示用的 capture_chance
+        capture_chance = calculated_chance;
+        surface_needs_update = true;
         
         // 2. 決定捕獲是否成功
-        capture_result = (random(1) <= capture_chance);
+        capture_result = (random(1) <= calculated_chance);
         
         // 3. 設置捕獲狀態和計時器
-        capture_state = "capturing"; // 標記為正在捕獲動畫中
-        var capture_duration = 120; // 捕獲動畫持續幀數
-        alarm[0] = capture_duration; // 設置 Alarm 0
+        capture_state = "capturing";
+        var capture_duration = 120;
+        alarm[0] = capture_duration;
         
-        // 可選: 重置用於繪製的動畫計時器 (如果不用 alarm 剩餘時間)
-        // capture_animation_timer = 0; 
-
+        // 儲存本次使用的道具 ID，以便 Alarm 0 消耗
+        last_used_item_id = selected_item_id; 
+        
         // Debug 輸出
-        show_debug_message("嘗試捕獲: 機率 = " + string(capture_chance) + ", 結果將在 " + string(capture_duration) + " 幀後確定: " + (capture_result ? "預期成功" : "預期失敗"));
+        show_debug_message("嘗試捕獲 (使用道具: " + selected_capture_method.name + " ID: " + string(selected_item_id) + "): 機率 = " + string(calculated_chance) + ", 結果將在 " + string(capture_duration) + " 幀後確定: " + (capture_result ? "預期成功" : "預期失敗"));
         
         // 標記表面需要更新以顯示 "捕獲中"
         surface_needs_update = true; 
+    } else {
+         show_debug_message("嘗試捕獲失敗：無目標、無可用道具或未選擇道具。");
     }
 };
 

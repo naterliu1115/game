@@ -392,6 +392,11 @@ enum ITEM_RARITY {
   - `unassign_item_from_hotbar(inventory_index)`: 取消指定背包索引物品的快捷欄指派。
   - `get_hotbar_slot_for_item(inventory_index)`: 查詢物品被指派到哪個快捷欄位 (-1 表示未指派)。
   - `get_item_in_hotbar_slot(hotbar_slot)`: 獲取指定快捷欄位的物品背包索引 (`noone` 表示空)。
+- **庫存管理 (於 `obj_item_manager` 中定義)**:
+      - `remove_item_from_inventory(item_id, quantity_to_remove)`: 從背包移除指定數量或整個物品。
+      - `get_item_count_in_inventory(item_id)`: 獲取背包中指定物品的總數量。
+      - `get_inventory_items_by_type(item_type_string)`: 獲取背包中指定類型所有物品的詳細列表 (包含 `inventory_index`)。
+    - 物品使用: `use_item(item_id)` ... (保留後續內容)
 - 物品使用: `use_item(item_id)` (注意：尚未與快捷欄選擇掛鉤，僅限背包內使用)
 - 物品效果執行: `execute_item_effect(item_data)` (目前僅實現治療效果)
 
@@ -699,9 +704,10 @@ UI 系統管理遊戲中的各種用戶界面元素。
             - `obj_reward_system` 的 `calculate_victory_rewards` 函數已重構，現在會根據傳入的 `defeated_enemy_ids` 列表和 `enemies.csv` 中對應的 `gold_reward`（金幣）欄位計算總金幣獎勵。
             - `calculate_victory_rewards` 現在也會解析 `enemies.csv` 中的 `loot_table` 欄位（格式：`item_id:chance:min-max;...`），根據機率和數量範圍計算實際掉落的物品，並將結果存儲在 `battle_result.item_drops` 中。
             - 修復了 `is_numeric_safe` 函數未能正確處理從模板中讀取的數字（而非字符串）的問題。
-
-- **進行中/待辦**:
-    - **(高優先級)** **解決 `obj_event_manager` 缺少 `trigger_event` 功能**: 調查獎勵系統等處觸發的警告，實現或修復事件廣播功能。
+    - **庫存管理增強**:
+        - 在 `obj_item_manager` 中實現了 `remove_item_from_inventory`, `get_item_count_in_inventory`, `get_inventory_items_by_type` 函數。
+        - 使用 `#region` 對 `obj_item_manager/Create_0.gml` 進行了代碼結構整理。
+    - **測試數據清理**: 註釋/移除了 `obj_item_manager` 和 `obj_game_controller` 中的初始測試道具代碼。
     - **玩家怪物資料流重構**:
         - 已完成大部分，monster_data_manager 已統一資料流，主要流程已經改為只經由 manager 操作。
         - 召喚功能目前阻塞於事件註冊 scope 報錯，需清理子類（如 obj_test_summon）遺留的錯誤註冊。
@@ -709,6 +715,10 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 測試阻塞於召喚事件註冊錯誤，需先修正子類註冊。
         - 需檢查全專案有無直接呼叫 subscribe_to_event 的殘留。
         - 其他資料流、UI、捕獲、經驗分配等流程已完成大部分重構，剩餘步驟見 refactor_plan_player_monsters.md。
+  - **(高優先級)** **解決 `obj_event_manager` 缺少 `trigger_event` 功能**: 調查獎勵系統等處觸發的警告，實現或修復事件廣播功能。
+
+
+- **進行中/待辦**:
     - **採集系統擴展**: (保留)
     - **快捷欄持久化**: 在實現存檔系統時，需要保存和加載 `global.player_hotbar`。
     - **互動提示位置 (UX)**: 根據測試反饋，考慮是否將互動提示移到遊戲世界中的互動目標附近。
@@ -752,6 +762,9 @@ UI 系統管理遊戲中的各種用戶界面元素。
         - 考慮快捷欄在非戰鬥狀態下的使用。
     - **集中式腳本管理**: 設計 `player_monster.gml` 腳本，統一管理 struct 欄位與同步，優化資料流。
     - **資料流優化**: 持續檢查所有流程，確保資料結構一致與同步正確。
+    - **開發遊戲內調試工具**:
+        - 創建 `obj_debug_inventory_tool`，通過 F1 觸發。
+        - 實現 UI 界面，用於動態添加/移除物品、查詢數量、按類型獲取，以測試 `obj_item_manager` 的新庫存功能。
 
 - **已知問題**:
     - **事件管理器 `trigger_event` 功能缺失或調用錯誤。**

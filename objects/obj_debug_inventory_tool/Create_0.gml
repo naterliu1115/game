@@ -1,6 +1,8 @@
 // obj_debug_inventory_tool - Create_0.gml
 
-is_visible = false; // 初始隱藏
+event_inherited(); // <<-- 新增：執行父類的 Create 事件
+
+// is_visible = false; // <<-- 移除：由 parent_ui 初始化 visible 和 active
 
 // 輸入框變數
 input_item_id_str = "";

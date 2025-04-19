@@ -68,3 +68,8 @@ This file outlines the specific technologies, development setup, constraints, an
 - 目前重構已避開 global 變數直接操作，所有資料流經由 API 管理。
 - 需持續檢查專案內是否有遺留不合規的事件註冊或資料操作方式。
 
+# 技術背景
+
+- GML + GameMaker Studio 2，UI routine log 管理已成為標準開發流程一環。
+- 主要 debug 訊息以 show_debug_message 控制，routine log 以註解方式保留於原始碼。
+

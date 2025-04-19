@@ -5,42 +5,62 @@ if (!variable_instance_exists(id, "active")) {
     show_debug_message("!!! 嚴重錯誤：實例 " + string(id) + " (" + object_get_name(object_index) + ") 的 Step 事件正在運行，但 'active' 變數不存在！");
     // 添加默認值
     active = false; // 確保 active 存在
-    exit; // 退出 Step 事件，防止崩潰
+    exit; // 添加 exit 確保不繼續執行
 }
 
-// 如果UI活躍，禁止遊戲中的按鍵操作
+// 若是戰鬥UI則不自動關閉
+if (object_index == obj_battle_ui) {
+    exit;
+}
+
+// --- 通用輸入處理 (只在 active 時) ---
 if (active) {
-    // 禁止玩家移動 - 更強制的方法
-    if (instance_exists(Player)) {
-        with (Player) {
-            // 如果不是對話UI或其他特殊UI，則禁止移動
-            if (!other.allow_player_movement) {
-                keyboard_clear(vk_left);
-                keyboard_clear(vk_right);
-                keyboard_clear(vk_up);
-                keyboard_clear(vk_down);
-                // 額外設置速度為0
-                hspeed = 0;
-                vspeed = 0;
-                speed = 0;
+    var mouse_gui_x = device_mouse_x_to_gui(0);
+    var mouse_gui_y = device_mouse_y_to_gui(0);
+
+    // 檢查滑鼠左鍵點擊
+    if (mouse_check_button_pressed(mb_left)) {
+        var clicked_consumed_by_parent = false; // 標記點擊是否已被父類的關閉邏輯消耗
+
+        // 確保 ui_x, ui_y, ui_width, ui_height 存在
+        if (variable_instance_exists(id, "ui_x") && variable_instance_exists(id, "ui_y") &&
+            variable_instance_exists(id, "ui_width") && variable_instance_exists(id, "ui_height")) {
+            var rel_x = mouse_gui_x - ui_x;
+            var rel_y = mouse_gui_y - ui_y;
+            // 1. 檢查是否點擊了標準關閉按鈕 (使用相對座標)
+            //    子類需要在 Create 中定義 close_button_rect = [rel_x1, rel_y1, rel_x2, rel_y2]
+            if (variable_instance_exists(id, "close_button_rect")) {
+                var rect = close_button_rect;
+                if (point_in_rectangle(rel_x, rel_y, rect[0], rect[1], rect[2], rect[3])) {
+                    if (instance_exists(obj_ui_manager)) {
+                        show_debug_message("[DEBUG] parent_ui: 點擊內部關閉按鈕，呼叫 hide_ui，id=" + string(id) + ", 物件=" + object_get_name(object_index));
+                        obj_ui_manager.hide_ui(id);
+                        clicked_consumed_by_parent = true;
+                    }
+                }
             }
         }
+        // 3. 如果點擊被任何一種父類關閉方式消耗，清除滑鼠按鍵
+        if (clicked_consumed_by_parent) {
+            mouse_clear(mb_left);
+        }
+        // 注意：子類如果需要處理 UI 內部的其他點擊（非關閉按鈕），
+        // 應該在自己的 Step 事件中，在 event_inherited() 之後，
+        // 再次檢查 mouse_check_button_pressed(mb_left)，
+        // 如果點擊在內部元素上，處理完後也要呼叫 mouse_clear(mb_left)
+        // 以防止事件繼續傳遞。
     }
-    
-    // 禁止其他遊戲操作（根據UI類型決定）
-    if (!allow_game_controls) {
-        keyboard_clear(ord("E")); // 互動鍵
-        keyboard_clear(vk_space); // 召喚UI
-        keyboard_clear(ord("M")); // 標記目標
-    }
-} else {
-    // 如果UI不活動，檢查是否需要完全隱藏（關閉動畫完成後）
-    if (visible && open_animation > 0) {
+}
+
+// --- 修改：UI 不活躍時的處理 ---
+if (!active) {
+    if (visible && variable_instance_exists(id, "open_animation") && open_animation > 0) { 
         open_animation -= open_speed;
         if (open_animation <= 0) {
             open_animation = 0;
-            visible = false; // 動畫結束後才設置為不可見
+            visible = false; 
         }
-        surface_needs_update = true; // 動畫過程中需要更新表面
+        surface_needs_update = true; 
     }
+    exit; // <<-- 新增：確保非活躍時事件退出
 } 

@@ -1,4 +1,7 @@
 // obj_battle_ui - Step_0.gml
+
+event_inherited(); // <<-- 新增：確保父類 Step 事件執行
+
 // 更新信息提示計時器
 if (info_alpha > 0) {
     info_timer--;
@@ -125,28 +128,8 @@ if (reward_visible) {
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
     
-    // --- 移除懸停相關邏輯 ---
-    /* 
-    var prev_hovered_index = hovered_reward_item_index; 
-    hovered_reward_item_index = -1; 
-    
-    var list_size = ds_list_size(reward_items_list);
-    
-    for (var i = 0; i < list_size; i++) {
-        // ... (計算 item_x, item_y) ...
-        if (point_in_rectangle(mx, my, item_x, item_y, item_x + items_cell_width, item_y + items_cell_height)) {
-            hovered_reward_item_index = i;
-            break; 
-        }
-    }
-    
-    if (hovered_reward_item_index != -1) {
-       // ... (之前基於懸停創建/更新彈窗的邏輯) ...
-    } else {
-        // ... (之前基於滑鼠移開銷毀彈窗的邏輯) ...
-    }
-    */
-    // --- 結束移除懸停相關邏輯 ---
+    // 新增：本幀是否已處理物品點擊
+    var handled_item_click = false;
 
     // --- 新增：處理滑鼠左鍵點擊 ---
     if (mouse_check_button_pressed(mb_left)) {
@@ -156,108 +139,64 @@ if (reward_visible) {
         for (var i = 0; i < list_size; i++) {
             var col = i % items_cols;
             var row = floor(i / items_cols);
-            
-            // 修改：使用 slot 尺寸和 padding 計算格子位置
             var item_x = items_start_x + col * (item_slot_width + item_padding_x);
             var item_y = items_start_y + row * (item_slot_height + item_padding_y);
-            
-            // 修改：點擊檢測範圍是格子本身
             if (point_in_rectangle(mx, my, item_x, item_y, item_x + item_slot_width, item_y + item_slot_height)) {
                 // 點擊到物品格子 i
                 clicked_on_item = true;
-                selected_reward_item_index = i; // 更新選中索引
-                
-                // 記錄被點擊格子的座標，用於彈窗定位
+                handled_item_click = true; // 標記本幀已處理
+                selected_reward_item_index = i;
                 var clicked_cell_x = item_x;
                 var clicked_cell_y = item_y;
-                
                 var current_item_struct = reward_items_list[| i];
                 var item_id = current_item_struct.item_id;
-                
                 if (instance_exists(obj_item_manager)) {
                     var item_data_struct = obj_item_manager.get_item(item_id);
-                    
                     if (item_data_struct != undefined) {
-                        // 關閉可能已存在的舊彈窗
                         if (instance_exists(item_popup_instance)) {
-                            item_popup_instance.close(); // 調用彈窗的 close
+                            item_popup_instance.close();
                             item_popup_instance = noone;
                             show_debug_message("Existing Item Info Popup closed before opening new one.");
                         }
-                        
-                        // 創建新彈窗實例
+                        // 關鍵：本幀已處理點擊，阻止 parent_ui/管理器外部點擊自動關閉
+                        global.ui_input_block = true;
                         item_popup_instance = instance_create_layer(mx + 15, my + 15, "UI", obj_item_info_popup); 
-                        
                         if (instance_exists(item_popup_instance)) { 
-                            // 設置數據和位置
-                            item_popup_instance.setup_item_data(item_data_struct, -1); // 背包索引為 -1
-                            
-                            // --- 修改：根據格子位置計算彈窗位置，並進行完整的邊界檢測 --- 
+                            item_popup_instance.setup_item_data(item_data_struct, -1);
                             var gui_width = display_get_gui_width();
                             var gui_height = display_get_gui_height();
-                            
-                            // 預設位置：格子右上角
                             var popup_target_x = clicked_cell_x + item_slot_width + 5;
                             var popup_target_y = clicked_cell_y - 5;
-                            
                             var popup_width = item_popup_instance.width;
                             var popup_height = item_popup_instance.height;
-                            
-                            // 檢查右邊界
                             if (popup_target_x + popup_width > gui_width) {
-                                // 如果右側放不下，嘗試放在格子左側
                                 popup_target_x = clicked_cell_x - popup_width - 5;
-                                
-                                // 如果左側也放不下（超出左邊界），則貼齊左邊界
-                                if (popup_target_x < 0) {
-                                    popup_target_x = 0;
-                                }
+                                if (popup_target_x < 0) popup_target_x = 0;
                             }
-                            
-                            // 檢查上邊界
                             if (popup_target_y < 0) {
-                                // 如果超出上邊界，改為放在格子下方
                                 popup_target_y = clicked_cell_y + item_slot_height + 5;
-                                
-                                // 如果下方也放不下，則貼齊上邊界
-                                if (popup_target_y + popup_height > gui_height) {
-                                    popup_target_y = 0;
-                                }
+                                if (popup_target_y + popup_height > gui_height) popup_target_y = 0;
                             }
-                            
-                            // 檢查下邊界
                             if (popup_target_y + popup_height > gui_height) {
-                                // 如果超出下邊界，改為放在格子上方
                                 popup_target_y = clicked_cell_y - popup_height - 5;
-                                
-                                // 如果上方也放不下，則貼齊下邊界
-                                if (popup_target_y < 0) {
-                                    popup_target_y = gui_height - popup_height;
-                                }
+                                if (popup_target_y < 0) popup_target_y = gui_height - popup_height;
                             }
-                            
-                            // 設置最終位置
                             item_popup_instance.x = popup_target_x;
                             item_popup_instance.y = popup_target_y;
                             item_popup_instance.ui_x = popup_target_x;
                             item_popup_instance.ui_y = popup_target_y;
-                            // --- 結束彈窗位置計算 --- 
-                            
-                            // 使用 UI 管理器顯示
                             if (instance_exists(obj_ui_manager)) {
-                                obj_ui_manager.show_ui(item_popup_instance, "popup"); // 註冊到 popup 邏輯層
+                                obj_ui_manager.show_ui(item_popup_instance, "popup");
                                 show_debug_message("Item Info Popup shown via UI Manager for item ID: " + string(item_id));
                             } else {
-                                 show_debug_message("警告：找不到 UI 管理器，彈窗可能無法正常顯示！");
-                                 item_popup_instance.show(); // 備選方案
+                                show_debug_message("警告：找不到 UI 管理器，彈窗可能無法正常顯示！");
+                                item_popup_instance.show();
                             }
                         } else {
-                           item_popup_instance = noone; 
-                           show_debug_message("錯誤：創建 Item Info Popup 失敗");
+                            item_popup_instance = noone;
+                            show_debug_message("錯誤：創建 Item Info Popup 失敗");
                         }
-                        
                     } else {
-                        // get_item 失敗，確保關閉可能存在的彈窗並取消選擇
                         if (instance_exists(item_popup_instance)) {
                             item_popup_instance.close();
                             item_popup_instance = noone;
@@ -266,47 +205,49 @@ if (reward_visible) {
                         show_debug_message("Item Info Popup cannot be shown (get_item failed)");
                     }
                 } else {
-                     // 物品管理器不存在，確保關閉可能存在的彈窗並取消選擇
-                     if (instance_exists(item_popup_instance)) {
-                         item_popup_instance.close();
-                         item_popup_instance = noone;
-                     }
-                     selected_reward_item_index = -1;
-                     show_debug_message("Item Info Popup cannot be shown (item manager missing)");
+                    if (instance_exists(item_popup_instance)) {
+                        item_popup_instance.close();
+                        item_popup_instance = noone;
+                    }
+                    selected_reward_item_index = -1;
+                    show_debug_message("Item Info Popup cannot be shown (item manager missing)");
                 }
-                
-                surface_needs_update = true; // 標記需要重繪以顯示選擇高亮
-                break; // 處理完點擊的格子後退出迴圈
+                surface_needs_update = true;
+                break;
             }
-        } // end for loop
-
+        }
         // 如果點擊了但沒有點擊到任何物品格子
         if (!clicked_on_item) {
-             selected_reward_item_index = -1; // 取消選擇
-             // 關閉可能存在的彈窗
-             if (instance_exists(item_popup_instance)) {
-                 item_popup_instance.close();
-                 item_popup_instance = noone;
-                 show_debug_message("Item Info Popup closed (clicked outside items)");
-             }
-             surface_needs_update = true; // 標記需要重繪以移除高亮
+            selected_reward_item_index = -1;
+            if (instance_exists(item_popup_instance)) {
+                item_popup_instance.close();
+                item_popup_instance = noone;
+                show_debug_message("Item Info Popup closed (clicked outside items)");
+            }
+            surface_needs_update = true;
         }
-    } // end if mouse_check_button_pressed
-    
-    // --- 處理彈窗本身的關閉 (ESC 或點擊外部) ---
-    if (!instance_exists(item_popup_instance) && item_popup_instance != noone) { // 彈窗被外部銷毀了
-         item_popup_instance = noone; // 重置追蹤變數
-         selected_reward_item_index = -1; // 新增：取消選擇狀態
-         surface_needs_update = true; // 新增：標記重繪以移除高亮
-         show_debug_message("Detected popup destroyed externally, resetting selection index.");
     }
-    
-} // end if reward_visible
+    // --- 結束滑鼠點擊處理 ---
+    // --- 處理彈窗本身的關閉 (ESC 或點擊外部) ---
+    if (!instance_exists(item_popup_instance) && item_popup_instance != noone) {
+        item_popup_instance = noone;
+        selected_reward_item_index = -1;
+        surface_needs_update = true;
+        show_debug_message("Detected popup destroyed externally, resetting selection index.");
+    }
+}
 // --- 結束修改 --- 
 
 // === 新增：處理戰鬥結果關閉輸入 ===
 if (is_showing_results) { // 確保只在顯示結果時響應
     if (keyboard_check_pressed(vk_space)) {
+        if (instance_exists(item_popup_instance)) {
+            item_popup_instance.close();
+            item_popup_instance = noone;
+            selected_reward_item_index = -1;
+            surface_needs_update = true;
+            show_debug_message("[Battle UI] Space pressed, closed popup before closing result UI.");
+        }
         show_debug_message("[Battle UI] Space pressed, handling close input.");
         handle_close_input();
     }

@@ -161,6 +161,7 @@ This document tracks the development progress, planned features, and known issue
 - [x] 戰鬥結束流程優化，延遲顯示結果，並修正掉落物動畫與狀態切換。
 - [x] 掉落工廠化（怪物），採集掉落工廠化規劃中。
 - [x] 飛行道具圖層與座標系統優化。
+- [x] **Debug Tools:** Finalize the functionality/UI of the "Query Type" button/input field in `obj_debug_inventory_tool` based on user feedback. (調試工具：根據用戶回饋，最終確定 `obj_debug_inventory_tool` 中「查詢類型」按鈕/輸入框的功能/UI。)
 
 ## 進行中事項
 - 採集系統掉落工廠化設計與實作
@@ -175,6 +176,14 @@ This document tracks the development progress, planned features, and known issue
 - 戰鬥結果關閉邏輯優化
 - 其他系統重構與優化
 - 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。
+
+## 近期進度
+
+- 2024/06/10：
+    - UI routine debug log 清理已完成，專案進入穩定維護期。
+    - 目前所有 UI 關閉、彈窗切換、外部點擊等互動皆已無明顯 bug。
+    - 測試結果 log 乾淨，routine log 不再干擾日常測試。
+    - 下一步可專注於新功能或細節優化。
 
 ## Progress Update
 

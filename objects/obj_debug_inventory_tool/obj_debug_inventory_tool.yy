@@ -13,7 +13,10 @@
     "name":"Item",
     "path":"folders/物体/Item.yy",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"parent_ui",
+    "path":"objects/parent_ui/parent_ui.yy",
+  },
   "persistent":true,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,

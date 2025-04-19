@@ -27,3 +27,8 @@ Develop a Turn-Based Battle RPG using GameMaker Studio 2 and GML. The project fo
 *   **Factory Pattern:** Used for enemies.
 *   **State Machines:** Control complex flows (battle, units, flying items).
 *   **Inheritance:** Parent objects define shared logic.
+
+# 專案簡介
+
+- 專案核心目標（回合制戰鬥、道具管理、彈窗互動）已落實，UI 維護性提升。
+- 使用者體驗與 debug 便利性兼顧，log 管理策略明確。
