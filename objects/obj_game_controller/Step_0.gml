@@ -9,6 +9,20 @@ if (keyboard_check_pressed(ord("I"))) {
     toggle_inventory_ui();
 }
 
+// --- 新增：戰術切換快捷鍵 (僅戰鬥中生效) ---
+if (keyboard_check_pressed(ord("T"))) {
+    // 檢查是否在戰鬥中
+    if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE) {
+        // 呼叫戰鬥管理器的戰術切換函數
+        if (variable_instance_exists(obj_battle_manager, "cycle_player_unit_tactics") && is_method(obj_battle_manager.cycle_player_unit_tactics)) {
+            obj_battle_manager.cycle_player_unit_tactics();
+        } else {
+            show_debug_message("錯誤：obj_battle_manager 中缺少 cycle_player_unit_tactics 方法！");
+        }
+    }
+}
+// --- 結束新增 ---
+
 // --- 然後再檢查是否需要阻斷後續的遊戲內輸入 ---
 if (global.ui_input_block) exit; // 如果 UI 開啟，阻斷後續的遊戲控制（召喚、捕捉等）
 

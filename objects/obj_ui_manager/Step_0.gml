@@ -75,16 +75,17 @@ if (queue_size > 0) {
     ds_queue_destroy(temp_queue);
 }
 
-// --- 處理UI輸入 (優先處理 Popup 層) ---
+// --- 處理UI輸入 (優先處理 Tooltip -> Popup -> Main) ---
 var _input_handled = false; // 標記輸入是否已被處理
 
-// 檢查 Popup 層
-var popup_ui_list = active_ui[? "popup"];
-if (ds_list_size(popup_ui_list) > 0) {
-    var _ui_inst = popup_ui_list[| ds_list_size(popup_ui_list) - 1]; // 取最上層 Popup UI
+// <<-- 新增: 檢查 Tooltip 層 -->>
+var tooltip_ui_list = active_ui[? "tooltip"];
+if (ds_list_size(tooltip_ui_list) > 0) {
+    var _ui_inst = tooltip_ui_list[| ds_list_size(tooltip_ui_list) - 1]; // 取最上層 Tooltip UI
     if (instance_exists(_ui_inst)) {
-        
-        // 滑鼠左鍵點擊
+        // Tooltip 通常只需要處理點擊自身外部關閉，或者不處理輸入
+        // 這裡可以根據 tooltip 的具體需求添加輸入處理邏輯
+        // 例如，如果點擊 tooltip 內部某個按鈕需要反應：
         if (mouse_check_button_pressed(mb_left)) {
             var mx = device_mouse_x_to_gui(0);
             var my = device_mouse_y_to_gui(0);
@@ -92,41 +93,78 @@ if (ds_list_size(popup_ui_list) > 0) {
                 if (_ui_inst.handle_mouse_click(mx, my)) {
                     _input_handled = true;
                     mouse_clear(mb_left);
-                    show_debug_message("UI管理器: 滑鼠左鍵點擊被 Popup UI 處理並消耗");
+                    show_debug_message("UI管理器: 滑鼠左鍵點擊被 Tooltip UI 處理並消耗");
                 }
             }
-            // 注意：Popup 層通常需要處理點擊外部關閉，這應該在 Popup 物件自身 Step 處理
+            // 如果 tooltip 需要點擊外部關閉，可以在 tooltip 自己的 Step 事件處理
+            // 或者在這裡添加邏輯：如果點擊不在 tooltip 範圍內，則關閉 tooltip
+            // else {
+            //    // 檢查點擊是否在 tooltip 範圍外
+            //    if (variable_instance_exists(_ui_inst, "ui_x") && ...) { // 假設 tooltip 有邊界變數
+            //        if (!point_in_rectangle(mx, my, _ui_inst.ui_x, _ui_inst.ui_y, _ui_inst.ui_x + _ui_inst.ui_width, _ui_inst.ui_y + _ui_inst.ui_height)) {
+            //            hide_ui(_ui_inst);
+            //           _input_handledtrue; // 消耗點擊，避免觸發下層
+            //            mouse_clear(mb_left);
+            //            show_debug_message("UI管理器: 點擊 Tooltip 外部，關閉 Tooltip");
+            //       }
+            //    }
+            // }
         }
+        // Tooltip 通常不響應 ESC 或 Enter/Space，除非有特殊設計
+    }
+}
 
-        // Escape鍵（關閉）
-        if (!_input_handled && keyboard_check_pressed(vk_escape)) {
-             if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
-                 if (_ui_inst.handle_close_input()) {
+// <<-- 修改: 只有在輸入未被 Tooltip 處理時才檢查 Popup -->>
+if (!_input_handled) { // <<-- 添加檢查
+    var popup_ui_list = active_ui[? "popup"];
+    if (ds_list_size(popup_ui_list) > 0) {
+        var _ui_inst = popup_ui_list[| ds_list_size(popup_ui_list) - 1]; // 取最上層 Popup UI
+        if (instance_exists(_ui_inst)) {
+            
+            // 滑鼠左鍵點擊
+            if (mouse_check_button_pressed(mb_left)) {
+                var mx = device_mouse_x_to_gui(0);
+                var my = device_mouse_y_to_gui(0);
+                if (variable_instance_exists(_ui_inst, "handle_mouse_click") && is_method(_ui_inst.handle_mouse_click)) {
+                    if (_ui_inst.handle_mouse_click(mx, my)) {
+                        _input_handled = true;
+                        mouse_clear(mb_left);
+                        show_debug_message("UI管理器: 滑鼠左鍵點擊被 Popup UI 處理並消耗");
+                    }
+                }
+                // 注意：Popup 層通常需要處理點擊外部關閉，這應該在 Popup 物件自身 Step 處理
+            }
+
+            // Escape鍵（關閉）
+            if (!_input_handled && keyboard_check_pressed(vk_escape)) {
+                 if (variable_instance_exists(_ui_inst, "handle_close_input") && is_method(_ui_inst.handle_close_input)) {
+                     if (_ui_inst.handle_close_input()) {
+                         _input_handled = true;
+                         keyboard_clear(vk_escape);
+                         show_debug_message("UI管理器: Escape鍵關閉輸入被 Popup UI 處理並消耗 (自訂方法)");
+                     }
+                 } else {
+                     // 如果 Popup 沒有自訂關閉方法，管理器預設幫它關閉
+                     hide_ui(_ui_inst);
                      _input_handled = true;
                      keyboard_clear(vk_escape);
-                     show_debug_message("UI管理器: Escape鍵關閉輸入被 Popup UI 處理並消耗 (自訂方法)");
+                     show_debug_message("UI管理器: Escape鍵關閉輸入，由管理器關閉 Popup UI");
                  }
-             } else {
-                 // 如果 Popup 沒有自訂關閉方法，管理器預設幫它關閉
-                 hide_ui(_ui_inst);
-                 _input_handled = true;
-                 keyboard_clear(vk_escape);
-                 show_debug_message("UI管理器: Escape鍵關閉輸入，由管理器關閉 Popup UI");
-             }
-        }
-        
-        // Enter/Space 鍵 (確認) - Popup 通常不直接處理確認，除非有特殊按鈕
-        if (!_input_handled && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space))) {
-            var _key = keyboard_check_pressed(vk_enter) ? vk_enter : vk_space;
-            var _key_name = (_key == vk_enter) ? "Enter" : "Space";
-            if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
-                if (_ui_inst.handle_confirm_input()) {
-                    _input_handled = true;
-                    keyboard_clear(_key);
-                    show_debug_message("UI管理器: " + _key_name + "鍵確認輸入被 Popup UI 處理並消耗");
-                }
             }
-             // Popup 通常點擊按鈕，不直接響應 Enter/Space，除非有設計
+            
+            // Enter/Space 鍵 (確認) - Popup 通常不直接處理確認，除非有特殊按鈕
+            if (!_input_handled && (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space))) {
+                var _key = keyboard_check_pressed(vk_enter) ? vk_enter : vk_space;
+                var _key_name = (_key == vk_enter) ? "Enter" : "Space";
+                if (variable_instance_exists(_ui_inst, "handle_confirm_input") && is_method(_ui_inst.handle_confirm_input)) {
+                    if (_ui_inst.handle_confirm_input()) {
+                        _input_handled = true;
+                        keyboard_clear(_key);
+                        show_debug_message("UI管理器: " + _key_name + "鍵確認輸入被 Popup UI 處理並消耗");
+                    }
+                }
+                 // Popup 通常點擊按鈕，不直接響應 Enter/Space，除非有設計
+            }
         }
     }
 }
@@ -147,8 +185,8 @@ if (reward_ui_found) {
     show_debug_message("[DEBUG] Step_0.gml: 偵測到 reward_visible=true 的 UI，id=" + string(_ui_inst) + ", 物件=" + object_get_name(_ui_inst.object_index));
 }
 
-// 如果輸入未被 Popup 處理，再檢查 Main 層
-if (!_input_handled) {
+// <<-- 修改: 只有在輸入未被 Tooltip 或 Popup 處理時才檢查 Main -->>
+if (!_input_handled) { // <<-- 這個檢查保持不變，因為它已經包含了上面兩個 if 的結果
     var main_ui_list = active_ui[? "main"];
     if (ds_list_size(main_ui_list) > 0) {
         var _ui_inst = main_ui_list[| ds_list_size(main_ui_list) - 1]; // 取最上層 Main UI

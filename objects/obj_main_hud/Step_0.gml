@@ -93,33 +93,74 @@ if (mouse_check_button_released(mb_left)) {
 // --- 結束拖放邏輯 ---
 
 
-// --- 處理其他滑鼠點擊 (背包、怪物按鈕) ---
+// --- 處理其他滑鼠點擊 (背包、怪物按鈕 或 戰鬥按鈕) ---
 // 將原有的點擊檢查移到這裡，並確保 *不在拖曳時* 才觸發
 if (mouse_check_button_pressed(mb_left) && !is_dragging_hotbar_item) {
-    // 檢查是否點擊背包圖示
-    if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
-        bag_bbox[0], bag_bbox[1],
-        bag_bbox[2], bag_bbox[3])) {
 
-        if (instance_exists(obj_game_controller)) {
-            with (obj_game_controller) {
-                toggle_inventory_ui();
+    // 獲取戰鬥狀態
+    var _in_battle = (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE);
+
+    if (!_in_battle) {
+        // --- 非戰鬥狀態：處理原按鈕點擊 --- 
+        // 檢查是否點擊背包圖示
+        if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+            bag_bbox[0], bag_bbox[1],
+            bag_bbox[2], bag_bbox[3])) {
+            if (instance_exists(obj_game_controller)) {
+                with (obj_game_controller) { toggle_inventory_ui(); }
             }
-        }
-    // 新增：檢查是否點擊怪物管理按鈕
-    } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
-               monster_button_bbox[0], monster_button_bbox[1],
-               monster_button_bbox[2], monster_button_bbox[3])) {
-
-        if (instance_exists(obj_game_controller)) {
-            with (obj_game_controller) {
-                // 假設控制器中有 toggle_monster_manager_ui 函數
-                if (variable_instance_exists(id, "toggle_monster_manager_ui")) {
-                    toggle_monster_manager_ui();
-                } else {
-                    show_debug_message("錯誤：obj_game_controller 中缺少 toggle_monster_manager_ui 函數！");
+        // 檢查是否點擊怪物管理按鈕
+        } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+                   monster_button_bbox[0], monster_button_bbox[1],
+                   monster_button_bbox[2], monster_button_bbox[3])) {
+            if (instance_exists(obj_game_controller)) {
+                with (obj_game_controller) {
+                    if (variable_instance_exists(id, "toggle_monster_manager_ui")) {
+                        toggle_monster_manager_ui();
+                    } else {
+                        show_debug_message("錯誤：obj_game_controller 中缺少 toggle_monster_manager_ui 函數！");
+                    }
                 }
             }
+        }
+    } else {
+        // --- 戰鬥狀態：處理新按鈕點擊 --- 
+        // 檢查是否點擊召喚按鈕 (使用 bag_bbox，因為它取代了背包位置)
+        if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+            bag_bbox[0], bag_bbox[1],
+            bag_bbox[2], bag_bbox[3])) {
+            if (instance_exists(obj_battle_manager)) {
+                // 假設 obj_battle_manager 有 try_summon 方法檢查冷卻並召喚
+                if (variable_instance_exists(obj_battle_manager, "try_summon") && is_method(obj_battle_manager.try_summon)) {
+                    obj_battle_manager.try_summon();
+                } else if (variable_instance_exists(obj_battle_manager, "summon_monster") && is_method(obj_battle_manager.summon_monster)){
+                     // 如果沒有 try_summon，直接呼叫 summon_monster (可能需要手動檢查冷卻)
+                     // obj_battle_manager.summon_monster(); // 這裡需要召喚邏輯的更多細節
+                     show_debug_message("呼叫 obj_battle_manager.summon_monster() - 需要確認參數和冷卻");
+                } else {
+                    show_debug_message("錯誤：obj_battle_manager 中缺少召喚相關方法！");
+                }
+            }
+        // 檢查是否點擊收服按鈕 (使用 monster_button_bbox)
+        } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+                   monster_button_bbox[0], monster_button_bbox[1],
+                   monster_button_bbox[2], monster_button_bbox[3])) {
+             if (instance_exists(obj_game_controller)) {
+                // 呼叫遊戲控制器的 toggle_capture_ui，它內部會檢查戰鬥狀態
+                with (obj_game_controller) { toggle_capture_ui(); }
+            }
+        // 檢查是否點擊戰術按鈕 (使用 tactics_button_bbox)
+        } else if (point_in_rectangle(mouse_gui_x, mouse_gui_y,
+                   tactics_button_bbox[0], tactics_button_bbox[1],
+                   tactics_button_bbox[2], tactics_button_bbox[3])) {
+             if (instance_exists(obj_battle_manager)) {
+                 // 呼叫戰鬥管理器中的戰術切換方法
+                 if (variable_instance_exists(obj_battle_manager, "cycle_player_unit_tactics") && is_method(obj_battle_manager.cycle_player_unit_tactics)) {
+                     obj_battle_manager.cycle_player_unit_tactics();
+                 } else {
+                     show_debug_message("錯誤：obj_battle_manager 中缺少 cycle_player_unit_tactics 方法！");
+                 }
+             }
         }
     }
 }

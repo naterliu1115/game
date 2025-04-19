@@ -186,8 +186,8 @@ if (reward_visible) {
                             item_popup_instance.ui_x = popup_target_x;
                             item_popup_instance.ui_y = popup_target_y;
                             if (instance_exists(obj_ui_manager)) {
-                                obj_ui_manager.show_ui(item_popup_instance, "popup");
-                                show_debug_message("Item Info Popup shown via UI Manager for item ID: " + string(item_id));
+                                obj_ui_manager.show_ui(item_popup_instance, "tooltip");
+                                show_debug_message("Item Info Popup shown via UI Manager (tooltip layer) for item ID: " + string(item_id));
                             } else {
                                 show_debug_message("警告：找不到 UI 管理器，彈窗可能無法正常顯示！");
                                 item_popup_instance.show();

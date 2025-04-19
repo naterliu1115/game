@@ -42,13 +42,18 @@ This file describes the system architecture, key technical decisions, design pat
 *   `obj_game_controller`: Orchestrates overall game flow and manager initialization.
 *   `obj_event_manager`: Central hub for event broadcasting and subscriptions.
 *   `obj_enemy_factory`: Loads enemy templates from `enemies.csv` into `global.enemy_templates`.
-*   `monster_data_manager`: (Target state) Sole manager for `global.player_monsters` data and operations.
-*   `obj_enemy_placer`: Uses `global.enemy_templates` (via `get_template_by_id`) to create `obj_test_enemy` instances.
-*   `obj_battle_manager`: Manages battle flow, drops, experience, and related events.
+*   `monster_data_manager`: Sole manager for `global.player_monsters` data and operations.
+*   `obj_enemy_placer`: Uses `global.enemy_templates` to create `obj_test_enemy` instances.
+*   `obj_battle_manager`: Manages battle flow, drops, experience, and related events. Stores `last_battle_result`.
 *   `obj_item_manager`: Manages item data, inventory, and hotbar.
 *   `Player`: Player character object, target for item collection.
 *   `obj_flying_item`: Handles drop animations and collection.
-*   UI Objects (`obj_main_hud`, `obj_battle_ui`, `obj_inventory_ui`, etc.): Display information and handle user input. (Target state) Should interact with data primarily through events. 
+*   **UI Objects:**
+    *   `obj_ui_manager`: Manages display, hiding, and layering of all major UI elements.
+    *   `obj_main_hud`: Displays persistent HUD elements (hotbar, interaction prompts). **In battle:** Shows alternate buttons (Summon, Capture, Tactic) and battle-specific info (time, unit counts, tactic mode, cooldowns).
+    *   `obj_battle_ui`: **Simplified role.** Primarily used for displaying temporary info text in the center of the screen via `show_info()`. Triggers the display of the result popup.
+    *   `obj_inventory_ui`, `obj_monster_manager_ui`, `obj_summon_ui`, `obj_capture_ui`, `obj_item_info_popup`: Handle specific UI tasks (inventory management, monster management, summoning selection, capture interface, item details).
+    *   `obj_battle_result_popup`: **Dedicated popup** displayed via `obj_ui_manager` to show battle outcome (victory/defeat, stats, item drops) with animations.
 
 # System Patterns Update
 

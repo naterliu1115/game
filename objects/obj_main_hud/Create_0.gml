@@ -72,6 +72,29 @@ var touch_visual_width = touch_bbox_right - touch_bbox_left + 1;
 touch_x = monster_button_x - (mb_visual_width / 2) - icon_spacing - (touch_visual_width / 2);
 touch_y = bag_y - 10; // 垂直對齊<-- 控制互動提示的 Y 軸
 
+// --- 新增：戰術按鈕計算 (收服按鈕左側) ---
+tactics_sprite = spr_tactics; // 戰術按鈕使用的 Sprite
+tactics_button_width = sprite_get_width(tactics_sprite);
+tactics_button_height = sprite_get_height(tactics_sprite);
+// 計算視覺寬度
+var tactics_bbox_left = sprite_get_bbox_left(tactics_sprite);
+var tactics_bbox_right = sprite_get_bbox_right(tactics_sprite);
+var tactics_visual_width = tactics_bbox_right - tactics_bbox_left + 1;
+// **注意：** 這裡計算 X 座標時，依賴的 mb_visual_width 應該是 *收服按鈕*(spr_capture) 的視覺寬度，而非原怪物按鈕(spr_mainbutton)。
+// 為了簡化，我們先假設它們視覺寬度相近，或者在 Draw 事件中動態計算。
+// 或者，更健壯的方式是在這裡預先計算 spr_capture 的視覺寬度。
+var capture_sprite_temp = spr_capture;
+var cap_bb_l = sprite_get_bbox_left(capture_sprite_temp);
+var cap_bb_r = sprite_get_bbox_right(capture_sprite_temp);
+var cap_visual_width = cap_bb_r - cap_bb_l + 1;
+// 計算中心點 X (基於怪物按鈕中心、*收服按鈕*視覺半寬、間距、戰術按鈕視覺半寬)
+tactics_button_x = monster_button_x - (cap_visual_width / 2) - icon_spacing - (tactics_visual_width / 2);
+tactics_button_y = bag_y; // 垂直對齊
+// 點擊區域 (基於畫布尺寸)
+tactics_button_bbox = [tactics_button_x - tactics_button_width / 2, tactics_button_y - tactics_button_height / 2, 
+                       tactics_button_x + tactics_button_width / 2, tactics_button_y + tactics_button_height / 2];
+// --- 結束新增：戰術按鈕計算 ---
+
 // --- 拖放狀態變數 (新增) ---
 is_dragging_hotbar_item = false;
 dragged_item_inventory_index = noone;

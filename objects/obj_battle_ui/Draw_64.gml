@@ -1,6 +1,6 @@
 // obj_battle_ui 的 Draw_64.gml
 
-
+/*
 if (!surface_exists(ui_surface) || surface_needs_update) {
     if (surface_exists(ui_surface)) {
         surface_free(ui_surface);
@@ -26,8 +26,8 @@ if (!surface_exists(ui_surface) || surface_needs_update) {
 }
 
 // 繪製基本UI表面
-draw_surface(ui_surface, 0, ui_y);
-
+// draw_surface(ui_surface, 0, ui_y);
+*/
 
 // 繪製玩家單位信息
 if (instance_exists(obj_battle_manager)) {
@@ -105,6 +105,7 @@ if (instance_exists(obj_battle_manager)) {
     }
 }
 
+/*
 // 繪製召喚按鈕（帶發光效果）
 var summon_enabled = true;
 if (instance_exists(obj_battle_manager)) {
@@ -144,6 +145,7 @@ if (summon_enabled) {
     draw_set_color(c_white);
     draw_text_safe(summon_btn_x + 20, summon_btn_y + 15, "冷卻: " + string(ceil(cooldown_percent * 100)) + "%", c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_MIDDLE);
 }
+
 
 // 繪製戰術切換按鈕
 draw_set_color(c_green);
@@ -189,179 +191,20 @@ if (info_alpha > 0) {
     draw_set_alpha(1.0);
 }
 
-// 顯示戰鬥狀態信息
-draw_set_color(c_white);
-var battle_status = "戰鬥進行中";
-if (instance_exists(obj_battle_manager)) {
-    var player_count = ds_list_size(obj_battle_manager.player_units);
-    var enemy_count = ds_list_size(obj_battle_manager.enemy_units);
-    var battle_time = obj_battle_manager.battle_timer / game_get_speed(gamespeed_fps);
-    
-    battle_status = "時間: " + string_format(battle_time, 3, 1) + "秒 | 我方: " + string(player_count) + " | 敵方: " + string(enemy_count);
-}
-draw_text_safe(10, ui_y + 5, battle_status, c_white, TEXT_ALIGN_LEFT, TEXT_VALIGN_TOP);
+*/
 
+// 顯示戰鬥信息和提示 ... (保留)
+
+/* 將繪製戰鬥狀態信息的程式碼移除 ... */
+
+// --- 新增：繪製技能目標指示器 --- (如果存在，保留)
+
+/* 徹底移除舊的全螢幕結果繪製邏輯
 // 如果處於結果狀態，顯示戰鬥結果
 if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state == BATTLE_STATE.RESULT) {
-    draw_set_alpha(0.8);
-    draw_rectangle_color(0, 0, display_get_gui_width(), display_get_gui_height(),
-                      c_black, c_navy, c_navy, c_black, false);
-    draw_set_alpha(1.0);
-    
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    
-    // 修改：判斷戰鬥結果，使用 battle_victory_status
-    var result_text = "";
-    var result_color = c_white;
-    var stats_y = display_get_gui_height() / 2; // 統計文本的起始 Y 座標
-
-    if (battle_victory_status == 1) { // 勝利
-        result_text = "戰鬥勝利!";
-        result_color = c_lime;
-        
-        // 繪製勝利文字
-        var scale = 1.5 + sin(current_time / 200) * 0.2;
-        draw_text_outlined(
-            display_get_gui_width() / 2,
-            stats_y - 100, // 向上移動標題
-            result_text,
-            result_color,
-            c_black,
-            TEXT_ALIGN_CENTER,
-            TEXT_VALIGN_MIDDLE,
-            scale * 2.0 // 調整縮放
-        );
-
-        // 顯示獎勵信息
-        if (reward_visible) {
-            draw_set_color(c_white);
-            // 修改：使用記錄的變數顯示統計
-            draw_text_safe(display_get_gui_width() / 2, stats_y - 30, "戰鬥時間: " + string_format(battle_duration, 3, 1) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-            draw_text_safe(display_get_gui_width() / 2, stats_y + 0, "擊敗敵人: " + string(defeated_enemies_count), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-            draw_set_color(c_yellow);
-            draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "獲得經驗: " + string(reward_exp), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-            draw_set_color(make_color_rgb(255, 215, 0)); // 金色
-            draw_text_safe(display_get_gui_width() / 2, stats_y + 60, "獲得金幣: " + string(reward_gold), make_color_rgb(255, 215, 0), TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-            
-            // --- 新增：繪製獲得物品網格 --- 
-            var list_size = ds_list_size(reward_items_list);
-            if (list_size > 0) {
-                draw_set_halign(fa_left);
-                draw_set_valign(fa_top);
-                draw_set_font(fnt_dialogue);
-                draw_set_color(c_white);
-                draw_text(items_start_x, items_start_y - 30, "獲得物品:");
-                
-                for (var i = 0; i < list_size; i++) {
-                    var item_struct = reward_items_list[| i];
-                    var item_id = item_struct.item_id;
-                    var quantity = item_struct.quantity;
-                    
-                    // **從 reward_items 結構體獲取 item_data**
-                    // **假設 reward_items[i] 的結構是 { item_id: ..., quantity: ..., item_data: ... }**
-                    // **如果不是，需要先用 get_item 獲取**
-                    var item_data = obj_item_manager.get_item(item_id); // **假設需要重新獲取**
-                    if (is_undefined(item_data)) {
-                        show_debug_message("警告: 在繪製戰利品時找不到物品資料 ID: " + string(item_id));
-                        continue; // 跳過這個物品
-                    }
-
-                    var col = i % items_cols;
-                    var row = floor(i / items_cols);
-                    
-                    // 修改：使用 slot 尺寸和 padding 計算格子位置
-                    var cell_x = items_start_x + col * (item_slot_width + item_padding_x);
-                    var cell_y = items_start_y + row * (item_slot_height + item_padding_y);
-
-                    // --- 修改：使用 draw_ui_item_slot 並傳遞 slot 尺寸 --- 
-                    draw_ui_item_slot(
-                        cell_x, 
-                        cell_y, 
-                        item_slot_width,  // 使用 slot 寬度
-                        item_slot_height, // 使用 slot 高度
-                        item_data,        
-                        quantity,         
-                        (i == selected_reward_item_index) 
-                    );
-                    // --- 結束修改 ---
-                    
-                    // --- 移除舊的懸停高亮 ---
-                    /*
-                    if (hovered_reward_item_index == i) {
-                        draw_set_alpha(0.3);
-                        draw_set_color(c_yellow);
-                        draw_rectangle(cell_x, cell_y, cell_x + items_cell_width - 1, cell_y + items_cell_height - 1, false); 
-                        draw_set_alpha(1.0);
-                    }
-                    */
-                    // --- 結束移除舊的懸停高亮 ---
-                }
-                // 重置繪製對齊和顏色
-                draw_set_halign(fa_center);
-                draw_set_valign(fa_middle);
-                draw_set_color(c_white);
-            }
-            // --- 結束新增 --- 
-        }
-            
-    } else if (battle_victory_status == 0) { // 失敗
-        result_text = "戰鬥失敗!";
-        result_color = c_red;
-        
-        // 繪製失敗文字
-        var scale = 1.5 + sin(current_time / 200) * 0.2;
-        draw_text_outlined(
-            display_get_gui_width() / 2,
-            stats_y - 80, // 向上移動標題
-            result_text,
-            result_color,
-            c_black,
-            TEXT_ALIGN_CENTER,
-            TEXT_VALIGN_MIDDLE,
-            scale * 2.4
-        );
-
-        // 顯示懲罰信息
-        draw_set_color(c_white);
-        // *** 添加繪製前日誌 ***
-        //show_debug_message("[Draw GUI] Drawing defeat stats: duration=" + string(battle_duration) + ", defeated=" + string(defeated_enemies_count));
-        draw_text_safe(display_get_gui_width() / 2, stats_y - 30, "戰鬥時間: " + string_format(battle_duration, 3, 1) + "秒", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-        draw_text_safe(display_get_gui_width() / 2, stats_y + 0, "擊敗敵人: " + string(defeated_enemies_count), c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-        // 顯示經驗 (可能是部分經驗)
-        if (reward_exp > 0) {
-            draw_set_color(c_yellow);
-            // *** 添加繪製前日誌 ***
-            //show_debug_message("[Draw GUI] Drawing defeat exp: " + string(reward_exp));
-            draw_text_safe(display_get_gui_width() / 2, stats_y + 30, "獲得經驗: " + string(reward_exp), c_yellow, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-        }
-        // 顯示金幣損失 (使用 defeat_penalty_text)
-        if (variable_instance_exists(id, "defeat_penalty_text") && defeat_penalty_text != "") {
-             // *** 添加繪製前日誌 ***
-            //show_debug_message("[Draw GUI] Drawing defeat penalty text: " + defeat_penalty_text);
-             draw_text_outlined(
-                 display_get_gui_width() / 2,
-                 stats_y + 60, // 調整Y位置
-                 defeat_penalty_text,
-                 c_white,
-                 c_black,
-                 TEXT_ALIGN_CENTER,
-                 TEXT_VALIGN_MIDDLE
-            );
-        }
-    } else { // 未知狀態
-        result_text = "等待結果...";
-        result_color = c_white;
-        draw_set_color(result_color);
-        draw_text_safe(display_get_gui_width() / 2, display_get_gui_height() / 2, result_text, result_color, TEXT_ALIGN_CENTER, TEXT_VALIGN_MIDDLE);
-    }
-    
-    // 添加通用提示
-    if (battle_victory_status != -1) { // 只有在結果確定後才顯示
-        draw_set_color(c_white);
-        draw_text_safe(display_get_gui_width() / 2, display_get_gui_height() - 60, "按空格鍵繼續", c_white, TEXT_ALIGN_CENTER, TEXT_VALIGN_BOTTOM);
-    }
+    // ... (所有舊的全螢幕結果繪製程式碼) ...
 }
+*/
 
-// 重置繪圖顏色
-draw_set_color(c_white);
+// 重置繪圖顏色 (如果存在)
+// draw_set_color(c_white);

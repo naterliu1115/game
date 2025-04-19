@@ -138,7 +138,7 @@ function show() {
     event_inherited();
     
     // 設置最上層深度
-    depth = -200;  // 確保在最上層
+    // depth = -200;  // <<-- 移除或註解掉這行，讓 UI 管理器決定深度
 }
 
 // 重寫父類的 hide 方法

@@ -297,6 +297,16 @@ toggle_summon_ui = function() {
 }
 
 toggle_monster_manager_ui = function() {
+    // --- 新增：戰鬥狀態檢查 ---
+    if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE) {
+        show_debug_message("戰鬥中無法開啟怪物管理。"); // 或顯示遊戲內提示
+        if (instance_exists(obj_event_manager)) {
+            broadcast_event("ui_message", { text: "戰鬥中無法開啟怪物管理。", color: c_yellow });
+        }
+        exit; // 直接退出函數
+    }
+    // --- 檢查結束 ---
+
     if (!ui_enabled || ui_cooldown > 0) {
         show_debug_message("UI被禁用或在冷卻中 (怪物管理)");
         return;
@@ -471,6 +481,16 @@ toggle_capture_ui = function() {
 }
 
 toggle_inventory_ui = function() {
+    // --- 新增：戰鬥狀態檢查 ---
+    if (instance_exists(obj_battle_manager) && obj_battle_manager.battle_state != BATTLE_STATE.INACTIVE) {
+        show_debug_message("戰鬥中無法開啟背包。"); // 或顯示遊戲內提示
+        if (instance_exists(obj_event_manager)) {
+            broadcast_event("ui_message", { text: "戰鬥中無法開啟背包。", color: c_yellow });
+        }
+        exit; // 直接退出函數
+    }
+    // --- 檢查結束 ---
+
     if (!ui_enabled || ui_cooldown > 0) {
         show_debug_message("UI被禁用或在冷卻中");
         return;
@@ -654,3 +674,12 @@ add_item_to_inventory(3001, 3);  // 普通球
 
 // 清空或重置其他需要重置的全局變數
 // ...
+
+// --- 新增：確保 Battle Result Popup 實例存在 ---
+if (!instance_exists(obj_battle_result_popup)) {
+    var _battle_result_popup_inst = instance_create_layer(0, 0, "Instances", obj_battle_result_popup); // 確認 "Instances" 圖層
+    _battle_result_popup_inst.visible = false;
+    _battle_result_popup_inst.active = false;
+    show_debug_message("創建並初始化隱藏的 obj_battle_result_popup 實例。");
+}
+// --- 結束新增 ---

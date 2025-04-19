@@ -22,9 +22,9 @@ y = ui_y;
 // routine debug 訊息全部註解
 
 // Step 事件開頭加強 log
-if (global.game_debug_mode) {
+/*if (global.game_debug_mode) {
     show_debug_message("[彈窗Step] active=" + string(active) + ", visible=" + string(visible));
-}
+}*/
 
 // 檢查ESC鍵或滑鼠點擊範圍外以關閉
 if (keyboard_check_pressed(vk_escape) || 

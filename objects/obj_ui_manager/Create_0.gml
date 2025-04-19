@@ -19,7 +19,8 @@ ui_layers = ds_map_create();
 ds_map_add(ui_layers, "background", ds_list_create());  // 最底層
 ds_map_add(ui_layers, "main", ds_list_create());        // 主要UI層
 ds_map_add(ui_layers, "overlay", ds_list_create());     // 浮層UI
-ds_map_add(ui_layers, "popup", ds_list_create());       // 彈窗層（最高層級）
+ds_map_add(ui_layers, "popup", ds_list_create());       // 彈窗層
+ds_map_add(ui_layers, "tooltip", ds_list_create());     // <<-- 新增：工具提示層
 
 // 層級深度設置
 layer_depths = ds_map_create();
@@ -27,6 +28,7 @@ ds_map_add(layer_depths, "background", -50);
 ds_map_add(layer_depths, "main", -100);
 ds_map_add(layer_depths, "overlay", -150);
 ds_map_add(layer_depths, "popup", -200);
+ds_map_add(layer_depths, "tooltip", -250);              // <<-- 新增：Tooltip 深度
 
 // 追蹤當前活躍的UI
 active_ui = ds_map_create();
@@ -34,6 +36,7 @@ ds_map_add(active_ui, "background", ds_list_create());
 ds_map_add(active_ui, "main", ds_list_create());
 ds_map_add(active_ui, "overlay", ds_list_create());
 ds_map_add(active_ui, "popup", ds_list_create());
+ds_map_add(active_ui, "tooltip", ds_list_create());     // <<-- 新增
 
 // Surface管理
 ui_surfaces = ds_map_create(); // 存儲UI surface的映射表
@@ -114,10 +117,13 @@ function show_ui(ui_instance, layer_name) {
     if (!registered) {
         register_ui(ui_instance, layer_name);
     }
-    // 處理互斥層
-    if (layer_name == "main" || layer_name == "popup") {
+    // 處理互斥層 和 新的 tooltip 層
+    if (layer_name == "main" || layer_name == "popup") { // <<-- 移除 tooltip 層的互斥處理
         show_debug_message("[UI管理器] show_ui: 先隱藏層級 " + layer_name);
         hide_layer(layer_name);
+    } else if (layer_name == "tooltip") { // <<-- 新增: tooltip 層每次只顯示一個
+        show_debug_message("[UI管理器] show_ui: 先隱藏舊的 tooltip");
+        hide_layer("tooltip"); // 隱藏當前所有 tooltip
     }
     // 顯示UI
     with (ui_instance) {
@@ -336,11 +342,12 @@ function check_lost_surfaces() {
 
 // 處理UI消息事件
 function on_ui_message(data) {
-    if (!variable_struct_exists(data, "message")) return;
+    if (!variable_struct_exists(data, "text")) return;
     
     // 添加到消息隊列
     var message = {
-        text: data.message,
+        text: data.text,
+        color: variable_struct_exists(data, "color") ? data.color : c_white,
         duration: variable_struct_exists(data, "duration") ? data.duration : message_duration,
         alpha: 1.0,
         timer: 0

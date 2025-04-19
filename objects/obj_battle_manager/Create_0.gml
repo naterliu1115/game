@@ -45,6 +45,14 @@ defeated_enemy_ids_this_battle = [];
 current_battle_drops = [];
 pending_flying_items = [];
 
+// --- 新增：用於儲存上一次戰鬥結果數據 ---
+last_battle_result = undefined;
+// --- 結束新增 ---
+
+// --- 新增：當前全局戰術模式 ---
+current_global_tactic = AI_MODE.AGGRESSIVE; // 預設為積極
+// --- 結束新增 ---
+
 // --- 戰鬥區域 ---
 battle_area = {
     center_x: 0,
@@ -369,3 +377,42 @@ check_all_enemies_defeated = function() {
     
     return all_enemies_defeated;
 };
+
+// --- 新增：切換玩家單位戰術模式 --- 
+cycle_player_unit_tactics = function() {
+    // 計算下一個模式
+    var next_tactic_index = (current_global_tactic + 1) mod 3; // 假設 AI_MODE 是 0, 1, 2
+    var next_tactic = next_tactic_index; // 直接使用索引作為 Enum 值
+
+    // 更新全局模式記錄
+    current_global_tactic = next_tactic;
+
+    var tactic_name = "未知";
+    switch(current_global_tactic) {
+        case AI_MODE.AGGRESSIVE: tactic_name = "積極"; break;
+        case AI_MODE.FOLLOW: tactic_name = "跟隨"; break;
+        case AI_MODE.PASSIVE: tactic_name = "待命"; break;
+    }
+    show_debug_message("全局戰術已切換至: " + tactic_name);
+
+    // 遍歷所有玩家單位並應用新模式
+    if (instance_exists(obj_unit_manager)) {
+        var player_list = obj_unit_manager.player_units;
+        var list_size = ds_list_size(player_list);
+        for (var i = 0; i < list_size; i++) {
+            var unit_instance = player_list[| i];
+            if (instance_exists(unit_instance)) {
+                // 呼叫單位自己的 set_ai_mode 方法
+                if (variable_instance_exists(unit_instance, "set_ai_mode") && is_method(unit_instance.set_ai_mode)) {
+                    unit_instance.set_ai_mode(current_global_tactic);
+                    // show_debug_message("  已為單位 " + string(unit_instance.id) + " 設置模式為 " + tactic_name);
+                } else {
+                    show_debug_message("警告：單位 " + string(unit_instance.id) + " 缺少 set_ai_mode 方法！");
+                }
+            }
+        }
+    } else {
+        show_debug_message("錯誤：切換戰術時找不到 obj_unit_manager！");
+    }
+}
+// --- 結束新增 ---

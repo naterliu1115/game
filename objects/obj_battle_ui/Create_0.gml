@@ -145,12 +145,35 @@ show_rewards = function(event_data) { // <-- 修改函數簽名
 
 
     // --- 新增：整合通知 UI 管理器的邏輯 ---
+    /* 移除舊的 show_ui 呼叫
     if (instance_exists(obj_ui_manager)) {
         obj_ui_manager.show_ui(id, "main");
         show_debug_message("[obj_battle_ui show_rewards] 已通知 UI 管理器顯示此 UI (ID: " + string(id) + ")");
     } else {
         show_debug_message("警告：[obj_battle_ui show_rewards] UI 管理器不存在，無法註冊！");
     }
+    */
+    
+    // --- 新增：儲存結果數據並觸發結果彈窗 ---
+    if (instance_exists(obj_battle_manager)) {
+        obj_battle_manager.last_battle_result = event_data;
+        show_debug_message("[obj_battle_ui show_rewards] 已將結果數據儲存到 obj_battle_manager");
+        if (instance_exists(obj_ui_manager)) {
+             // 確保結果彈窗實例存在 (如果不存在，需要 obj_game_controller 創建)
+             if (instance_exists(obj_battle_result_popup)) {
+                 obj_ui_manager.show_ui(obj_battle_result_popup, "popup");
+                 show_debug_message("[obj_battle_ui show_rewards] 已請求 UI 管理器顯示結果彈窗 obj_battle_result_popup");
+             } else {
+                 show_debug_message("錯誤：[obj_battle_ui show_rewards] 結果彈窗實例 obj_battle_result_popup 不存在！");
+             }
+        } else {
+             show_debug_message("警告：[obj_battle_ui show_rewards] UI 管理器不存在，無法顯示結果彈窗！");
+        }
+    } else {
+        show_debug_message("錯誤：[obj_battle_ui show_rewards] 戰鬥管理器不存在，無法儲存結果數據！");
+    }
+    // --- 結束新增 ---
+
     // --- 結束整合：通知 UI 管理器 ---
 
     // 標記表面需要更新 (原 show_rewards 和 update_rewards_display 都有此操作)
@@ -190,42 +213,6 @@ if (instance_exists(obj_event_manager)) {
 
 } else {
     show_debug_message("警告：無法訂閱事件，obj_event_manager NOT FOUND at subscription time!");
-}
-
-// --- 新增：處理關閉輸入的方法 ---
-handle_close_input = function() {
-    show_debug_message("[Battle UI] handle_close_input called.");
-    
-    // 確保只在顯示結果時響應
-    if (!is_showing_results) {
-        show_debug_message("[Battle UI] handle_close_input ignored: Not showing results.");
-        return;
-    }
-
-    // 停止顯示結果
-    is_showing_results = false;
-    reward_visible = false; // 重置這個標誌
-
-    // 廣播關閉事件
-    if (instance_exists(obj_event_manager)) {
-        broadcast_event("battle_result_closed", {}); 
-        show_debug_message("[Battle UI] Broadcasted battle_result_closed event.");
-    } else {
-        show_debug_message("錯誤：[Battle UI] 無法廣播 battle_result_closed，事件管理器不存在。");
-    }
-
-    // 讓 UI 管理器隱藏自己 <--- 註解掉這部分
-    /*
-    if (instance_exists(obj_ui_manager)) {
-         with(obj_ui_manager) {
-             hide_ui(other.id); // other.id 指向 obj_battle_ui 實例
-             show_debug_message("[Battle UI] Requested UI Manager to hide self (ID: " + string(other.id) + ").");
-         }
-    } else {
-         show_debug_message("錯誤：[Battle UI] 無法通過 UI 管理器隱藏，管理器不存在。");
-         hide(); // 備選方案
-    }
-    */
 }
 
 // 初始化時顯示戰鬥開始提示

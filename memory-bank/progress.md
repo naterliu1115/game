@@ -72,23 +72,31 @@ This document tracks the development progress, planned features, and known issue
 - **已解決**：飛行道具創建和 Step 事件中的 `string_format` 除錯函數錯誤。
 - **已解決**：**事件管理器 `trigger_event` 功能實現：** 在 `obj_event_manager` 中添加了標準的 `trigger_event` 函數，解決了獎勵系統等處觸發事件的警告。
 - **已解決**：**重複隱藏 UI 警告修復：** 移除了 `obj_battle_ui` 中 `handle_close_input` 的直接隱藏請求，統一由 `obj_ui_manager` 響應 `battle_end` 事件關閉 UI，解決了重複隱藏警告。
+- **已解決**：**戰鬥狀態初始化警告 (`戰鬥已經在進行中`) 修復。**
+- **戰鬥 UI 重構與職責拆分：**
+    - `obj_main_hud` 現在能在戰鬥中顯示替換的按鈕（召喚、收服、戰術）和狀態資訊（時間、單位數、戰術模式、冷卻）。
+    - 創建了新的彈窗式戰鬥結果 UI (`obj_battle_result_popup`)，包含結果數據、物品列表、指定樣式和滑入+淡入動畫。
+    - `obj_battle_ui` 被簡化，主要負責顯示中央提示文字，舊的全螢幕結果繪製已移除。
+    - `obj_battle_manager` 現在在 `RESULT` 狀態觸發 `obj_battle_ui` 的隱藏。
+    - 在戰鬥中阻止了背包和怪物管理 UI 的開啟。
 - 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。
 
 ## 待辦/已知問題
 
-- **核心問題 - 高優先級:**
-    - **事件管理器缺少 `trigger_event` 功能**: 在獎勵系統等處觀察到警告，影響系統間通信。(**當前調查中**)
 - **核心問題 - 中優先級:**
-    - **戰鬥狀態警告**: 初始化戰鬥時提示 `戰鬥已經在進行中`。
+    - **(新)** 戰鬥結果彈窗 (`obj_battle_result_popup`) 會因點擊自身而錯誤關閉 (疑似繼承自 `parent_ui`)。
 - **功能待完善:**
-    - 戰鬥結果 UI 的關閉邏輯需要從 `obj_battle_manager` 遷移到 UI 層。
     - 恢復玩家移動能力。
+    - 採集系統掉落工廠化設計與實作。
+    - 掉落工廠統一化（怪物/採集/礦石）。
+    - 技能系統 array 索引重構。
     - 玩家等級與屬性成長系統。
     - 更豐富的技能類型與效果（狀態異常、Buff/Debuff、範圍效果）。
     - 捕獲怪物機制實現。
     - 物品系統完善（使用、裝備？）。
     - 完整的遊戲流程（地圖移動、觸發戰鬥等）。
     - UI/UX 細節打磨（動畫、反饋）。
+    - 調試工具 (`obj_debug_inventory_tool`) 功能完善與確認。
 - **低優先級問題:**
     - 資源缺失警告 (`spr_...`)。
     - 技能管理器缺少 `on_game_save`/`on_game_load` 回調。
@@ -134,25 +142,23 @@ This document tracks the development progress, planned features, and known issue
 
 ## What's left to build
 
-- **核心功能修復**: 實現或修復 `obj_event_manager` 的 `trigger_event` 功能。
-- **邏輯遷移**: 將戰鬥結果關閉邏輯移至 UI 層。
-- **功能恢復**: 恢復玩家移動。
-- **完善快捷欄**: 快捷欄物品使用、與其他 UI (如製作) 的交互。
-- **戰鬥結果 UI**: 確認是否正確顯示所有掉落物品；實現更完善的結果展示流程 (等待動畫等)。
-- **新增**: **根據物品稀有度改變飛行道具 (`obj_flying_item`) 的外框顏色。**
-- **Battle Log**: 實現 UI 面板和詳細日誌記錄。
-- **深化戰鬥**: 更多技能、狀態、AI、行動順序機制。
-- **豐富物品**: 更多消耗品、裝備、材料。
-- **捕捉與養成**: 細化捕捉、技能學習/遺忘、進化等。
+- **(新)** 修復戰鬥結果彈窗 (`obj_battle_result_popup`) 的意外點擊關閉問題（調查 `parent_ui`）。
+- 恢復玩家移動。
+- 完善快捷欄。
+- 採集系統掉落工廠化。
+- 掉落工廠統一化。
+- 技能系統 array 索引重構。
+- Battle Log 功能。
+- 深化戰鬥系統。
+- 豐富物品系統。
+- 捕捉與養成系統。
 
 ## Known Issues
 
-- **(已解決)** 事件管理器 `trigger_event` 功能缺失或調用錯誤。
-- **(已解決)** 重複隱藏 UI 的警告。
-- 戰鬥狀態初始化警告。
+- **(新)** 戰鬥結果彈窗 (`obj_battle_result_popup`) 可能繼承了 `parent_ui` 不期望的點擊關閉行為。
 - 飛行道具 (`obj_flying_item`) 在 `FLYING_TO_PLAYER` 狀態下直接使用 `Player.x`, `Player.y` 作為目標，可能在鏡頭快速移動時產生視覺追趕延遲（待觀察）。
-- 採集系統掉落尚未工廠化，維護需多處同步
-- 掉落工廠尚未設計，日後需統一管理
+- 採集系統掉落尚未工廠化，維護需多處同步。
+- 掉落工廠尚未設計，日後需統一管理。
 
 ## 已完成事項
 - [x] 戰鬥事件 callback function 完全重構，移除 obj_battle_manager Create 事件內所有 callback function，統一集中於 battle_callbacks.gml。
@@ -170,16 +176,14 @@ This document tracks the development progress, planned features, and known issue
 - UI/UX 優化與戰鬥結果流程完善
 
 ## 待辦事項
+- **(新)** 修復戰鬥結果彈窗的意外點擊關閉問題 (調查 `parent_ui`)。
 - 採集掉落工廠化
 - 掉落工廠統一化
 - world_to_gui_coords 相關耦合移除
-- 戰鬥結果關閉邏輯優化
-- 其他系統重構與優化
 - 技能系統重構進度：尚未完成，目前仍有大量 struct/array 型別錯誤與 bug，尚未達到 array 索引一一對應的目標。主要卡點：技能冷卻初始化、技能新增、技能查找等流程型別不一致，導致崩潰。每次 build 幾乎都會遇到技能冷卻相關錯誤，需持續修正。
+- 恢復玩家移動。
 
 ## 近期進度
-
-- 2024/06/10：
     - UI routine debug log 清理已完成，專案進入穩定維護期。
     - 目前所有 UI 關閉、彈窗切換、外部點擊等互動皆已無明顯 bug。
     - 測試結果 log 乾淨，routine log 不再干擾日常測試。
@@ -219,7 +223,8 @@ This document tracks the development progress, planned features, and known issue
 - [x] UI 顯示正確（資料來源唯一，顯示與資料同步）
 - [進行中] 採集系統掉落工廠化
 - [進行中] 技能系統 array 索引重構
-- [待辦] 戰鬥結果 UI 關閉邏輯遷移到 UI 層 
+- [待辦] **修復戰鬥結果 UI 意外點擊關閉問題**
+- [x] **戰鬥 UI 重構** (拆分職責至 HUD 和新彈窗，實現彈窗樣式與動畫)
 
 ## 進度追蹤
 
