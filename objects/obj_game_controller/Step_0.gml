@@ -10,7 +10,7 @@ if (keyboard_check_pressed(ord("1"))) {
     toggle_summon_ui();
 }
 
-if (keyboard_check_pressed(ord("2"))) {
+if (keyboard_check_pressed(ord("C"))) {
     toggle_capture_ui();
 }
 

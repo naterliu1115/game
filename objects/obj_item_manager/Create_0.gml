@@ -2,6 +2,8 @@
 
 // 注意：已禁用GameMaker的"Remove Unused Resources"選項，不再需要手動引用精靈
 
+#region Enums & Initialization
+
 // 物品類型枚舉
 enum ITEM_TYPE {
     CONSUMABLE,
@@ -31,6 +33,10 @@ if (default_sprite != -1 && sprite_exists(default_sprite)) {
 } else {
     show_debug_message("警告：預設精靈 spr_gold 無法加載");
 }
+
+#endregion // Enums & Initialization
+
+#region Data Loading & Validation
 
 // 數據驗證函數
 function validate_item_data(item_data) {
@@ -189,6 +195,10 @@ function load_items_data() {
     return true;
 }
 
+#endregion // Data Loading & Validation
+
+#region Item Data Accessors
+
 // 獲取物品數據
 function get_item(item_id) {
     if (ds_map_exists(items_data, item_id)) {
@@ -219,31 +229,36 @@ function get_item_sprite(item_id) {
 
         // 如果精靈無效，使用預設精靈 spr_gold
         show_debug_message("警告：物品 " + string(item_id) + " 的圖示精靈無效，使用預設精靈 spr_gold");
-
-        // 從緩存中獲取 spr_gold
+        // 處理找不到物品的情況，返回預設精靈
         if (ds_map_exists(item_sprites, "spr_gold")) {
-            return item_sprites[? "spr_gold"];
-        }
-
-        // 如果緩存中沒有，嘗試直接加載
-        var default_sprite = asset_get_index("spr_gold");
-        if (default_sprite != -1 && sprite_exists(default_sprite)) {
-            // 將預設精靈添加到緩存中
-            item_sprites[? "spr_gold"] = default_sprite;
-            return default_sprite;
+             return item_sprites[? "spr_gold"];
         } else {
-            show_debug_message("嚴重錯誤：預設精靈 spr_gold 也無效！");
-            return -1; // 如果連預設精靈都找不到，返回-1
+             // 嘗試加載預設精靈
+             var default_sprite = asset_get_index("spr_gold");
+             if (default_sprite != -1 && sprite_exists(default_sprite)) {
+                  item_sprites[? "spr_gold"] = default_sprite;
+                  return default_sprite;
+             } else {
+                  show_debug_message("嚴重錯誤：預設精靈 spr_gold 也無效！");
+                  return -1; // 如果連預設精靈都找不到，返回-1
+             }
         }
     } else {
         show_debug_message("警告：找不到物品 " + string(item_id) + "，使用預設精靈 spr_gold");
-
-        // 從緩存中獲取 spr_gold
+        // 處理找不到物品的情況，返回預設精靈
         if (ds_map_exists(item_sprites, "spr_gold")) {
-            return item_sprites[? "spr_gold"];
+             return item_sprites[? "spr_gold"];
+        } else {
+             // 嘗試加載預設精靈
+             var default_sprite = asset_get_index("spr_gold");
+             if (default_sprite != -1 && sprite_exists(default_sprite)) {
+                  item_sprites[? "spr_gold"] = default_sprite;
+                  return default_sprite;
+             } else {
+                  show_debug_message("嚴重錯誤：預設精靈 spr_gold 也無效！");
+                  return -1; // 如果連預設精靈都找不到，返回-1
+             }
         }
-
-        return asset_get_index("spr_gold");
     }
 }
 
@@ -253,13 +268,79 @@ function get_item_type(item_id) {
 
 function is_stackable(item_id) {
     var item = get_item(item_id);
-    return item != undefined && item.StackMax > 1;
+    return item != undefined && variable_struct_exists(item, "StackMax") && item.StackMax > 1;
 }
 
 function can_use_item(item_id) {
     var item = get_item(item_id);
-    return item != undefined && item.UseEffect != "none";
+    return item != undefined && variable_struct_exists(item, "UseEffect") && item.UseEffect != "none";
 }
+
+// 新增：獲取物品的持有/動作 Sprite
+function get_item_action_sprite(item_id) {
+    var item_data = get_item(item_id); // 使用現有的 get_item 函數
+
+    if (item_data != undefined) {
+        // 檢查類型是否為 EQUIPMENT 或 TOOL
+        if (item_data.Type == "EQUIPMENT" || item_data.Type == "TOOL") {
+            // 檢查是否有有效的 action_sprite_index
+            if (variable_struct_exists(item_data, "action_sprite_index") && item_data.action_sprite_index > -1) {
+                 // 確保 sprite 存在 (以防萬一)
+                 if (sprite_exists(item_data.action_sprite_index)) {
+                      return item_data.action_sprite_index;
+                 } else {
+                      show_debug_message("警告: 物品 " + string(item_id) + " 的 action_sprite_index 無效，索引為 " + string(item_data.action_sprite_index));
+                      // 回退到預設? 或者返回主sprite? 這裡按要求回退到 spr_pickaxe_mining
+                 }
+            }
+            // 如果沒有有效的 action_sprite_index，返回預設的 spr_pickaxe_mining (選項 B)
+            var default_action_sprite = asset_get_index("spr_pickaxe_mining"); // Make sure spr_pickaxe_mining exists!
+            if (default_action_sprite != -1 && sprite_exists(default_action_sprite)) {
+                 // 可以選擇性地快取預設動作sprite
+                 if (!ds_map_exists(item_sprites, "spr_pickaxe_mining")) {
+                      item_sprites[? "spr_pickaxe_mining"] = default_action_sprite;
+                 }
+                 return default_action_sprite;
+            } else {
+                 show_debug_message("嚴重錯誤：預設動作精靈 spr_pickaxe_mining 無法找到！");
+                 // 如果連預設都找不到，返回主要sprite作為最終備選？
+                 var main_sprite = get_item_sprite(item_id); // Use existing function
+                 if (main_sprite != -1) return main_sprite;
+                 return -1;
+            }
+        }
+    }
+    // 如果物品不存在或類型不對，返回 -1
+    return -1;
+}
+
+// 移除 get_item_sprite_full 函數，因為不再需要
+// 如果其他地方有使用，可以讓它直接返回與 get_item_sprite 相同的結果
+function get_item_sprite_full(item_id) {
+    show_debug_message("警告：get_item_sprite_full 已被棄用，請改用 get_item_sprite");
+    return get_item_sprite(item_id);
+}
+
+// 新增：根據 ID 獲取物品類型
+function get_item_type_by_id(item_id) {
+    var item_data = get_item(item_id); // 使用現有的 get_item 函數
+    if (item_data != undefined) {
+        // 確保 Type 欄位存在
+        if (variable_struct_exists(item_data, "Type")) {
+            return item_data.Type;
+        } else {
+            show_debug_message("警告：物品 ID " + string(item_id) + " 的數據缺少 Type 欄位。");
+            return undefined; // 或返回其他表示錯誤的值
+        }
+    } else {
+        // get_item 內部已經有警告信息了，這裡直接返回未找到
+        return undefined;
+    }
+}
+
+#endregion // Item Data Accessors
+
+#region Inventory Management
 
 // 添加物品到背包
 function add_item_to_inventory(item_id, quantity) {
@@ -403,26 +484,147 @@ function execute_item_effect(item_data) {
     return false;
 }
 
-// 移除 get_item_sprite_full 函數，因為不再需要
-// 如果其他地方有使用，可以讓它直接返回與 get_item_sprite 相同的結果
-function get_item_sprite_full(item_id) {
-    return get_item_sprite(item_id);
+// 新增：從背包移除指定數量的物品
+remove_item_from_inventory = function(item_id, quantity_to_remove) {
+    // 檢查參數
+    if (!is_real(item_id) || !is_real(quantity_to_remove) || quantity_to_remove <= 0) {
+        show_debug_message("錯誤 (remove_item_from_inventory): 無效的 item_id 或 quantity_to_remove。");
+        return false;
+    }
+
+    // 檢查背包是否存在
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+        show_debug_message("錯誤 (remove_item_from_inventory): global.player_inventory 不存在或不是 ds_list。");
+        return false;
+    }
+
+    var inventory_size = ds_list_size(global.player_inventory);
+    for (var i = inventory_size - 1; i >= 0; i--) { // 從後往前遍歷以安全刪除
+        var inv_item = global.player_inventory[| i];
+
+        // 檢查條目是否有效且 item_id 匹配
+        if (is_struct(inv_item) && variable_struct_exists(inv_item, "item_id") && inv_item.item_id == item_id) {
+            // 檢查是否有足夠數量
+            if (variable_struct_exists(inv_item, "quantity") && inv_item.quantity >= quantity_to_remove) {
+                // 減少數量
+                inv_item.quantity -= quantity_to_remove;
+                show_debug_message("物品管理器：減少物品 " + string(item_id) + " 數量 " + string(quantity_to_remove) + "，剩餘 " + string(inv_item.quantity));
+
+                // 如果數量歸零，移除物品
+                if (inv_item.quantity <= 0) {
+                    ds_list_delete(global.player_inventory, i);
+                    show_debug_message("物品管理器：物品 " + string(item_id) + " 數量為 0，已從背包移除。");
+                    // TODO: 觸發物品移除事件? (例如更新快捷欄)
+                    if (variable_instance_exists(self, "unassign_item_from_hotbar")) {
+                        unassign_item_from_hotbar(i); // 如果物品被移除，也從快捷欄取消指派 (注意：這裡用的是刪除前的索引i)
+                    }
+                }
+                // TODO: 觸發物品數量變更事件?
+                return true; // 成功減少或移除
+            } else {
+                var current_quantity = variable_struct_exists(inv_item, "quantity") ? inv_item.quantity : 0;
+                show_debug_message("警告 (remove_item_from_inventory): 物品 " + string(item_id) + " 數量不足 (需要 " + string(quantity_to_remove) + ", 擁有 " + string(current_quantity) + ")。");
+                return false; // 數量不足
+            }
+        }
+    }
+
+    show_debug_message("警告 (remove_item_from_inventory): 在背包中未找到物品 ID: " + string(item_id));
+    return false; // 未找到物品
 }
 
-show_debug_message("obj_item_manager Create: 即將調用 load_items_data()...");
+// 新增：獲取背包中指定物品的數量
+get_item_count_in_inventory = function(item_id) {
+    // 檢查參數
+    if (!is_real(item_id)) {
+         show_debug_message("錯誤 (get_item_count_in_inventory): 無效的 item_id。");
+         return 0;
+    }
 
-// 初始化時載入數據
-if (!load_items_data()) {
-    show_debug_message("錯誤：物品數據載入失敗 (load_items_data 返回 false)");
-    // 在這裡考慮是否要 instance_destroy() 或設置一個錯誤狀態？
-} else {
-     show_debug_message("obj_item_manager Create: load_items_data() 調用成功完成。");
+    // 檢查背包是否存在
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+        // 背包不存在，視為數量為 0
+        return 0;
+    }
+
+    var inventory_size = ds_list_size(global.player_inventory);
+    var total_quantity = 0;
+    for (var i = 0; i < inventory_size; i++) {
+        var inv_item = global.player_inventory[| i];
+
+        // 檢查條目是否有效且 item_id 匹配
+        if (is_struct(inv_item) && variable_struct_exists(inv_item, "item_id") && inv_item.item_id == item_id) {
+            if (variable_struct_exists(inv_item, "quantity")) {
+                total_quantity += inv_item.quantity; // 累加數量 (以防萬一有分開的堆疊)
+            } else {
+                 show_debug_message("錯誤 (get_item_count_in_inventory): 物品 " + string(item_id) + " 的庫存條目 (索引 " + string(i) + ") 缺少 'quantity' 欄位。");
+            }
+        }
+    }
+
+    return total_quantity; // 返回總數量
 }
+
+// 新增：根據類型獲取背包中的物品列表（包含詳細信息）
+get_inventory_items_by_type = function(item_type_string) {
+    var _result_array = [];
+
+    // 檢查參數
+    if (!is_string(item_type_string) || item_type_string == "") {
+        show_debug_message("錯誤 (get_inventory_items_by_type): 無效的 item_type_string。");
+        return _result_array; // 返回空數組
+    }
+
+    // 檢查背包是否存在
+    if (!variable_global_exists("player_inventory") || !ds_exists(global.player_inventory, ds_type_list)) {
+         show_debug_message("警告 (get_inventory_items_by_type): global.player_inventory 不存在或不是 ds_list。");
+        return _result_array; // 返回空數組
+    }
+
+    var inventory_size = ds_list_size(global.player_inventory);
+    for (var i = 0; i < inventory_size; i++) {
+        var inv_item = global.player_inventory[| i];
+
+        // 檢查庫存條目是否有效
+        if (is_struct(inv_item) && variable_struct_exists(inv_item, "item_id") && variable_struct_exists(inv_item, "quantity")) {
+            var item_id = inv_item.item_id;
+            var quantity = inv_item.quantity;
+
+             // 跳過數量為0或以下的物品
+             if (quantity <= 0) continue;
+
+            // 獲取物品詳細數據
+            var item_data = get_item(item_id); // 使用管理器內部的 get_item
+
+            // 檢查物品數據是否有效，以及類型是否匹配
+            if (item_data != undefined && variable_struct_exists(item_data, "Type") && item_data.Type == item_type_string) {
+                // 創建結果結構體
+                var result_item = {
+                    item_id: item_id,
+                    quantity: quantity,
+                    name: variable_struct_exists(item_data, "Name") ? item_data.Name : "Unknown Name",
+                    effect_value: variable_struct_exists(item_data, "EffectValue") ? item_data.EffectValue : 0,
+                    // 添加 inventory_index 以便UI操作
+                    inventory_index: i
+                };
+                array_push(_result_array, result_item);
+            }
+        } else {
+             show_debug_message("警告 (get_inventory_items_by_type): 背包索引 " + string(i) + " 的條目無效或缺少必要欄位。");
+        }
+    }
+
+    return _result_array;
+}
+
+#endregion // Inventory Management
+
+#region Hotbar Management
 
 // --- 新增/遷移：快捷欄管理 ---
-global.player_hotbar_slots = 10;
-global.player_hotbar = array_create(global.player_hotbar_slots, noone);
-show_debug_message("  - 全局快捷欄數據已初始化");
+global.player_hotbar_slots = 10; // 最好在 obj_game_controller 中定義
+global.player_hotbar = array_create(global.player_hotbar_slots, noone); // 最好在 obj_game_controller 中定義
+show_debug_message("  - 全局快捷欄數據已初始化 (注意：最好移至 obj_game_controller)");
 
 // 指派物品到快捷欄的函數
 assign_item_to_hotbar = function(inventory_index) {
@@ -511,6 +713,10 @@ get_item_in_hotbar_slot = function(hotbar_slot) {
 show_debug_message("  - get_item_in_hotbar_slot 函數已定義");
 show_debug_message("obj_item_manager Create: 快捷欄管理函數定義完成。");
 
+#endregion // Hotbar Management
+
+#region Tool Management
+
 // --- 工具使用相關函數 ---
 
 // 獲取當前選中的工具物品
@@ -577,7 +783,9 @@ use_tool = function(tool_id) {
 
 show_debug_message("  - 工具使用相關函數已定義");
 
-// --- 結束 快捷欄管理 ---
+#endregion // Tool Management
+
+#region Cleanup & Testing
 
 // 清理函數
 function cleanup_item_manager() {
@@ -589,7 +797,8 @@ function cleanup_item_manager() {
     }
 }
 
-// 測試函數
+// 測試函數 (已棄用，改用遊戲內調試工具)
+/*
 function test_item_manager() {
     show_debug_message("===== 開始測試道具管理器 =====");
 
@@ -660,46 +869,28 @@ function test_item_manager() {
 
     show_debug_message("===== 道具管理器測試完成 =====");
 }
+*/
 
-// 新增：獲取物品的持有/動作 Sprite
-function get_item_action_sprite(item_id) {
-    var item_data = get_item(item_id); // 使用現有的 get_item 函數
+#endregion // Cleanup & Testing
 
-    if (item_data != undefined) {
-        // 檢查類型是否為 EQUIPMENT 或 TOOL
-        if (item_data.Type == "EQUIPMENT" || item_data.Type == "TOOL") {
-            // 檢查是否有有效的 action_sprite_index
-            if (variable_struct_exists(item_data, "action_sprite_index") && item_data.action_sprite_index > -1) {
-                 // 確保 sprite 存在 (以防萬一)
-                 if (sprite_exists(item_data.action_sprite_index)) {
-                      return item_data.action_sprite_index;
-                 } else {
-                      show_debug_message("警告: 物品 " + string(item_id) + " 的 action_sprite_index 無效，索引為 " + string(item_data.action_sprite_index));
-                      // 回退到預設? 或者返回主sprite? 這裡按要求回退到 spr_pickaxe_mining
-                 }
-            }
-            // 如果沒有有效的 action_sprite_index，返回預設的 spr_pickaxe_mining (選項 B)
-            var default_action_sprite = asset_get_index("spr_pickaxe_mining"); // Make sure spr_pickaxe_mining exists!
-            if (default_action_sprite != -1 && sprite_exists(default_action_sprite)) {
-                 // 可以選擇性地快取預設動作sprite
-                 if (!ds_map_exists(item_sprites, "spr_pickaxe_mining")) {
-                      item_sprites[? "spr_pickaxe_mining"] = default_action_sprite;
-                 }
-                 return default_action_sprite;
-            } else {
-                 show_debug_message("嚴重錯誤：預設動作精靈 spr_pickaxe_mining 無法找到！");
-                 // 如果連預設都找不到，返回主要sprite作為最終備選？
-                 var main_sprite = get_item_sprite(item_id); // Use existing function
-                 if (main_sprite != -1) return main_sprite;
-                 return -1;
-            }
-        }
-    }
-    // 如果物品不存在或類型不對，返回 -1
-    return -1;
+#region Initialization Execution
+
+show_debug_message("obj_item_manager Create: 即將調用 load_items_data()...");
+
+// 初始化時載入數據
+if (!load_items_data()) {
+    show_debug_message("錯誤：物品數據載入失敗 (load_items_data 返回 false)");
+    // 在這裡考慮是否要 instance_destroy() 或設置一個錯誤狀態？
+} else {
+     show_debug_message("obj_item_manager Create: load_items_data() 調用成功完成。");
 }
 
+// 調用測試函數 (已棄用，改用遊戲內調試工具)
+// // test_item_manager();
+
 show_debug_message("Item Manager Initialized");
+
+#endregion // Initialization Execution
 
 
 

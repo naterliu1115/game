@@ -8,8 +8,8 @@
   "name":"obj_item_manager",
   "overriddenProperties":[],
   "parent":{
-    "name":"物体",
-    "path":"folders/物体.yy",
+    "name":"Item",
+    "path":"folders/物体/Item.yy",
   },
   "parentObjectId":null,
   "persistent":false,

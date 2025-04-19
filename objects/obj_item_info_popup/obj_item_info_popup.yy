@@ -11,8 +11,8 @@
   "name":"obj_item_info_popup",
   "overriddenProperties":[],
   "parent":{
-    "name":"物体",
-    "path":"folders/物体.yy",
+    "name":"Item",
+    "path":"folders/物体/Item.yy",
   },
   "parentObjectId":{
     "name":"parent_ui",

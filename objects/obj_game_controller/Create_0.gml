@@ -54,20 +54,20 @@ if (!instance_exists(obj_main_hud)) {
 if (!variable_global_exists("player_inventory")) {
     global.player_inventory = ds_list_create();
     // 預設道具初始化（只在遊戲啟動時加入一次）
-    if (instance_exists(obj_item_manager)) {
-        with (obj_item_manager) {
-            add_item_to_inventory(1001, 5);  // 小型回復藥水
-            add_item_to_inventory(1002, 3);  // 中型回復藥水
-            add_item_to_inventory(1003, 1);  // 大型回復藥水
-            add_item_to_inventory(2001, 1);  // 銅劍
-            add_item_to_inventory(2002, 1);  // 鐵劍
-            add_item_to_inventory(3001, 10); // 普通球
-            add_item_to_inventory(3002, 5);  // 高級球
-            add_item_to_inventory(4001, 20); // 銅礦石
-            add_item_to_inventory(4002, 10); // 鐵礦石
-            add_item_to_inventory(5001, 1);  // 採礦稿
-        }
-    }
+    // if (instance_exists(obj_item_manager)) {
+    //     with (obj_item_manager) {
+    //         add_item_to_inventory(1001, 5);  // 小型回復藥水
+    //         add_item_to_inventory(1002, 3);  // 中型回復藥水
+    //         add_item_to_inventory(1003, 1);  // 大型回復藥水
+    //         add_item_to_inventory(2001, 1);  // 銅劍
+    //         add_item_to_inventory(2002, 1);  // 鐵劍
+    //         add_item_to_inventory(3001, 10); // 普通球
+    //         add_item_to_inventory(3002, 5);  // 高級球
+    //         add_item_to_inventory(4001, 20); // 銅礦石
+    //         add_item_to_inventory(4002, 10); // 鐵礦石
+    //         add_item_to_inventory(5001, 1);  // 採礦稿
+    //     }
+    // }
 }
 
 // 添加缺失的变量初始化 - 解决警告
@@ -527,16 +527,6 @@ toggle_inventory_ui = function() {
         show_debug_message("道具UI已顯示");
     }
 
-    // 添加一些測試物品（如果背包為空）
-    if (ds_list_size(global.player_inventory) == 0) {
-        show_debug_message("添加測試物品到背包");
-        with (obj_item_manager) {
-            add_item_to_inventory(1001, 5);  // 小型回復藥水
-            add_item_to_inventory(2001, 1);  // 銅劍
-            add_item_to_inventory(3001, 3);  // 普通球
-        }
-    }
-
     ui_cooldown = 5;
     show_debug_message("===== 道具UI切換完成 =====");
 };
@@ -617,3 +607,40 @@ if (!variable_global_exists("player_hotbar")) {
 
 
 show_debug_message("obj_game_controller 初始化完成。請確保此物件持久化。")
+
+// 初始化玩家數據和狀態
+function initialize_player_data() {
+    global.player_level = 1;
+    global.player_exp = 0;
+    global.player_next_level_exp = 100;
+    global.player_gold = 100;
+    global.player_inventory = ds_list_create();
+    
+    // 添加初始測試道具 (已棄用，改用遊戲內調試工具)
+    /*
+    add_item_to_inventory(1001, 5);  // 小型回復藥水
+    add_item_to_inventory(1002, 3);  // 中型回復藥水
+    add_item_to_inventory(1003, 1);  // 大型回復藥水
+    add_item_to_inventory(2001, 1);  // 銅劍
+    add_item_to_inventory(2002, 1);  // 鐵劍
+    add_item_to_inventory(3001, 10); // 普通球
+    add_item_to_inventory(3002, 5);  // 高級球
+    add_item_to_inventory(4001, 20); // 銅礦石
+    add_item_to_inventory(4002, 10); // 鐵礦石
+    add_item_to_inventory(5001, 1);  // 採礦稿
+    */
+
+    global.player_skill_points = 0;
+    global.player_attribute_points = 0;
+    ds_list_clear(global.player_inventory);
+}
+
+// 添加初始測試道具 (已棄用，改用遊戲內調試工具)
+/*
+add_item_to_inventory(1001, 5);  // 小型回復藥水
+add_item_to_inventory(2001, 1);  // 銅劍
+add_item_to_inventory(3001, 3);  // 普通球
+*/
+
+// 清空或重置其他需要重置的全局變數
+// ...
