@@ -1,15 +1,16 @@
 const express = require('express');
 const axios = require('axios');
-require('dotenv').config(); // 載入 .env 的內容
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 
-// 從環境變數中讀取 Webhook URL
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 let lastPushTime = 0;
 const COOLDOWN_MS = 10000;
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 2 * 60 * 1000; // 2 分鐘
 
 app.post("/", async (req, res) => {
   const now = Date.now();
@@ -45,26 +46,39 @@ app.post("/", async (req, res) => {
   };
 
   // ✅ 提前回應 GitHub，避免 timeout
-  res.status(200).send("Webhook received. Will notify Discord after 2 minutes.");
+  res.status(200).send("Webhook received. Will attempt to notify Discord up to 10 times.");
 
-  // ✅ 延遲 2 分鐘後發送 webhook 給 Discord
-  setTimeout(() => {
-    axios.post(DISCORD_WEBHOOK_URL, message, {
-      headers: {
-        'User-Agent': 'MyWebhookBridge/1.0',
-        'Content-Type': 'application/json'
-      },
-      timeout: 5000
-    }).then(response => {
+  // ✅ 啟動 retry 任務
+  let attempt = 0;
+
+  const trySend = async () => {
+    try {
+      attempt++;
+      console.log(`📤 Attempt ${attempt} sending to Discord...`);
+
+      const response = await axios.post(DISCORD_WEBHOOK_URL, message, {
+        headers: {
+          'User-Agent': 'MyWebhookBridge/1.0',
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
+
       lastPushTime = Date.now();
-      console.log("✅ [DELAYED] Delivered to Discord!", response.status);
-    }).catch(err => {
-      console.error("❌ [DELAYED] Error sending webhook:", err.message);
-      if (err.response) {
-        console.error("📛 Response:", err.response.status, err.response.data);
+      console.log(`✅ Delivered on attempt ${attempt}`, response.status);
+    } catch (err) {
+      console.error(`❌ Failed on attempt ${attempt}:`, err.message);
+      if (attempt < MAX_RETRIES) {
+        console.log(`🔁 Waiting 2 minutes before retrying...`);
+        setTimeout(trySend, RETRY_DELAY_MS);
+      } else {
+        console.error("❌ Max retries reached. Giving up.");
       }
-    });
-  }, 2 * 60 * 1000); // 2 分鐘延遲
+    }
+  };
+
+  // 開始第一次發送
+  trySend();
 });
 
 app.get("/", (req, res) => {
