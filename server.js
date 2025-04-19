@@ -1,15 +1,15 @@
 const express = require('express');
 const axios = require('axios');
+require('dotenv').config(); // 載入 .env 的內容
 
 const app = express();
 app.use(express.json());
 
-// ✅ 實際使用你的 Discord Webhook URL
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1362832031448436886/g6sSIBEO5JLO9DC3XXMvJtQtZfkJnibGVAVuOOlFs2cJTNmeT7Hr_2QXBQm5IFoNfW3U";
+// 從環境變數中讀取 Webhook URL
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-// ✅ 預設 Cooldown 時間（防止被 Discord/Cloudflare 封鎖）
 let lastPushTime = 0;
-const COOLDOWN_MS = 10000; // 每 10 秒最多一次
+const COOLDOWN_MS = 10000;
 
 app.post("/", async (req, res) => {
   try {
@@ -45,13 +45,12 @@ app.post("/", async (req, res) => {
       }]
     };
 
-    // ✅ 加入 headers 防止 Discord 限制
     const response = await axios.post(DISCORD_WEBHOOK_URL, message, {
       headers: {
         'User-Agent': 'MyWebhookBridge/1.0',
         'Content-Type': 'application/json'
       },
-      timeout: 5000 // 加 timeout 保護
+      timeout: 5000
     });
 
     lastPushTime = now;
